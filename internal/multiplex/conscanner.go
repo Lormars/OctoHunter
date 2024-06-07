@@ -1,0 +1,41 @@
+package multiplex
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"sync"
+
+	"github.com/lormars/octohunter/common"
+)
+
+func Conscan(f common.Atomic, options *common.Opts) {
+	request_ch := make(chan *common.Opts)
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for options := range request_ch {
+				f(options)
+			}
+		}()
+	}
+	file, err := os.Open(options.File)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		request_ch <- &common.Opts{
+			Hopper: options.Hopper,
+			Target: line,
+			File:   options.File,
+		}
+	}
+	close(request_ch)
+	wg.Wait()
+}
