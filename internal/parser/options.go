@@ -12,6 +12,7 @@ func Parse_Options() *common.Opts {
 		target = flag.String("target", "none", "The target to scan")
 		file   = flag.String("file", "none", "The file to scan")
 	)
+	flag.Parse()
 	return &common.Opts{
 		Hopper: *hopper,
 		Target: *target,
