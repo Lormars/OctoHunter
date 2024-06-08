@@ -10,4 +10,8 @@ func main() {
 	if options.Hopper {
 		modules.CheckHop(options)
 	}
+
+	if options.Dork {
+		modules.GoogleDork(options)
+	}
 }
