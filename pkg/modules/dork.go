@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strings"
+	"time"
 
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/multiplex"
 )
 
 func GoogleDork(options *common.Opts) {
@@ -23,6 +26,10 @@ func GoogleDork(options *common.Opts) {
 func singleDork(options *common.Opts) {
 	site := "site:" + options.Target
 	for _, dork := range asset.DorkQueries {
+
+		randomDuration := time.Duration(rand.Intn(5)+1) * time.Second
+		time.Sleep(randomDuration)
+
 		dork = url.QueryEscape(dork)
 		url := "https://www.google.com/search?q=" + dork + "+" + site
 		//fmt.Print(url + "\n")
@@ -47,18 +54,29 @@ func singleDork(options *common.Opts) {
 			fmt.Println(err)
 			return
 		}
-		//fmt.Println(string(body))
-		//TODO: regex domain and ban
+		if strings.Contains(string(body), "Our systems have detected unusual traffic from your computer network.") {
+			fmt.Println("Google detected unusual traffic, please try again later")
+			if options.Broker {
+				msg := fmt.Sprintf("Google detected unusual traffic for %s", url)
+				common.PublishMessage(msg)
+			}
+			time.Sleep(1 * time.Minute)
+			continue
+		}
+
 		pattern := fmt.Sprintf(`(http|https)://[a-zA-Z0-9./?=_~-]*%s/[a-zA-Z0-9./?=_~-]*`, regexp.QuoteMeta(options.Target))
 		re := regexp.MustCompile(pattern)
 		matches := re.FindAllString(string(body), -1)
 		for _, match := range matches {
 			fmt.Println(match)
+			if options.Broker {
+				common.PublishMessage(match)
+			}
 		}
 
 	}
 }
 
 func multiDork(options *common.Opts) {
-
+	multiplex.Conscan(singleDork, options, 1)
 }

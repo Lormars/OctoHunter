@@ -19,7 +19,7 @@ func CheckHop(options *common.Opts) {
 }
 
 func multiCheck(options *common.Opts) {
-	multiplex.Conscan(singleCheck, options)
+	multiplex.Conscan(singleCheck, options, 10)
 }
 
 func singleCheck(options *common.Opts) {

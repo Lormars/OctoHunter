@@ -9,10 +9,10 @@ import (
 	"github.com/lormars/octohunter/common"
 )
 
-func Conscan(f common.Atomic, options *common.Opts) {
+func Conscan(f common.Atomic, options *common.Opts, concurrency int) {
 	request_ch := make(chan *common.Opts)
 	var wg sync.WaitGroup
-	for i := 0; i < 10; i++ {
+	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -34,6 +34,8 @@ func Conscan(f common.Atomic, options *common.Opts) {
 			Hopper: options.Hopper,
 			Target: line,
 			File:   options.File,
+			Broker: options.Broker,
+			Dork:   options.Dork,
 		}
 	}
 	close(request_ch)
