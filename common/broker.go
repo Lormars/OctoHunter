@@ -7,7 +7,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/joho/godotenv"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
@@ -25,8 +24,6 @@ func failOnError(err error, msg string) {
 
 func Init() {
 	var err error
-	err = godotenv.Load()
-	failOnError(err, "Error loading .env file")
 	user := os.Getenv("RABBITMQ_USER")
 	password := os.Getenv("RABBITMQ_PASSWORD")
 	connStr := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, password)

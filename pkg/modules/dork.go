@@ -13,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/multiplex"
+	"github.com/lormars/octohunter/internal/proxy"
 )
 
 func GoogleDork(options *common.Opts) {
@@ -31,7 +32,8 @@ func singleDork(options *common.Opts) {
 		time.Sleep(randomDuration)
 
 		dork = url.QueryEscape(dork)
-		url := "https://www.google.com/search?q=" + dork + "+" + site
+		query := dork + "+" + site
+		url := "https://www.google.com/search?q=" + query
 		//fmt.Print(url + "\n")
 		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
@@ -55,15 +57,23 @@ func singleDork(options *common.Opts) {
 			return
 		}
 		if strings.Contains(string(body), "Our systems have detected unusual traffic from your computer network.") {
-			fmt.Println("Google detected unusual traffic, please try again later")
-			if options.Broker {
+			fmt.Println("Google detected unusual traffic, try aws api gateway")
+			var bypassed bool
+			for i := 0; i < 3; i++ {
+				bypassed, body = proxy.AwsProxy(query)
+				if bypassed {
+					fmt.Println("Bypassed Google Captcha with AWS API Gateway")
+					break
+				}
+			}
+
+			if options.Broker && !bypassed {
 				msg := fmt.Sprintf("Google detected unusual traffic for %s", url)
 				common.PublishMessage(msg)
+				time.Sleep(1 * time.Minute)
+				continue
 			}
-			time.Sleep(1 * time.Minute)
-			continue
 		}
-
 		pattern := fmt.Sprintf(`(http|https)://[a-zA-Z0-9./?=_~-]*%s/[a-zA-Z0-9./?=_~-]*`, regexp.QuoteMeta(options.Target))
 		re := regexp.MustCompile(pattern)
 		matches := re.FindAllString(string(body), -1)
