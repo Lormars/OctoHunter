@@ -79,8 +79,9 @@ func singleDork(options *common.Opts) {
 		matches := re.FindAllString(string(body), -1)
 		for _, match := range matches {
 			fmt.Println(match)
+			msg := fmt.Sprintf("Dork: %s, Match: %s", query, match)
 			if options.Broker {
-				common.PublishMessage(match)
+				common.PublishMessage(msg)
 			}
 		}
 
