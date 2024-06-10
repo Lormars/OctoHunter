@@ -2,9 +2,6 @@ package main
 
 import (
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/joho/godotenv"
 	"github.com/lormars/octohunter/common"
@@ -33,9 +30,4 @@ func main() {
 		modules.GoogleDork(options)
 	}
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-sigs
-	log.Printf("Received signal: %s", sig)
-	log.Println("Exiting...")
 }
