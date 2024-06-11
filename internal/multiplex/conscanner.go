@@ -34,6 +34,8 @@ func Conscan(f common.Atomic, options *common.Opts, concurrency int) {
 			Hopper: options.Hopper,
 			Target: line,
 			File:   options.File,
+			Method: options.Method,
+			Cname:  options.Cname,
 			Broker: options.Broker,
 			Dork:   options.Dork,
 		}

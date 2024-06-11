@@ -7,6 +7,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/parser"
 	"github.com/lormars/octohunter/pkg/modules"
+	"github.com/lormars/octohunter/pkg/modules/takeover"
 )
 
 func main() {
@@ -28,6 +29,14 @@ func main() {
 
 	if options.Dork {
 		modules.GoogleDork(options)
+	}
+
+	if options.Method {
+		modules.CheckMethod(options)
+	}
+
+	if options.Cname {
+		takeover.CNAMETakeover(options)
 	}
 
 }
