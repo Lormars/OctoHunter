@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/requester/pkg/runner"
@@ -18,7 +19,7 @@ var records []common.TakeoverRecord
 func CNAMETakeover(options *common.Opts) {
 	parseSignature("list/fingerprints.json")
 	if options.Target == "none" {
-		multiplex.Conscan(takeover, options, 10)
+		multiplex.Conscan(takeover, options, 50)
 	} else {
 		takeover(options)
 	}
@@ -37,7 +38,14 @@ func takeover(opts *common.Opts) {
 		cname = strings.Replace(cname, "]", "", -1)
 	}
 
-	checkSig(domain, cname)
+	skip := []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "elb.amazonaws"}
+	for _, s := range skip {
+		if strings.Contains(cname, s) {
+			fmt.Println("skipped")
+			return
+		}
+	}
+	checkSig(domain, cname, opts)
 
 }
 
@@ -51,7 +59,7 @@ func checkNXDomain(cname string) bool {
 	return false
 }
 
-func checkSig(domain, cname string) bool {
+func checkSig(domain, cname string, opts *common.Opts) bool {
 	protocols := []string{"http://", "https://"}
 	for _, protocol := range protocols {
 		url := protocol + domain
@@ -65,12 +73,21 @@ func checkSig(domain, cname string) bool {
 		}
 		for _, record := range records {
 			if record.Vulnerable {
+
 				if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
-					fmt.Printf("Vulnerable to CNAME takeover through fingerprint: %s\n", url)
+					msg := "[CNAME] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
+					color.Red(msg)
+					if opts.Broker {
+						common.PublishMessage(msg)
+					}
 					return true
 				}
 				if record.Nxdomain && record.Fingerprint == "NXDOMAIN" && checkNXDomain(cname) {
-					fmt.Printf("Vulnerable to CNAME takeover through nxdomain: %s\n", url)
+					msg := "[CNAME] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
+					color.Red(msg)
+					if opts.Broker {
+						common.PublishMessage(msg)
+					}
 					return true
 				}
 			}
@@ -105,7 +122,8 @@ func MonitorPreprocess() {
 		name string
 		args []string
 	}{
-		{"bash", []string{"-c", "cat list/subdomains list/gunames | grep -v '\\*' | sort | uniq > list/subdomains"}},
+		{"bash", []string{"-c", "cat list/subdomains list/gunames | grep -v '\\*' | sort | uniq > list/temp_subdomains"}},
+		{"bash", []string{"-c", "mv list/temp_subdomains list/subdomains"}},
 		{"dnsx", []string{"-l", "list/subdomains", "-nc", "-cname", "-re", "-o", "list/cnames_raw"}},
 		{"bash", []string{"-c", "cat list/cnames_raw | grep -iv 'shop.spacex.com' > list/cnames"}},
 	}
@@ -117,5 +135,6 @@ func MonitorPreprocess() {
 			return
 		}
 	}
-	fmt.Println("Preprocess completed")
+	fmt.Println("Preprocess completed, scanning again...")
+
 }

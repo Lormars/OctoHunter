@@ -23,6 +23,11 @@ func main() {
 		defer common.Close()
 	}
 
+	if options.Monitor {
+		modules.Monitor(options)
+
+	}
+
 	if options.Hopper {
 		modules.CheckHop(options)
 	}

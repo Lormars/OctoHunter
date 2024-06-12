@@ -31,13 +31,14 @@ func Conscan(f common.Atomic, options *common.Opts, concurrency int) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		request_ch <- &common.Opts{
-			Hopper: options.Hopper,
-			Target: line,
-			File:   options.File,
-			Method: options.Method,
-			Cname:  options.Cname,
-			Broker: options.Broker,
-			Dork:   options.Dork,
+			Hopper:  options.Hopper,
+			Target:  line,
+			File:    options.File,
+			Method:  options.Method,
+			Monitor: options.Monitor,
+			Cname:   options.Cname,
+			Broker:  options.Broker,
+			Dork:    options.Dork,
 		}
 	}
 	close(request_ch)
