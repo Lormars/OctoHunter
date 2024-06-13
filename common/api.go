@@ -7,14 +7,15 @@ import (
 )
 
 type Opts struct {
-	Hopper  bool
-	Dork    bool
-	Broker  bool
-	Method  bool
-	Cname   bool
-	Monitor bool
-	Target  string
-	File    string
+	Hopper   bool
+	Dork     bool
+	Broker   bool
+	Method   bool
+	Cname    bool
+	Monitor  bool
+	Redirect bool
+	Target   string
+	File     string
 }
 
 type TakeoverRecord struct {

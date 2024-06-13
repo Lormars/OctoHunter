@@ -116,25 +116,3 @@ func parseSignature(fileName string) {
 		return
 	}
 }
-
-func MonitorPreprocess() {
-	commands := []struct {
-		name string
-		args []string
-	}{
-		{"bash", []string{"-c", "cat list/subdomains list/gunames | grep -v '\\*' | sort | uniq > list/temp_subdomains"}},
-		{"bash", []string{"-c", "mv list/temp_subdomains list/subdomains"}},
-		{"dnsx", []string{"-l", "list/subdomains", "-nc", "-cname", "-re", "-o", "list/cnames_raw"}},
-		{"bash", []string{"-c", "cat list/cnames_raw | grep -iv 'shop.spacex.com' > list/cnames"}},
-	}
-
-	for _, command := range commands {
-		err := common.RunCommand(command.name, command.args)
-		if err != nil {
-			fmt.Printf("Error running command %s: %s\n", command.name, err)
-			return
-		}
-	}
-	fmt.Println("Preprocess completed, scanning again...")
-
-}

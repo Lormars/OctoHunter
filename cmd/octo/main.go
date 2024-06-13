@@ -44,4 +44,8 @@ func main() {
 		takeover.CNAMETakeover(options)
 	}
 
+	if options.Redirect {
+		modules.CheckRedirect(options)
+	}
+
 }
