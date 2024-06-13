@@ -53,20 +53,6 @@ func takeover(opts *common.Opts) {
 
 }
 
-func checkNXDomain(hostname string) (bool, string) {
-	cname, err := net.LookupCNAME(hostname)
-	if err != nil {
-		if dnsErr, ok := err.(*net.DNSError); ok && dnsErr.Err == "no such host" {
-			return true, hostname
-		}
-		return false, ""
-	}
-
-	cname = cname[:len(cname)-1]
-	return checkNXDomain(cname)
-
-}
-
 func checkSig(domain, cname string, opts *common.Opts) bool {
 	var dnsError error
 	var temp_cname string
@@ -74,7 +60,7 @@ func checkSig(domain, cname string, opts *common.Opts) bool {
 	temp_domain := domain
 	for {
 		temp_cname, dnsError = checker.FindImmediateCNAME(temp_domain)
-		if temp_cname != temp_domain {
+		if temp_cname == temp_domain {
 			break
 		}
 
