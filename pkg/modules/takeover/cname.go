@@ -2,6 +2,7 @@ package takeover
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/requester/pkg/runner"
 )
@@ -66,50 +68,70 @@ func checkNXDomain(hostname string) (bool, string) {
 }
 
 func checkSig(domain, cname string, opts *common.Opts) bool {
-	protocols := []string{"http://", "https://"}
-	for _, protocol := range protocols {
-		url := protocol + domain
-		config, err := runner.NewConfig(url)
-		if err != nil {
-			continue
+	var dnsError error
+	var temp_cname string
+
+	temp_domain := domain
+	for {
+		temp_cname, dnsError = checker.FindImmediateCNAME(temp_domain)
+		if temp_cname != temp_domain {
+			break
 		}
-		resp, err := runner.Run(config)
-		if err != nil {
-			isNx, finalcname := checkNXDomain(cname)
-			if isNx {
-				for _, record := range records {
-					if record.Nxdomain && record.Vulnerable {
-						for _, sig := range record.Cname {
-							if strings.Contains(finalcname, sig) {
-								msg := "[CNAME Confirmed] " + url + " | Fingerprint: " + sig + " | Service: " + record.Service
-								color.Red(msg)
-								if opts.Broker {
-									common.PublishMessage(msg)
-								}
-								return true
+
+		temp_domain = temp_cname
+
+	}
+
+	if dnsError != nil {
+		if errors.Is(dnsError, common.ErrNXDOMAIN) {
+			for _, record := range records {
+				if record.Nxdomain && record.Vulnerable {
+					for _, sig := range record.Cname {
+						if strings.Contains(temp_cname, sig) {
+							msg := "[CNAME Confirmed] " + domain + " | Fingerprint: " + sig + " | Service: " + record.Service
+							color.Red(msg)
+							if opts.Broker {
+								common.PublishMessage(msg)
 							}
+							return true
 						}
 					}
 				}
 			}
-			continue
 		}
-		for _, record := range records {
-			if record.Vulnerable {
+		return false
+	} else {
+		protocols := []string{"http://", "https://"}
+		for _, protocol := range protocols {
+			url := protocol + domain
+			config, err := runner.NewConfig(url)
+			if err != nil {
+				continue
+			}
+			resp, err := runner.Run(config)
+			if err != nil {
+				continue
+			}
+			for _, record := range records {
+				if record.Vulnerable {
 
-				if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
-					msg := "[CNAME Potential] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
-					color.Red(msg)
-					if opts.Broker {
-						common.PublishMessage(msg)
+					if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
+						msg := "[CNAME Potential] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
+						color.Red(msg)
+						if opts.Broker {
+							common.PublishMessage(msg)
+						}
+						return true
 					}
-					return true
-				}
 
+				}
 			}
 		}
+
+		return false
+
 	}
-	return false
+
 }
 
 func parseSignature(fileName string) {
