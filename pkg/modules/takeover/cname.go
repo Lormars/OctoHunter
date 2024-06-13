@@ -92,6 +92,7 @@ func checkSig(domain, cname string, opts *common.Opts) bool {
 					}
 				}
 			}
+			continue
 		}
 		for _, record := range records {
 			if record.Vulnerable {
