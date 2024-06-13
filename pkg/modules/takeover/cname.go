@@ -16,8 +16,11 @@ import (
 
 var records []common.TakeoverRecord
 
+var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "elb.amazonaws"}
+
 func CNAMETakeover(options *common.Opts) {
-	parseSignature("list/fingerprints.json")
+	parseSignature("asset/fingerprints.json")
+
 	if options.Target == "none" {
 		multiplex.Conscan(takeover, options, 50)
 	} else {
@@ -38,7 +41,6 @@ func takeover(opts *common.Opts) {
 		cname = strings.Replace(cname, "]", "", -1)
 	}
 
-	skip := []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "elb.amazonaws"}
 	for _, s := range skip {
 		if strings.Contains(cname, s) {
 			fmt.Println("skipped")
@@ -49,14 +51,18 @@ func takeover(opts *common.Opts) {
 
 }
 
-func checkNXDomain(cname string) bool {
-	_, err := net.LookupHost(cname)
+func checkNXDomain(hostname string) (bool, string) {
+	cname, err := net.LookupCNAME(hostname)
 	if err != nil {
 		if dnsErr, ok := err.(*net.DNSError); ok && dnsErr.Err == "no such host" {
-			return true
+			return true, hostname
 		}
+		return false, ""
 	}
-	return false
+
+	cname = cname[:len(cname)-1]
+	return checkNXDomain(cname)
+
 }
 
 func checkSig(domain, cname string, opts *common.Opts) bool {
@@ -69,27 +75,36 @@ func checkSig(domain, cname string, opts *common.Opts) bool {
 		}
 		resp, err := runner.Run(config)
 		if err != nil {
-			continue
+			isNx, finalcname := checkNXDomain(cname)
+			if isNx {
+				for _, record := range records {
+					if record.Nxdomain && record.Vulnerable {
+						for _, sig := range record.Cname {
+							if strings.Contains(finalcname, sig) {
+								msg := "[CNAME Confirmed] " + url + " | Fingerprint: " + sig + " | Service: " + record.Service
+								color.Red(msg)
+								if opts.Broker {
+									common.PublishMessage(msg)
+								}
+								return true
+							}
+						}
+					}
+				}
+			}
 		}
 		for _, record := range records {
 			if record.Vulnerable {
 
 				if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
-					msg := "[CNAME] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
+					msg := "[CNAME Potential] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
 					color.Red(msg)
 					if opts.Broker {
 						common.PublishMessage(msg)
 					}
 					return true
 				}
-				if record.Nxdomain && record.Fingerprint == "NXDOMAIN" && checkNXDomain(cname) {
-					msg := "[CNAME] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
-					color.Red(msg)
-					if opts.Broker {
-						common.PublishMessage(msg)
-					}
-					return true
-				}
+
 			}
 		}
 	}
