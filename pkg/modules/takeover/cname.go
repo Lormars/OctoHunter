@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"os"
 	"strings"
 
@@ -60,6 +59,10 @@ func checkSig(domain, cname string, opts *common.Opts) bool {
 	temp_domain := domain
 	for {
 		temp_cname, dnsError = checker.FindImmediateCNAME(temp_domain)
+		if temp_cname == "" || (dnsError != nil && !errors.Is(dnsError, common.ErrNXDOMAIN)) {
+			fmt.Printf("Oops, something bad happened on checkSig with temp_cname: %s and dnsError: %v", temp_cname, dnsError)
+			return false
+		}
 		if temp_cname == temp_domain {
 			break
 		}
