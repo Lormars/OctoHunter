@@ -37,7 +37,10 @@ func singleCheck(options *common.Opts) {
 	}
 	result, place := comparer.CompareResponse(control_resp, treatment_resp)
 	if !result && place == "status" {
-		msg := fmt.Sprintf("The responses are different for %s: %d vs %d\n", options.Target, control_resp.Status, treatment_resp.Status)
+		msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, control_resp.Status, treatment_resp.Status)
 		color.Red(msg)
+		if options.Broker {
+			common.PublishMessage(msg)
+		}
 	}
 }

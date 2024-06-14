@@ -1,7 +1,6 @@
 package checker
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/lormars/octohunter/common"
@@ -25,7 +24,7 @@ func FindImmediateCNAME(hostname string) (string, error) {
 	r, _, err := c.Exchange(m, dnsServer)
 
 	if err != nil {
-		fmt.Printf("DNS query failed: %v\n", err)
+		//fmt.Printf("DNS query failed: %v\n", err)
 		return "", err
 	}
 
@@ -48,7 +47,7 @@ func FindImmediateCNAME(hostname string) (string, error) {
 
 }
 
-func answertoCname(r *Msg) string {
+func answertoCname(r *dns.Msg) string {
 	for _, ans := range r.Answer {
 		if cname, ok := ans.(*dns.CNAME); ok {
 			target := cname.Target

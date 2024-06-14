@@ -10,8 +10,5 @@ func CheckAccess(resp *common.Response) bool {
 }
 
 func Check405(resp *common.Response) bool {
-	if resp.Status == 405 {
-		return true
-	}
-	return false
+	return resp.Status == 405
 }

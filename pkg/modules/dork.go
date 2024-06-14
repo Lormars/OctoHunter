@@ -67,9 +67,7 @@ func singleDork(options *common.Opts) {
 				}
 			}
 
-			if options.Broker && !bypassed {
-				msg := fmt.Sprintf("Google detected unusual traffic for %s", url)
-				common.PublishMessage(msg)
+			if !bypassed {
 				time.Sleep(1 * time.Minute)
 				continue
 			}
@@ -79,7 +77,7 @@ func singleDork(options *common.Opts) {
 		matches := re.FindAllString(string(body), -1)
 		for _, match := range matches {
 			fmt.Println(match)
-			msg := fmt.Sprintf("Dork: %s, Match: %s", query, match)
+			msg := fmt.Sprintf("[Dork]: %s, Match: %s", query, match)
 			if options.Broker {
 				common.PublishMessage(msg)
 			}

@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/multiplex"
@@ -45,7 +46,11 @@ func singleRedirectCheck(opts *common.Opts) {
 					continue
 				}
 				if length_i > 100 {
-					fmt.Printf("[Redirect] from %s to %s\n", newUrl, finalURL.String())
+					msg := fmt.Sprintf("[Redirect] from %s to %s\n", newUrl, finalURL.String())
+					color.Red(msg)
+					if opts.Broker {
+						common.PublishMessage(msg)
+					}
 				}
 			}
 		}

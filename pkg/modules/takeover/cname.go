@@ -44,15 +44,15 @@ func takeover(opts *common.Opts) {
 
 	for _, s := range skip {
 		if strings.Contains(cname, s) {
-			fmt.Println("skipped")
+			//fmt.Println("skipped")
 			return
 		}
 	}
-	checkSig(domain, cname, opts)
+	checkSig(domain, opts)
 
 }
 
-func checkSig(domain, cname string, opts *common.Opts) bool {
+func checkSig(domain string, opts *common.Opts) bool {
 	var dnsError error
 	var temp_cname string
 
@@ -60,7 +60,7 @@ func checkSig(domain, cname string, opts *common.Opts) bool {
 	for {
 		temp_cname, dnsError = checker.FindImmediateCNAME(temp_domain)
 		if temp_cname == "" || (dnsError != nil && !errors.Is(dnsError, common.ErrNXDOMAIN)) {
-			fmt.Printf("Oops, something bad happened on checkSig with temp_cname: %s and dnsError: %v", temp_cname, dnsError)
+			//fmt.Printf("Oops, something bad happened on checkSig with temp_cname: %s and dnsError: %v", temp_cname, dnsError)
 			return false
 		}
 		if temp_cname == temp_domain {
@@ -77,7 +77,7 @@ func checkSig(domain, cname string, opts *common.Opts) bool {
 				if record.Nxdomain && record.Vulnerable {
 					for _, sig := range record.Cname {
 						if strings.Contains(temp_cname, sig) {
-							msg := "[CNAME Confirmed] " + domain + " | Fingerprint: " + sig + " | Service: " + record.Service
+							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
 							color.Red(msg)
 							if opts.Broker {
 								common.PublishMessage(msg)

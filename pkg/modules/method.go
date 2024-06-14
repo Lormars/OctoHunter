@@ -3,6 +3,7 @@ package modules
 import (
 	"fmt"
 
+	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/multiplex"
@@ -22,12 +23,20 @@ func singleMethodCheck(options *common.Opts) {
 	headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
 	for _, method := range methods {
 		if testAccessControl(options, method) {
-			fmt.Printf("Access control Bypassed for target %s using method %s\n", options.Target, method)
+			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s\n", options.Target, method)
+			color.Red(msg)
+			if options.Broker {
+				common.PublishMessage(msg)
+			}
 		}
 	}
 	for _, header := range headers {
 		if checkMethodOverwrite(options, header) {
-			fmt.Printf("Method Overwrite Bypassed for target %s using header %s\n", options.Target, header)
+			msg := fmt.Sprintf("[Method] Method Overwrite Bypassed for target %s using header %s\n", options.Target, header)
+			color.Red(msg)
+			if options.Broker {
+				common.PublishMessage(msg)
+			}
 		}
 	}
 
