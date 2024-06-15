@@ -102,6 +102,22 @@ func checkSig(domain string, opts *common.Opts) bool {
 				continue
 			}
 			for _, record := range records {
+
+				for _, sig := range record.Cname {
+					if strings.Contains(temp_cname, sig) {
+						if !record.Vulnerable {
+							return false
+						} else {
+							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
+							color.Red(msg)
+							if opts.Broker {
+								common.PublishMessage(msg)
+							}
+							return true
+						}
+					}
+				}
+
 				if record.Vulnerable {
 
 					if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
