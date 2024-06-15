@@ -41,10 +41,6 @@ func takeover(opts *common.Opts) {
 		cname = strings.Replace(cname, "[", "", -1)
 		cname = strings.Replace(cname, "]", "", -1)
 	}
-	//just for elb...
-	if strings.Contains(cname, "elb.") && strings.Contains(cname, "amazonaws.com") {
-		return
-	}
 
 	for _, s := range skip {
 		if strings.Contains(cname, s) {
@@ -73,6 +69,10 @@ func checkSig(domain string, opts *common.Opts) bool {
 
 		temp_domain = temp_cname
 
+	}
+	//just for elb...
+	if strings.Contains(temp_cname, "elb.") && strings.Contains(temp_cname, "amazonaws.com") {
+		return false
 	}
 
 	if dnsError != nil {
