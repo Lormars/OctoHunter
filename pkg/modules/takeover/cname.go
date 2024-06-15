@@ -17,13 +17,13 @@ import (
 
 var records []common.TakeoverRecord
 
-var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "elb.amazonaws"}
+var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "sendgrid.net"}
 
 func CNAMETakeover(options *common.Opts) {
 	parseSignature("asset/fingerprints.json")
 
 	if options.Target == "none" {
-		multiplex.Conscan(takeover, options, 50)
+		multiplex.Conscan(takeover, options, 100)
 	} else {
 		takeover(options)
 	}
@@ -40,6 +40,10 @@ func takeover(opts *common.Opts) {
 		cname = parts[2]
 		cname = strings.Replace(cname, "[", "", -1)
 		cname = strings.Replace(cname, "]", "", -1)
+	}
+	//just for elb...
+	if strings.Contains(cname, "elb.") && strings.Contains(cname, "amazonaws.com") {
+		return
 	}
 
 	for _, s := range skip {
