@@ -71,7 +71,10 @@ func checkSig(domain string, opts *common.Opts) bool {
 
 	}
 	//just for elb...
-	fmt.Println(temp_cname, domain)
+	if strings.Contains(domain, "tesla") {
+		msg := fmt.Sprintf("DEBUG: ", temp_cname, domain)
+		common.PublishMessage(msg)
+	}
 	if strings.Contains(temp_cname, "elb.") && strings.Contains(temp_cname, "amazonaws.com") {
 		return false
 	}
