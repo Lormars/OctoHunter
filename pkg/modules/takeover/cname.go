@@ -17,7 +17,7 @@ import (
 
 var records []common.TakeoverRecord
 
-var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "sendgrid.net"}
+var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "sendgrid.net", "akamaiedge"}
 
 func CNAMETakeover(options *common.Opts) {
 	parseSignature("asset/fingerprints.json")
@@ -73,6 +73,11 @@ func checkSig(domain string, opts *common.Opts) bool {
 	//just for elb...
 	if strings.Contains(temp_cname, "elb.") && strings.Contains(temp_cname, "amazonaws.com") {
 		return false
+	}
+	for _, s := range skip {
+		if strings.Contains(temp_cname, s) {
+			return false
+		}
 	}
 
 	if dnsError != nil {

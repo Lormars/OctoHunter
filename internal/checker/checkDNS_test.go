@@ -5,6 +5,6 @@ import (
 )
 
 func TestFindImmediateCname(t *testing.T) {
-	res, err := FindImmediateCNAME("dlab01-mda-w2b-filemanagement.azurewebsites.net")
+	res, err := FindImmediateCNAME("npute-prd-a-ea25687038eacb2e.elb.us-west-2.amazonaws.com")
 	t.Logf("res is %s, err is %v\n", res, err)
 }
