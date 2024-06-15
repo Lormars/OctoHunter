@@ -87,5 +87,5 @@ func singleDork(options *common.Opts) {
 }
 
 func multiDork(options *common.Opts) {
-	multiplex.Conscan(singleDork, options, 1)
+	multiplex.Conscan(singleDork, options, options.DorkFile, 1)
 }

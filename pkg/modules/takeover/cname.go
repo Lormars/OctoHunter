@@ -23,7 +23,7 @@ func CNAMETakeover(options *common.Opts) {
 	parseSignature("asset/fingerprints.json")
 
 	if options.Target == "none" {
-		multiplex.Conscan(takeover, options, 100)
+		multiplex.Conscan(takeover, options, options.DnsFile, 100)
 	} else {
 		takeover(options)
 	}
@@ -71,10 +71,6 @@ func checkSig(domain string, opts *common.Opts) bool {
 
 	}
 	//just for elb...
-	if strings.Contains(domain, "tesla") {
-		msg := fmt.Sprintf("DEBUG: ", temp_cname, domain)
-		common.PublishMessage(msg)
-	}
 	if strings.Contains(temp_cname, "elb.") && strings.Contains(temp_cname, "amazonaws.com") {
 		return false
 	}

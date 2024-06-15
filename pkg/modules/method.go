@@ -43,7 +43,7 @@ func singleMethodCheck(options *common.Opts) {
 }
 
 func multiMethodCheck(options *common.Opts) {
-	multiplex.Conscan(singleMethodCheck, options, 10)
+	multiplex.Conscan(singleMethodCheck, options, options.MethodFile, 10)
 }
 
 func testAccessControl(options *common.Opts, verb string) bool {

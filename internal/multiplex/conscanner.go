@@ -9,7 +9,7 @@ import (
 	"github.com/lormars/octohunter/common"
 )
 
-func Conscan(f common.Atomic, options *common.Opts, concurrency int) {
+func Conscan(f common.Atomic, options *common.Opts, fileName string, concurrency int) {
 	request_ch := make(chan *common.Opts)
 	var wg sync.WaitGroup
 	for i := 0; i < concurrency; i++ {
@@ -21,7 +21,7 @@ func Conscan(f common.Atomic, options *common.Opts, concurrency int) {
 			}
 		}()
 	}
-	file, err := os.Open(options.File)
+	file, err := os.Open(fileName)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -31,15 +31,19 @@ func Conscan(f common.Atomic, options *common.Opts, concurrency int) {
 	for scanner.Scan() {
 		line := scanner.Text()
 		request_ch <- &common.Opts{
-			Hopper:   options.Hopper,
-			Target:   line,
-			File:     options.File,
-			Method:   options.Method,
-			Monitor:  options.Monitor,
-			Redirect: options.Redirect,
-			Cname:    options.Cname,
-			Broker:   options.Broker,
-			Dork:     options.Dork,
+			Hopper:       options.Hopper,
+			Target:       line,
+			Method:       options.Method,
+			Monitor:      options.Monitor,
+			Redirect:     options.Redirect,
+			Cname:        options.Cname,
+			Broker:       options.Broker,
+			Dork:         options.Dork,
+			DorkFile:     options.DorkFile,
+			HopFile:      options.HopFile,
+			MethodFile:   options.MethodFile,
+			RedirectFile: options.RedirectFile,
+			DnsFile:      options.DnsFile,
 		}
 	}
 	close(request_ch)

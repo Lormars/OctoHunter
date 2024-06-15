@@ -58,7 +58,7 @@ func singleRedirectCheck(opts *common.Opts) {
 }
 
 func multiRedirectCheck(opts *common.Opts) {
-	multiplex.Conscan(singleRedirectCheck, opts, 10)
+	multiplex.Conscan(singleRedirectCheck, opts, opts.RedirectFile, 10)
 }
 
 func getFinalURL(initialURL string) (*url.URL, error) {

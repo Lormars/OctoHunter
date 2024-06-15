@@ -40,12 +40,11 @@ func main() {
 		modules.CheckMethod(options)
 	}
 
-	if options.Cname {
-		takeover.CNAMETakeover(options)
-	}
-
 	if options.Redirect {
 		modules.CheckRedirect(options)
 	}
 
+	if options.Cname {
+		takeover.CNAMETakeover(options)
+	}
 }
