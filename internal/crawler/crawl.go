@@ -66,6 +66,6 @@ func checkStatus(target string) (int, string) {
 		return common.SERVERERR, ""
 	}
 
-	return common.XERROR
+	return common.XERROR, ""
 
 }

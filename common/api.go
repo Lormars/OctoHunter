@@ -2,24 +2,25 @@ package common
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"os/exec"
 )
 
 type Opts struct {
-	Hopper       bool
-	Dork         bool
-	Broker       bool
-	Method       bool
-	Cname        bool
-	Monitor      bool
-	Redirect     bool
-	Target       string
-	DorkFile     string
-	HopFile      string
-	MethodFile   string
-	RedirectFile string
-	DnsFile      string
+	Hopper       bool   `json:"hopper"`
+	Dork         bool   `json:"dork"`
+	Broker       bool   `json:"broker"`
+	Method       bool   `json:"method"`
+	Cname        bool   `json:"cname"`
+	Monitor      bool   `json:"monitor"`
+	Redirect     bool   `json:"redirect"`
+	Target       string `json:"target"`
+	DorkFile     string `json:"dorkFile"`
+	HopFile      string `json:"hopFile"`
+	MethodFile   string `json:"methodFile"`
+	RedirectFile string `json:"redirectFile"`
+	DnsFile      string `json:"dnsFile"`
 }
 
 type TakeoverRecord struct {
@@ -57,3 +58,5 @@ func RunCommand(name string, args []string) error {
 	}
 	return nil
 }
+
+var DB *sql.DB

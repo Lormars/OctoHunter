@@ -5,12 +5,16 @@ import (
 
 	"github.com/joho/godotenv"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/parser"
 	"github.com/lormars/octohunter/pkg/modules"
 	"github.com/lormars/octohunter/pkg/modules/takeover"
 )
 
 func main() {
+
+	cacher.Init()
+
 	options := parser.Parse_Options()
 
 	err := godotenv.Load()
@@ -26,25 +30,26 @@ func main() {
 	if options.Monitor {
 		modules.Monitor(options)
 
-	}
+	} else {
 
-	if options.Hopper {
-		modules.CheckHop(options)
-	}
+		if options.Hopper {
+			modules.CheckHop(options)
+		}
 
-	if options.Dork {
-		modules.GoogleDork(options)
-	}
+		if options.Dork {
+			modules.GoogleDork(options)
+		}
 
-	if options.Method {
-		modules.CheckMethod(options)
-	}
+		if options.Method {
+			modules.CheckMethod(options)
+		}
 
-	if options.Redirect {
-		modules.CheckRedirect(options)
-	}
+		if options.Redirect {
+			modules.CheckRedirect(options)
+		}
 
-	if options.Cname {
-		takeover.CNAMETakeover(options)
+		if options.Cname {
+			takeover.CNAMETakeover(options)
+		}
 	}
 }
