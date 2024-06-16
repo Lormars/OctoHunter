@@ -130,7 +130,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 				if record.Vulnerable {
 
 					if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
-						msg := "[CNAME Potential] " + url + " | Fingerprint: " + record.Fingerprint + " | Service: " + record.Service
+						msg := "[CNAME Potential] " + url + " | Cname: " + temp_cname + " | Service: " + record.Service
 						color.Red(msg)
 						if opts.Broker {
 							common.PublishMessage(msg)

@@ -2,6 +2,7 @@ package modules
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -19,7 +20,7 @@ func CheckMethod(options *common.Opts) {
 }
 
 func singleMethodCheck(options *common.Opts) {
-	methods := []string{"HEAD", "POST", "FOO"}
+	methods := []string{"POST", "FOO"}
 	headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
 	for _, method := range methods {
 		if testAccessControl(options, method) {
@@ -29,6 +30,7 @@ func singleMethodCheck(options *common.Opts) {
 				common.PublishMessage(msg)
 			}
 		}
+		time.Sleep(1 * time.Second)
 	}
 	for _, header := range headers {
 		if checkMethodOverwrite(options, header) {
@@ -38,6 +40,7 @@ func singleMethodCheck(options *common.Opts) {
 				common.PublishMessage(msg)
 			}
 		}
+		time.Sleep(1 * time.Second)
 	}
 
 }

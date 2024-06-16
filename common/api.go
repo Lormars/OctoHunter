@@ -35,6 +35,14 @@ type TakeoverRecord struct {
 	Vulnerable    bool     `json:"vulnerable"`
 }
 
+const (
+	OK = iota
+	REDIRECT
+	CLIENTERR
+	SERVERERR
+	XERROR
+)
+
 type Atomic func(options *Opts)
 
 func RunCommand(name string, args []string) error {
