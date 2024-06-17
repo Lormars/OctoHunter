@@ -13,7 +13,7 @@ func Parse_Options() *common.Opts {
 	flag.Var(&modules, "modules", "The module to run")
 	var (
 		target       = flag.String("target", "none", "The target to scan")
-		dnsFile      = flag.String("dnsfile", "none", "The file to scan for subdomain takeover")
+		cnameFile    = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")
 		dorkFile     = flag.String("dorkfile", "none", "The file to scan for Google dork")
 		methodFile   = flag.String("methodfile", "none", "The file to scan for HTTP method checker")
 		redirectFile = flag.String("redirectfile", "none", "The file to scan for redirect checker")
@@ -23,7 +23,7 @@ func Parse_Options() *common.Opts {
 	return &common.Opts{
 		Module:       modules,
 		Target:       *target,
-		DnsFile:      *dnsFile,
+		CnameFile:    *cnameFile,
 		DorkFile:     *dorkFile,
 		MethodFile:   *methodFile,
 		RedirectFile: *redirectFile,

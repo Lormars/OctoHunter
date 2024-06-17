@@ -11,6 +11,7 @@ import (
 )
 
 // Crawler that does not follow redirect
+// but what is it crawling....? like other modules? crawl from a file? or crawl from the result of other modules?
 func Crawl(target string, concurrency int) {
 	// Crawl the web
 	status, body := checkStatus(target)

@@ -12,7 +12,7 @@ import (
 )
 
 func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileName, cacheName string, concurrency int) {
-	request_ch := make(chan *common.Opts)
+	request_ch := make(chan *common.Opts, concurrency)
 	var wg sync.WaitGroup
 	for i := 0; i < concurrency; i++ {
 		wg.Add(1)
@@ -55,7 +55,7 @@ Loop:
 			HopFile:      options.HopFile,
 			MethodFile:   options.MethodFile,
 			RedirectFile: options.RedirectFile,
-			DnsFile:      options.DnsFile,
+			CnameFile:    options.CnameFile,
 		}:
 		}
 	}

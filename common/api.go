@@ -44,7 +44,7 @@ type Opts struct {
 	HopFile      string     `json:"hopFile"`
 	MethodFile   string     `json:"methodFile"`
 	RedirectFile string     `json:"redirectFile"`
-	DnsFile      string     `json:"dnsFile"`
+	CnameFile    string     `json:"cnameFile"`
 }
 
 type TakeoverRecord struct {

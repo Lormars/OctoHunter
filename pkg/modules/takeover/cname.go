@@ -26,7 +26,7 @@ func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts
 	parseSignature("asset/fingerprints.json")
 
 	if options.Target == "none" {
-		multiplex.Conscan(ctx, takeover, options, options.DnsFile, "cname", 100)
+		multiplex.Conscan(ctx, takeover, options, options.CnameFile, "cname", 100)
 	} else {
 		takeover(options)
 	}
