@@ -1,0 +1,14 @@
+POST http://localhost:8888/start
+Content-Type: application/json
+Authorization: Basic user:password
+
+{
+    "modules": "method",
+    "methodFile": "list/methodFile",
+    "target": "none"
+} 
+
+###
+GET http://localhost:8888/stop?module=method
+Authorization: Basic user:password
+

@@ -1,12 +1,14 @@
 package takeover
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -19,11 +21,12 @@ var records []common.TakeoverRecord
 
 var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "sendgrid.net", "akamaiedge"}
 
-func CNAMETakeover(options *common.Opts) {
+func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
+	defer wg.Done()
 	parseSignature("asset/fingerprints.json")
 
 	if options.Target == "none" {
-		multiplex.Conscan(takeover, options, options.DnsFile, 100)
+		multiplex.Conscan(ctx, takeover, options, options.DnsFile, "cname", 100)
 	} else {
 		takeover(options)
 	}
@@ -88,7 +91,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 						if strings.Contains(temp_cname, sig) {
 							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
 							color.Red(msg)
-							if opts.Broker {
+							if opts.Module.Contains("broker") {
 								common.PublishMessage(msg)
 							}
 							return true
@@ -119,7 +122,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 						} else {
 							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
 							color.Red(msg)
-							if opts.Broker {
+							if opts.Module.Contains("broker") {
 								common.PublishMessage(msg)
 							}
 							return true
@@ -132,7 +135,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 					if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
 						msg := "[CNAME Potential] " + url + " | Cname: " + temp_cname + " | Service: " + record.Service
 						color.Red(msg)
-						if opts.Broker {
+						if opts.Module.Contains("broker") {
 							common.PublishMessage(msg)
 						}
 						return true

@@ -1,7 +1,9 @@
 package modules
 
 import (
+	"context"
 	"fmt"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -10,16 +12,13 @@ import (
 	"github.com/lormars/requester/pkg/runner"
 )
 
-func CheckHop(options *common.Opts) {
+func CheckHop(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
+	defer wg.Done()
 	if options.Target != "none" {
 		singleCheck(options)
 	} else {
-		multiCheck(options)
+		multiplex.Conscan(ctx, singleCheck, options, options.HopFile, "hop", 10)
 	}
-}
-
-func multiCheck(options *common.Opts) {
-	multiplex.Conscan(singleCheck, options, options.HopFile, 10)
 }
 
 func singleCheck(options *common.Opts) {
@@ -39,7 +38,7 @@ func singleCheck(options *common.Opts) {
 	if !result && place == "status" {
 		msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, control_resp.Status, treatment_resp.Status)
 		color.Red(msg)
-		if options.Broker {
+		if options.Module.Contains("broker") {
 			common.PublishMessage(msg)
 		}
 	}

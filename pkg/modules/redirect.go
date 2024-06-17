@@ -1,10 +1,12 @@
 package modules
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -14,11 +16,12 @@ import (
 
 var payload []string = []string{"main", "admin", "dashboard", "user", "profile", "account", "settings", "portal", "home", "auth", "manage", "control", "panel", "secure", "access", "member", "myaccount", "private", "cpanel"}
 
-func CheckRedirect(opts *common.Opts) {
+func CheckRedirect(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts) {
+	defer wg.Done()
 	if opts.Target != "none" {
 		singleRedirectCheck(opts)
 	} else {
-		multiRedirectCheck(opts)
+		multiplex.Conscan(ctx, singleRedirectCheck, opts, opts.RedirectFile, "redirect", 10)
 	}
 }
 
@@ -48,17 +51,13 @@ func singleRedirectCheck(opts *common.Opts) {
 				if length_i > 100 {
 					msg := fmt.Sprintf("[Redirect] from %s to %s\n", newUrl, finalURL.String())
 					color.Red(msg)
-					if opts.Broker {
+					if opts.Module.Contains("broker") {
 						common.PublishMessage(msg)
 					}
 				}
 			}
 		}
 	}
-}
-
-func multiRedirectCheck(opts *common.Opts) {
-	multiplex.Conscan(singleRedirectCheck, opts, opts.RedirectFile, 10)
 }
 
 func getFinalURL(initialURL string) (*url.URL, error) {

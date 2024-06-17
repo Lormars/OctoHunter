@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"math/rand"
@@ -8,6 +9,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lormars/octohunter/asset"
@@ -16,11 +18,12 @@ import (
 	"github.com/lormars/octohunter/internal/proxy"
 )
 
-func GoogleDork(options *common.Opts) {
+func GoogleDork(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
+	defer wg.Done()
 	if options.Target != "none" {
 		singleDork(options)
 	} else {
-		multiDork(options)
+		multiplex.Conscan(ctx, singleDork, options, options.DorkFile, "dork", 1)
 	}
 }
 
@@ -78,14 +81,10 @@ func singleDork(options *common.Opts) {
 		for _, match := range matches {
 			fmt.Println(match)
 			msg := fmt.Sprintf("[Dork]: %s, Match: %s", query, match)
-			if options.Broker {
+			if options.Module.Contains("broker") {
 				common.PublishMessage(msg)
 			}
 		}
 
 	}
-}
-
-func multiDork(options *common.Opts) {
-	multiplex.Conscan(singleDork, options, options.DorkFile, 1)
 }

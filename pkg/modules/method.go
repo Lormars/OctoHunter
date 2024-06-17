@@ -1,7 +1,9 @@
 package modules
 
 import (
+	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/fatih/color"
@@ -11,11 +13,12 @@ import (
 	"github.com/lormars/requester/pkg/runner"
 )
 
-func CheckMethod(options *common.Opts) {
+func CheckMethod(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
+	defer wg.Done()
 	if options.Target != "none" {
 		singleMethodCheck(options)
 	} else {
-		multiMethodCheck(options)
+		multiplex.Conscan(ctx, singleMethodCheck, options, options.MethodFile, "method", 10)
 	}
 }
 
@@ -26,7 +29,7 @@ func singleMethodCheck(options *common.Opts) {
 		if testAccessControl(options, method) {
 			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s\n", options.Target, method)
 			color.Red(msg)
-			if options.Broker {
+			if options.Module.Contains("broker") {
 				common.PublishMessage(msg)
 			}
 		}
@@ -36,17 +39,13 @@ func singleMethodCheck(options *common.Opts) {
 		if checkMethodOverwrite(options, header) {
 			msg := fmt.Sprintf("[Method] Method Overwrite Bypassed for target %s using header %s\n", options.Target, header)
 			color.Red(msg)
-			if options.Broker {
+			if options.Module.Contains("broker") {
 				common.PublishMessage(msg)
 			}
 		}
 		time.Sleep(1 * time.Second)
 	}
 
-}
-
-func multiMethodCheck(options *common.Opts) {
-	multiplex.Conscan(singleMethodCheck, options, options.MethodFile, 10)
 }
 
 func testAccessControl(options *common.Opts, verb string) bool {

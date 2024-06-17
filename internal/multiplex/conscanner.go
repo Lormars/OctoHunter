@@ -2,14 +2,16 @@ package multiplex
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"sync"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 )
 
-func Conscan(f common.Atomic, options *common.Opts, fileName string, concurrency int) {
+func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileName, cacheName string, concurrency int) {
 	request_ch := make(chan *common.Opts)
 	var wg sync.WaitGroup
 	for i := 0; i < concurrency; i++ {
@@ -17,7 +19,14 @@ func Conscan(f common.Atomic, options *common.Opts, fileName string, concurrency
 		go func() {
 			defer wg.Done()
 			for options := range request_ch {
-				f(options)
+				select {
+				case <-ctx.Done():
+					fmt.Print("Context Done!!!\n")
+					return
+				default:
+					f(options)
+					cacher.UpdateScanTime(options.Target, cacheName)
+				}
 			}
 		}()
 	}
@@ -28,22 +37,26 @@ func Conscan(f common.Atomic, options *common.Opts, fileName string, concurrency
 	}
 	defer file.Close()
 	scanner := bufio.NewScanner(file)
+Loop:
 	for scanner.Scan() {
 		line := scanner.Text()
-		request_ch <- &common.Opts{
-			Hopper:       options.Hopper,
+		if !cacher.CanScan(line, cacheName) {
+			fmt.Println("Skipping: ", line)
+			continue
+		}
+		select {
+		case <-ctx.Done():
+			fmt.Println("Loop breaked!!!")
+			break Loop
+		case request_ch <- &common.Opts{
+			Module:       options.Module,
 			Target:       line,
-			Method:       options.Method,
-			Monitor:      options.Monitor,
-			Redirect:     options.Redirect,
-			Cname:        options.Cname,
-			Broker:       options.Broker,
-			Dork:         options.Dork,
 			DorkFile:     options.DorkFile,
 			HopFile:      options.HopFile,
 			MethodFile:   options.MethodFile,
 			RedirectFile: options.RedirectFile,
 			DnsFile:      options.DnsFile,
+		}:
 		}
 	}
 	close(request_ch)

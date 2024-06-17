@@ -3,24 +3,48 @@ package common
 import (
 	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
+type ModuleList []string
+
+func (m *ModuleList) String() string {
+	return strings.Join(*m, ", ")
+}
+func (m *ModuleList) Set(value string) error {
+	*m = strings.Split(value, ",")
+	return nil
+}
+
+func (m *ModuleList) Contains(module string) bool {
+	for _, m := range *m {
+		if m == module {
+			return true
+		}
+	}
+	return false
+}
+
+func (m *ModuleList) UnmarshalJSON(data []byte) error {
+	var modules string
+	if err := json.Unmarshal(data, &modules); err != nil {
+		return err
+	}
+	*m = strings.Split(modules, ",")
+	return nil
+}
+
 type Opts struct {
-	Hopper       bool   `json:"hopper"`
-	Dork         bool   `json:"dork"`
-	Broker       bool   `json:"broker"`
-	Method       bool   `json:"method"`
-	Cname        bool   `json:"cname"`
-	Monitor      bool   `json:"monitor"`
-	Redirect     bool   `json:"redirect"`
-	Target       string `json:"target"`
-	DorkFile     string `json:"dorkFile"`
-	HopFile      string `json:"hopFile"`
-	MethodFile   string `json:"methodFile"`
-	RedirectFile string `json:"redirectFile"`
-	DnsFile      string `json:"dnsFile"`
+	Module       ModuleList `json:"modules"`
+	Target       string     `json:"target"`
+	DorkFile     string     `json:"dorkFile"`
+	HopFile      string     `json:"hopFile"`
+	MethodFile   string     `json:"methodFile"`
+	RedirectFile string     `json:"redirectFile"`
+	DnsFile      string     `json:"dnsFile"`
 }
 
 type TakeoverRecord struct {

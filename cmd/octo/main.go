@@ -4,16 +4,12 @@ import (
 	"log"
 
 	"github.com/joho/godotenv"
-	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/parser"
 	"github.com/lormars/octohunter/pkg/modules"
-	"github.com/lormars/octohunter/pkg/modules/takeover"
+	"github.com/lormars/octohunter/tools/controller"
 )
 
 func main() {
-
-	cacher.Init()
 
 	options := parser.Parse_Options()
 
@@ -22,34 +18,7 @@ func main() {
 		log.Println("No .env file found")
 	}
 
-	if options.Broker {
-		common.Init()
-		defer common.Close()
-	}
+	moduleManager := controller.NewModuleManager()
 
-	if options.Monitor {
-		modules.Monitor(options)
-
-	} else {
-
-		if options.Hopper {
-			modules.CheckHop(options)
-		}
-
-		if options.Dork {
-			modules.GoogleDork(options)
-		}
-
-		if options.Method {
-			modules.CheckMethod(options)
-		}
-
-		if options.Redirect {
-			modules.CheckRedirect(options)
-		}
-
-		if options.Cname {
-			takeover.CNAMETakeover(options)
-		}
-	}
+	modules.Startup(moduleManager, options)
 }
