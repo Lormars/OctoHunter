@@ -17,10 +17,10 @@ import (
 var moduleManager *controller.ModuleManager
 
 func Monitor(opts *common.Opts) {
-	//var username = os.Getenv("CONTROLLER_USERNAME")
-	//var password = os.Getenv("CONTROLLER_PASSWORD")
-	var username = "user"
-	var password = "password"
+	var username = os.Getenv("CONTROLLER_USERNAME")
+	var password = os.Getenv("CONTROLLER_PASSWORD")
+	//var username = "user"
+	//var password = "password"
 	var port = os.Getenv("PORT")
 
 	moduleManager = controller.NewModuleManager()

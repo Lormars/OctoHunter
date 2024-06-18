@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"os"
@@ -47,6 +48,10 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		// Respond to the client
+		response := map[string]string{"message": "File uploaded successfully", "filename": handler.Filename}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
 	} else {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
