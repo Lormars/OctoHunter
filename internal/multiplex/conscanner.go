@@ -9,6 +9,7 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/logger"
 )
 
 func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileName, cacheName string, concurrency int) {
@@ -21,7 +22,7 @@ func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileNam
 			for options := range request_ch {
 				select {
 				case <-ctx.Done():
-					fmt.Print("Context Done!!!\n")
+					logger.Infof("Conscan Done for %s\n", cacheName)
 					return
 				default:
 					f(options)
@@ -41,18 +42,18 @@ Loop:
 	for scanner.Scan() {
 		line := scanner.Text()
 		if !cacher.CanScan(line, cacheName) {
-			fmt.Println("Skipping: ", line)
+
 			continue
 		}
 		select {
 		case <-ctx.Done():
-			fmt.Println("Loop breaked!!!")
+			logger.Infof("Loop Done for %s\n", cacheName)
 			break Loop
 		case request_ch <- &common.Opts{
 			Module:       options.Module,
 			Target:       line,
 			DorkFile:     options.DorkFile,
-			HopFile:      options.HopFile,
+			HopperFile:   options.HopperFile,
 			MethodFile:   options.MethodFile,
 			RedirectFile: options.RedirectFile,
 			CnameFile:    options.CnameFile,

@@ -26,7 +26,7 @@ func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts
 	parseSignature("asset/fingerprints.json")
 
 	if options.Target == "none" {
-		multiplex.Conscan(ctx, takeover, options, options.CnameFile, "cname", 100)
+		multiplex.Conscan(ctx, takeover, options, options.CnameFile, "cname", 10)
 	} else {
 		takeover(options)
 	}
@@ -82,7 +82,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 			return false
 		}
 	}
-
+	//check if NXDomain
 	if dnsError != nil {
 		if errors.Is(dnsError, common.ErrNXDOMAIN) {
 			for _, record := range records {
@@ -101,6 +101,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 			}
 		}
 		return false
+		//if not NXDomain
 	} else {
 		protocols := []string{"http://", "https://"}
 		for _, protocol := range protocols {
@@ -111,6 +112,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 			}
 			resp, err := runner.Run(config)
 			if err != nil {
+				//when the status is noerror but there is no ip address...
 				continue
 			}
 			for _, record := range records {

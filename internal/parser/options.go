@@ -17,7 +17,7 @@ func Parse_Options() *common.Opts {
 		dorkFile     = flag.String("dorkfile", "none", "The file to scan for Google dork")
 		methodFile   = flag.String("methodfile", "none", "The file to scan for HTTP method checker")
 		redirectFile = flag.String("redirectfile", "none", "The file to scan for redirect checker")
-		hopFile      = flag.String("hopfile", "none", "The file to scan for hopper")
+		hopperFile   = flag.String("hopperfile", "none", "The file to scan for hopper")
 	)
 	flag.Parse()
 	return &common.Opts{
@@ -27,6 +27,6 @@ func Parse_Options() *common.Opts {
 		DorkFile:     *dorkFile,
 		MethodFile:   *methodFile,
 		RedirectFile: *redirectFile,
-		HopFile:      *hopFile,
+		HopperFile:   *hopperFile,
 	}
 }

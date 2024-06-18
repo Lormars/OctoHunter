@@ -10,7 +10,7 @@ import (
 	"github.com/lormars/octohunter/common"
 )
 
-func Init() {
+func init() {
 	var err error
 	common.DB, err = sql.Open("sqlite3", "./cache.db")
 	if err != nil {

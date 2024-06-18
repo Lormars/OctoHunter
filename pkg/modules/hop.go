@@ -17,7 +17,7 @@ func CheckHop(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
 	if options.Target != "none" {
 		singleCheck(options)
 	} else {
-		multiplex.Conscan(ctx, singleCheck, options, options.HopFile, "hop", 10)
+		multiplex.Conscan(ctx, singleCheck, options, options.HopperFile, "hop", 10)
 	}
 }
 

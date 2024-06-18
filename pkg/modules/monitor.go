@@ -9,15 +9,14 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/auth"
-	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/logger"
+	"github.com/lormars/octohunter/tools"
 	"github.com/lormars/octohunter/tools/controller"
 )
 
 var moduleManager *controller.ModuleManager
 
 func Monitor(opts *common.Opts) {
-	cacher.Init()
-
 	//var username = os.Getenv("CONTROLLER_USERNAME")
 	//var password = os.Getenv("CONTROLLER_PASSWORD")
 	var username = "user"
@@ -28,6 +27,7 @@ func Monitor(opts *common.Opts) {
 
 	http.HandleFunc("/start", auth.BasicAuth(startHandler, username, password))
 	http.HandleFunc("/stop", auth.BasicAuth(stopHandler, username, password))
+	http.HandleFunc("/upload", auth.BasicAuth(tools.UploadHandler, username, password))
 
 	fmt.Println("Starting server on :", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
@@ -48,9 +48,8 @@ func startHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	fmt.Println(opts)
-
 	Startup(moduleManager, &opts)
+	logger.Infof("Module %s started\n", opts.Module)
 	w.WriteHeader(http.StatusOK)
 
 }

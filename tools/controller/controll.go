@@ -2,10 +2,10 @@ package controller
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/logger"
 )
 
 type Module struct {
@@ -41,6 +41,7 @@ func (m *ModuleManager) StartModule(name string, startFunc func(ctx context.Cont
 	defer m.mu.Unlock()
 
 	if _, exists := m.Modules[name]; exists {
+		logger.Infof("Module %s already running\n", name)
 		return
 	}
 
@@ -49,26 +50,29 @@ func (m *ModuleManager) StartModule(name string, startFunc func(ctx context.Cont
 
 	module.Wg.Add(1)
 	go func() {
+		logger.Infof("Starting module %s\n", name)
 		startFunc(module.Ctx, module.Wg, opts)
 		m.mu.Lock()
 		defer m.mu.Unlock()
+		logger.Infof("Module %s finished\n", name)
 		delete(m.Modules, name)
+		logger.Infof("Module %s removed from manager\n", name)
 	}()
 }
 
 func (m *ModuleManager) StopModule(name string) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	if module, exists := m.Modules[name]; exists {
-		fmt.Println("Stopping module ", name)
+		logger.Infoln("Stopping module ", name)
 		module.Cancel()
-		fmt.Println("Waiting for module ", name, " to stop")
+		logger.Infoln("Waiting for module ", name, " to stop")
 		module.Wg.Wait()
+		m.mu.Lock()
+		defer m.mu.Unlock()
 		delete(m.Modules, name)
-		fmt.Println("Module ", name, " stopped")
+		logger.Infoln("Module ", name, " stopped")
 	} else {
-		fmt.Println("Module ", name, " not found")
+		logger.Infoln("Module ", name, " not found")
 	}
 
 }
