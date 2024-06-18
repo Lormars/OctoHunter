@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gorilla/mux"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/auth"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/tools"
 	"github.com/lormars/octohunter/tools/controller"
+	"github.com/rs/cors"
 )
 
 var moduleManager *controller.ModuleManager
@@ -25,12 +27,23 @@ func Monitor(opts *common.Opts) {
 
 	moduleManager = controller.NewModuleManager()
 
-	http.HandleFunc("/start", auth.BasicAuth(startHandler, username, password))
-	http.HandleFunc("/stop", auth.BasicAuth(stopHandler, username, password))
-	http.HandleFunc("/upload", auth.BasicAuth(tools.UploadHandler, username, password))
+	r := mux.NewRouter()
+
+	r.HandleFunc("/start", auth.BasicAuth(startHandler, username, password))
+	r.HandleFunc("/stop", auth.BasicAuth(stopHandler, username, password))
+	r.HandleFunc("/upload", auth.BasicAuth(tools.UploadHandler, username, password))
+
+	c := cors.New(cors.Options{
+		AllowedOrigins:   []string{"*"},
+		AllowedMethods:   []string{"GET", "POST"},
+		AllowedHeaders:   []string{"*"},
+		AllowCredentials: true,
+	})
+
+	handler := c.Handler(r)
 
 	fmt.Println("Starting server on :", port)
-	if err := http.ListenAndServe(":"+port, nil); err != nil {
+	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatal("Error starting server: ", err)
 	}
 
