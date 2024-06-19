@@ -16,7 +16,7 @@ import (
 	"github.com/lormars/octohunter/internal/multiplex"
 )
 
-var payload []string = []string{"main", "admin", "dashboard", "user", "profile", "account", "settings", "portal", "home", "auth", "manage", "control", "panel", "secure", "access", "member", "myaccount", "private", "cpanel"}
+var payload []string = []string{"admin", "dashboard", "user", "profile", "account", "portal", "home", "auth", "panel", "secure", "myaccount"}
 var client = &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return nil
@@ -46,7 +46,7 @@ func singleRedirectCheck(opts *common.Opts) {
 			if err != nil {
 				continue
 			}
-			fmt.Println("newFinalURL.Path: ", newFinalURL.Path)
+			//fmt.Println("newFinalURL.Path: ", newFinalURL.Path)
 			if newFinalURL.Path == finalURL.Path {
 				//fmt.Println("newFinalURL.Path == finalURL.Path")
 				length, err := getter.GetHeader(newUrl, "Content-Length")

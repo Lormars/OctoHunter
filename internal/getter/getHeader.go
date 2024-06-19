@@ -3,12 +3,14 @@ package getter
 import (
 	"fmt"
 	"net/http"
+	"time"
 )
 
 var httpClient = &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return http.ErrUseLastResponse
 	},
+	Timeout: 10 * time.Second,
 }
 
 func GetHeader(url, header string) (string, error) {
