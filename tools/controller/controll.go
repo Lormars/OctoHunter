@@ -3,6 +3,7 @@ package controller
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/logger"
@@ -48,15 +49,19 @@ func (m *ModuleManager) StartModule(name string, startFunc func(ctx context.Cont
 	module := NewModule(name)
 	m.Modules[name] = module
 
-	module.Wg.Add(1)
 	go func() {
-		logger.Infof("Starting module %s\n", name)
-		startFunc(module.Ctx, module.Wg, opts)
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		logger.Infof("Module %s finished\n", name)
-		delete(m.Modules, name)
-		logger.Infof("Module %s removed from manager\n", name)
+		for {
+			module.Wg.Add(1)
+			logger.Infof("Starting module %s\n", name)
+			startFunc(module.Ctx, module.Wg, opts)
+			module.Wg.Wait()
+			logger.Infof("Module %s stopped\n", name)
+			m.mu.Lock()
+			delete(m.Modules, name)
+			m.mu.Unlock()
+			logger.Infof("Module %s removed from manager\n", name)
+			time.Sleep(15 * time.Minute)
+		}
 	}()
 }
 
@@ -66,11 +71,6 @@ func (m *ModuleManager) StopModule(name string) {
 		logger.Infoln("Stopping module ", name)
 		module.Cancel()
 		logger.Infoln("Waiting for module ", name, " to stop")
-		module.Wg.Wait()
-		m.mu.Lock()
-		defer m.mu.Unlock()
-		delete(m.Modules, name)
-		logger.Infoln("Module ", name, " stopped")
 	} else {
 		logger.Infoln("Module ", name, " not found")
 	}
