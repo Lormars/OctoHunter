@@ -52,13 +52,14 @@ func singleDork(options *common.Opts) {
 			fmt.Println(err)
 			return
 		}
-		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
+
+		resp.Body.Close()
 		if strings.Contains(string(body), "Our systems have detected unusual traffic from your computer network.") {
 			fmt.Println("Google detected unusual traffic, try aws api gateway")
 			var bypassed bool

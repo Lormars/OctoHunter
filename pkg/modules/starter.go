@@ -7,12 +7,11 @@ import (
 )
 
 func Startup(moduleManager *controller.ModuleManager, options *common.Opts) {
-
+	if options.Module.Contains("broker") {
+		common.Init()
+		defer common.Close()
+	}
 	if options.Module.Contains("monitor") {
-		if options.Module.Contains("broker") {
-			common.Init()
-			defer common.Close()
-		}
 		Monitor(options)
 
 	} else {
@@ -36,4 +35,5 @@ func Startup(moduleManager *controller.ModuleManager, options *common.Opts) {
 			moduleManager.StartModule("cname", takeover.CNAMETakeover, options)
 		}
 	}
+	select {}
 }

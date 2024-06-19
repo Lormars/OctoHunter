@@ -30,13 +30,13 @@ func Fingerprint(target string) (bool, string) {
 		if err != nil {
 			return false, ""
 		}
-		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			continue
 		}
 
+		resp.Body.Close()
 		if bytes.Contains(body, []byte("aura:invalidSession")) {
 			return true, newUrl
 		}
