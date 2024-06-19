@@ -72,6 +72,8 @@ func getFinalURL(initialURL string) (*url.URL, error) {
 		return nil, err
 	}
 
+	defer resp.Body.Close()
+
 	finalURL := resp.Request.URL
 	if resp.Request.URL.String() != initialURL {
 		finalURL, err = url.Parse(resp.Request.URL.String())

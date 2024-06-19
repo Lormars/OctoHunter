@@ -1,8 +1,24 @@
 package salesforce
 
-import "testing"
+import (
+	"bufio"
+	"os"
+	"testing"
+)
 
 func TestFingerprint(t *testing.T) {
-	res, _ := Fingerprint("https://example.com/")
-	t.Logf("res is %v\n", res)
+	file, err := os.Open("../../../list/salesforceFile")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		domain := scanner.Text()
+		res, _ := Fingerprint(domain)
+		t.Logf("res is %v\n", res)
+	}
 }
