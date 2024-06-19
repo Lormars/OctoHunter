@@ -61,7 +61,9 @@ Loop:
 			CnameFile:    options.CnameFile,
 		}:
 			lineCount++
+			logger.Infof("Sending %s to request_ch\n", line)
 			if lineCount%gcInterval == 0 {
+				logger.Infoln("GC Interval Reached, Running GC")
 				runtime.GC()
 			}
 		}
