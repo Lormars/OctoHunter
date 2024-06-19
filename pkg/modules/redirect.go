@@ -3,12 +3,10 @@ package modules
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -17,12 +15,6 @@ import (
 )
 
 var payload []string = []string{"admin", "dashboard", "user", "profile", "account", "portal", "home", "auth", "panel", "secure", "myaccount"}
-var client = &http.Client{
-	CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		return nil
-	},
-	Timeout: 10 * time.Second,
-}
 
 func CheckRedirect(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts) {
 	defer wg.Done()
@@ -71,7 +63,7 @@ func singleRedirectCheck(opts *common.Opts) {
 
 func getFinalURL(initialURL string) (*url.URL, error) {
 
-	resp, err := client.Get(initialURL)
+	resp, err := common.NormalClient.Get(initialURL)
 	if err != nil {
 		return nil, err
 	}

@@ -6,15 +6,13 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
+
+	"github.com/lormars/octohunter/common"
 )
 
 func Fingerprint(target string) (bool, string) {
 	path := []string{"/aura", "/s/sfsites/aura", "/sfsites/aura"}
 
-	client := &http.Client{
-		Timeout: 10 * time.Second,
-	}
 	for _, p := range path {
 		newUrl := strings.TrimSuffix(target, "/") + p
 		fmt.Println(newUrl)
@@ -26,7 +24,7 @@ func Fingerprint(target string) (bool, string) {
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := client.Do(req)
+		resp, err := common.NormalClient.Do(req)
 		if err != nil {
 			return false, ""
 		}

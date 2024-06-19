@@ -2,19 +2,12 @@ package getter
 
 import (
 	"fmt"
-	"net/http"
-	"time"
+
+	"github.com/lormars/octohunter/common"
 )
 
-var httpClient = &http.Client{
-	CheckRedirect: func(req *http.Request, via []*http.Request) error {
-		return http.ErrUseLastResponse
-	},
-	Timeout: 10 * time.Second,
-}
-
 func GetHeader(url, header string) (string, error) {
-	resp, err := httpClient.Get(url)
+	resp, err := common.NoRedirectClient.Get(url)
 	if err != nil {
 		return "", err
 	}
