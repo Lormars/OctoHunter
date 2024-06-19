@@ -44,7 +44,9 @@ func singleRedirectCheck(opts *common.Opts) {
 			if err != nil {
 				continue
 			}
+			fmt.Println("newFinalURL.Path: ", newFinalURL.Path)
 			if newFinalURL.Path == finalURL.Path {
+				fmt.Println("newFinalURL.Path == finalURL.Path")
 				length, err := getter.GetHeader(newUrl, "Content-Length")
 				if err != nil {
 					continue
