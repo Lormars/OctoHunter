@@ -54,7 +54,6 @@ func (m *ModuleManager) StartModule(name string, startFunc func(ctx context.Cont
 			module.Wg.Add(1)
 			logger.Infof("Starting module %s\n", name)
 			startFunc(module.Ctx, module.Wg, opts)
-			module.Wg.Wait()
 			logger.Infof("Module %s stopped\n", name)
 			m.mu.Lock()
 			delete(m.Modules, name)

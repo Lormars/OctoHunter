@@ -12,3 +12,7 @@ func CheckAccess(resp *common.Response) bool {
 func Check405(resp *common.Response) bool {
 	return resp.Status == 405
 }
+
+func Check429(resp *common.Response) bool {
+	return resp.Status == 429
+}

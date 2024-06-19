@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -33,7 +34,7 @@ func singleMethodCheck(options *common.Opts) {
 				common.PublishMessage(msg)
 			}
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 	for _, header := range headers {
 		if checkMethodOverwrite(options, header) {
@@ -43,7 +44,7 @@ func singleMethodCheck(options *common.Opts) {
 				common.PublishMessage(msg)
 			}
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 	}
 
 }
@@ -61,7 +62,10 @@ func testAccessControl(options *common.Opts, verb string) bool {
 		return false
 	}
 	if !checker.CheckAccess(control_resp) && checker.CheckAccess(treatment_resp) {
-		return true
+		//to fix equifax false positive
+		if !strings.Contains(treatment_resp.Body, "Something went wrong") || !strings.Contains(treatment_resp.Body, "Equifax") {
+			return true
+		}
 	}
 
 	return false
@@ -82,7 +86,7 @@ func checkMethodOverwrite(options *common.Opts, header string) bool {
 	if err1 != nil || err2 != nil {
 		return false
 	}
-	if checker.Check405(control_resp) && !checker.Check405(treatment_resp) {
+	if checker.Check405(control_resp) && !checker.Check405(treatment_resp) && !checker.Check429(treatment_resp) {
 		return true
 	}
 
