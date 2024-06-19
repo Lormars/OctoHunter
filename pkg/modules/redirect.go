@@ -15,6 +15,11 @@ import (
 )
 
 var payload []string = []string{"main", "admin", "dashboard", "user", "profile", "account", "settings", "portal", "home", "auth", "manage", "control", "panel", "secure", "access", "member", "myaccount", "private", "cpanel"}
+var client = &http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		return nil
+	},
+}
 
 func CheckRedirect(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts) {
 	defer wg.Done()
@@ -61,11 +66,6 @@ func singleRedirectCheck(opts *common.Opts) {
 }
 
 func getFinalURL(initialURL string) (*url.URL, error) {
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return nil
-		},
-	}
 
 	resp, err := client.Get(initialURL)
 	if err != nil {
