@@ -27,56 +27,60 @@ func singleMethodCheck(options *common.Opts) {
 	methods := []string{"POST", "FOO"}
 	headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
 	for _, method := range methods {
-		if testAccessControl(options, method) {
+		if ok, err := testAccessControl(options, method); ok && err == nil {
 			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s\n", options.Target, method)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
 				common.PublishMessage(msg)
 			}
+		} else if err != nil {
+			break
 		}
 		time.Sleep(1 * time.Second)
 	}
 	for _, header := range headers {
-		if checkMethodOverwrite(options, header) {
+		if ok, err := checkMethodOverwrite(options, header); ok && err == nil {
 			msg := fmt.Sprintf("[Method] Method Overwrite Bypassed for target %s using header %s\n", options.Target, header)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
 				common.PublishMessage(msg)
 			}
+		} else if err != nil {
+			break
 		}
 		time.Sleep(1 * time.Second)
 	}
 
 }
 
-func testAccessControl(options *common.Opts, verb string) bool {
+func testAccessControl(options *common.Opts, verb string) (bool, error) {
 	control_config, err1 := runner.NewConfig(options.Target)
 	treatment_config, err2 := runner.NewConfig(options.Target)
 	if err1 != nil || err2 != nil {
-		return false
+		return false, err1 //err1 or 2 does not matter
 	}
 	treatment_config.Method = verb
 	control_resp, err1 := runner.Run(control_config)
 	treatment_resp, err2 := runner.Run(treatment_config)
 	if err1 != nil || err2 != nil {
-		return false
+		return false, err1
 	}
 	if !checker.CheckAccess(control_resp) && checker.CheckAccess(treatment_resp) {
 		//to fix equifax false positive
 		if !strings.Contains(treatment_resp.Body, "Something went wrong") || !strings.Contains(treatment_resp.Body, "Equifax") {
-			return true
+			return true, nil
 		}
 	}
 
-	return false
+	return false, nil
 
 }
 
-func checkMethodOverwrite(options *common.Opts, header string) bool {
+func checkMethodOverwrite(options *common.Opts, header string) (bool, error) {
 	control_config, err1 := runner.NewConfig(options.Target)
 	treatment_config, err2 := runner.NewConfig(options.Target)
 	if err1 != nil || err2 != nil {
-		return false
+		return false, err1
 	}
 	control_config.Method = "DELETE"
 	treatment_config.Method = "DELETE"
@@ -84,12 +88,12 @@ func checkMethodOverwrite(options *common.Opts, header string) bool {
 	control_resp, err1 := runner.Run(control_config)
 	treatment_resp, err2 := runner.Run(treatment_config)
 	if err1 != nil || err2 != nil {
-		return false
+		return false, err1
 	}
 	if checker.Check405(control_resp) && !checker.Check405(treatment_resp) && !checker.Check429(treatment_resp) {
-		return true
+		return true, nil
 	}
 
-	return false
+	return false, nil
 
 }
