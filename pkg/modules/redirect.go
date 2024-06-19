@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -20,6 +21,7 @@ var client = &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return nil
 	},
+	Timeout: 10 * time.Second,
 }
 
 func CheckRedirect(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts) {
