@@ -29,7 +29,7 @@ func CheckRedirect(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts) {
 	if opts.Target != "none" {
 		singleRedirectCheck(opts)
 	} else {
-		multiplex.Conscan(ctx, singleRedirectCheck, opts, opts.RedirectFile, "redirect", 10)
+		multiplex.Conscan(ctx, singleRedirectCheck, opts, opts.RedirectFile, "redirect", 5)
 	}
 }
 
