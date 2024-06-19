@@ -48,7 +48,7 @@ func singleRedirectCheck(opts *common.Opts) {
 				if err != nil {
 					continue
 				}
-				if length_i > 100 {
+				if length_i > 1000 {
 					msg := fmt.Sprintf("[Redirect] from %s to %s\n", newUrl, finalURL.String())
 					color.Red(msg)
 					if opts.Module.Contains("broker") {
