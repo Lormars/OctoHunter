@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -48,8 +49,7 @@ func singleRedirectCheck(opts *common.Opts) {
 				if err != nil {
 					continue
 				}
-				var length_i int64
-				_, err = fmt.Sscan(length, &length_i)
+				length_i, err := strconv.Atoi(length)
 				if err != nil {
 					continue
 				}
