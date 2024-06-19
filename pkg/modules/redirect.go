@@ -46,7 +46,7 @@ func singleRedirectCheck(opts *common.Opts) {
 			}
 			fmt.Println("newFinalURL.Path: ", newFinalURL.Path)
 			if newFinalURL.Path == finalURL.Path {
-				fmt.Println("newFinalURL.Path == finalURL.Path")
+				//fmt.Println("newFinalURL.Path == finalURL.Path")
 				length, err := getter.GetHeader(newUrl, "Content-Length")
 				if err != nil {
 					continue
@@ -77,12 +77,6 @@ func getFinalURL(initialURL string) (*url.URL, error) {
 	defer resp.Body.Close()
 
 	finalURL := resp.Request.URL
-	if resp.Request.URL.String() != initialURL {
-		finalURL, err = url.Parse(resp.Request.URL.String())
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	return finalURL, nil
 
