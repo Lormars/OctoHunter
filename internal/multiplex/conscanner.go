@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -26,7 +25,7 @@ func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileNam
 					return
 				default:
 					f(options)
-					cacher.UpdateScanTime(options.Target, cacheName)
+					// cacher.UpdateScanTime(options.Target, cacheName)
 				}
 			}
 		}()
@@ -41,10 +40,10 @@ func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileNam
 Loop:
 	for scanner.Scan() {
 		line := scanner.Text()
-		if !cacher.CanScan(line, cacheName) {
+		// if !cacher.CanScan(line, cacheName) {
 
-			continue
-		}
+		// 	continue
+		// }
 		select {
 		case <-ctx.Done():
 			logger.Infof("Loop Done for %s\n", cacheName)
