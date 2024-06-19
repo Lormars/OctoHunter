@@ -51,17 +51,19 @@ func checkSig(domain string, opts *common.Opts) bool {
 	var temp_cname string
 
 	temp_domain := domain
+	count := 0
 	for {
 		temp_cname, dnsError = checker.FindImmediateCNAME(temp_domain)
 		if temp_cname == "" || (dnsError != nil && !errors.Is(dnsError, common.ErrNXDOMAIN)) {
 			//fmt.Printf("Oops, something bad happened on checkSig with temp_cname: %s and dnsError: %v", temp_cname, dnsError)
 			return false
 		}
-		if temp_cname == temp_domain {
+		if temp_cname == temp_domain || count > 10 { //prevent circular cname
 			break
 		}
 
 		temp_domain = temp_cname
+		count++
 
 	}
 	//just for elb...
