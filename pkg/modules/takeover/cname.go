@@ -24,7 +24,6 @@ var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "s
 func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
 	defer wg.Done()
 	parseSignature("asset/fingerprints.json")
-
 	if options.Target == "none" {
 		multiplex.Conscan(ctx, takeover, options, options.CnameFile, "cname", 10)
 	} else {
@@ -33,25 +32,17 @@ func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts
 }
 
 func takeover(opts *common.Opts) {
-	var domain string
-	var cname string
-
-	line := opts.Target
-	parts := strings.Split(line, " ")
-	if len(parts) >= 3 {
-		domain = parts[0]
-		cname = parts[2]
-		cname = strings.Replace(cname, "[", "", -1)
-		cname = strings.Replace(cname, "]", "", -1)
-	}
-
-	for _, s := range skip {
-		if strings.Contains(cname, s) {
-			//fmt.Println("skipped")
-			return
+	domain := opts.Target
+	hasCname, cname, _ := checker.HasCname(domain)
+	if hasCname {
+		for _, s := range skip {
+			if strings.Contains(cname, s) {
+				//fmt.Println("skipped")
+				return
+			}
 		}
+		checkSig(domain, opts)
 	}
-	checkSig(domain, opts)
 
 }
 

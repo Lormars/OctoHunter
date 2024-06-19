@@ -1,13 +1,40 @@
 package checker
 
 import (
+	"net"
 	"strings"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/miekg/dns"
 )
 
+func HasCname(hostname string) (bool, string, error) {
+	cname, err := net.LookupCNAME(hostname)
+	if err != nil {
+		if dnsErr, ok := err.(*net.DNSError); ok && dnsErr.IsNotFound {
+			if dnsErr.Err == "no such host" {
+				//no idea why, but sometimes a query would both return NXDomain and a cname...
+				return true, "weird situation", nil
+			}
+			return false, "", nil
+		}
+		return false, "", err
+
+	}
+	cname = strings.TrimSuffix(cname, ".")
+
+	if cname != hostname {
+		return true, cname, nil
+
+	}
+
+	return false, "", nil
+
+}
+
 // Usage: finds the immediate cname record for a given hostname
+// Why this? Because net.LookupCNAME does not return the immediate cname record and
+// sometimes we need to know the immediate cname record to treat weird situation when NXDomain and cname both exist.
 // Returns:
 // - The immediate cname record if found
 // - The original hostname is no cname record is found
@@ -51,9 +78,7 @@ func answertoCname(r *dns.Msg) string {
 	for _, ans := range r.Answer {
 		if cname, ok := ans.(*dns.CNAME); ok {
 			target := cname.Target
-			if strings.HasSuffix(target, ".") {
-				target = target[:len(target)-1]
-			}
+			target = strings.TrimSuffix(target, ".")
 			return target
 		}
 	}

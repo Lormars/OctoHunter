@@ -16,7 +16,6 @@ func Startup(moduleManager *controller.ModuleManager, options *common.Opts) {
 		Monitor(options)
 
 	} else {
-
 		if options.Module.Contains("hopper") {
 			moduleManager.StartModule("hopper", CheckHop, options)
 		}
