@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"sync"
 
 	"github.com/lormars/octohunter/common"
@@ -36,6 +37,8 @@ func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileNam
 		return
 	}
 	defer file.Close()
+	lineCount := 0
+	gcInterval := 1000
 	scanner := bufio.NewScanner(file)
 Loop:
 	for scanner.Scan() {
@@ -57,8 +60,13 @@ Loop:
 			RedirectFile: options.RedirectFile,
 			CnameFile:    options.CnameFile,
 		}:
+			lineCount++
+			if lineCount%gcInterval == 0 {
+				runtime.GC()
+			}
 		}
 	}
 	close(request_ch)
 	wg.Wait()
+	runtime.GC()
 }
