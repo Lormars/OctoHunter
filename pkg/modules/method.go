@@ -34,7 +34,7 @@ func singleMethodCheck(options *common.Opts) {
 				common.PublishMessage(msg)
 			}
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 	for _, header := range headers {
 		if checkMethodOverwrite(options, header) {
@@ -44,7 +44,7 @@ func singleMethodCheck(options *common.Opts) {
 				common.PublishMessage(msg)
 			}
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 
 }

@@ -38,8 +38,6 @@ func NewModuleManager() *ModuleManager {
 }
 
 func (m *ModuleManager) StartModule(name string, startFunc func(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts), opts *common.Opts) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
 
 	if _, exists := m.Modules[name]; exists {
 		logger.Infof("Module %s already running\n", name)
@@ -47,7 +45,10 @@ func (m *ModuleManager) StartModule(name string, startFunc func(ctx context.Cont
 	}
 
 	module := NewModule(name)
+
+	m.mu.Lock()
 	m.Modules[name] = module
+	m.mu.Unlock()
 
 	go func() {
 		for {
