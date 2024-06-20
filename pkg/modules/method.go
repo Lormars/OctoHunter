@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -12,7 +13,6 @@ import (
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
-	"github.com/lormars/requester/pkg/runner"
 )
 
 func CheckMethod(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
@@ -28,27 +28,27 @@ func singleMethodCheck(options *common.Opts) {
 	methods := []string{"POST", "FOO"}
 	headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
 	for _, method := range methods {
-		if ok, err := testAccessControl(options, method); ok && err == nil {
+		if ok, errCtrl, errTreat := testAccessControl(options, method); ok {
 			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s\n", options.Target, method)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
 				common.OutputP.PublishMessage(msg)
 			}
-		} else if err != nil {
-			logger.Debugf("Error testing access control: %v\n", err)
+		} else if errCtrl != nil || errTreat != nil {
+			logger.Debugf("Error testing access control: control - %v | treament - %v\n", errCtrl, errTreat)
 			break
 		}
 		time.Sleep(1 * time.Second)
 	}
 	for _, header := range headers {
-		if ok, err := checkMethodOverwrite(options, header); ok && err == nil {
+		if ok, errCtrl, errTreat := checkMethodOverwrite(options, header); ok {
 			msg := fmt.Sprintf("[Method] Method Overwrite Bypassed for target %s using header %s\n", options.Target, header)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
 				common.OutputP.PublishMessage(msg)
 			}
-		} else if err != nil {
-			logger.Debugf("Error testing method overwrite: %v\n", err)
+		} else if errCtrl != nil || errTreat != nil {
+			logger.Debugf("Error testing method overwrite: control - %v | treament - %v\n", errCtrl, errTreat)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -56,51 +56,57 @@ func singleMethodCheck(options *common.Opts) {
 
 }
 
-func testAccessControl(options *common.Opts, verb string) (bool, error) {
-	control_config, err1 := runner.NewConfig(options.Target)
-	treatment_config, err2 := runner.NewConfig(options.Target)
-	if err1 != nil || err2 != nil {
-		logger.Debugf("Error creating runner config: err1 - %v | err2 - %v\n", err1, err2)
-		return false, err1 //err1 or 2 does not matter
+func testAccessControl(options *common.Opts, verb string) (bool, error, error) {
+	controlReq, err := http.NewRequest("GET", options.Target, nil)
+	if err != nil {
+		logger.Debugf("Error creating request: %v\n", err)
+		return false, err, nil
 	}
-	treatment_config.Method = verb
-	control_resp, err1 := runner.Run(control_config)
-	treatment_resp, err2 := runner.Run(treatment_config)
-	if err1 != nil || err2 != nil {
-		logger.Debugf("Error running control or treatment: err1 - %v | err2 - %v\n", err1, err2)
-		return false, err1
+	treatmentReq, err := http.NewRequest(verb, options.Target, nil)
+	if err != nil {
+		logger.Debugf("Error creating request: %v\n", err)
+		return false, err, nil
 	}
-	if !checker.CheckAccess(control_resp) && checker.CheckAccess(treatment_resp) {
+
+	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectClient)
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectClient)
+	if errCtrl != nil || errTreat != nil {
+		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
+		return false, errCtrl, errTreat
+	}
+	if !checker.CheckAccess(controlResp) && checker.CheckAccess(treatmentResp) {
 		//to fix equifax false positive
-		if !strings.Contains(treatment_resp.Body, "Something went wrong") || !strings.Contains(treatment_resp.Body, "Equifax") {
-			return true, nil
+		if !strings.Contains(treatmentResp.Body, "Something went wrong") || !strings.Contains(treatmentResp.Body, "Equifax") {
+			return true, nil, nil
 		}
 	}
 
-	return false, nil
+	return false, nil, nil
 
 }
 
-func checkMethodOverwrite(options *common.Opts, header string) (bool, error) {
-	control_config, err1 := runner.NewConfig(options.Target)
-	treatment_config, err2 := runner.NewConfig(options.Target)
-	if err1 != nil || err2 != nil {
-		logger.Debugf("Error creating runner config: err1 - %v | err2 - %v\n", err1, err2)
-		return false, err1
+func checkMethodOverwrite(options *common.Opts, header string) (bool, error, error) {
+	controlReq, err := http.NewRequest("DELETE", options.Target, nil)
+	if err != nil {
+		logger.Debugf("Error creating request: %v\n", err)
+		return false, err, nil
 	}
-	control_config.Method = "DELETE"
-	treatment_config.Method = "DELETE"
-	treatment_config.Header_input = fmt.Sprintf("%s: GET", header)
-	control_resp, err1 := runner.Run(control_config)
-	treatment_resp, err2 := runner.Run(treatment_config)
-	if err1 != nil || err2 != nil {
-		logger.Debugf("Error running control or treatment: err1 - %v | err2 - %v\n", err1, err2)
-		return false, err1
+	treatmentReq, err := http.NewRequest("DELETE", options.Target, nil)
+	if err != nil {
+		logger.Debugf("Error creating request: %v\n", err)
+		return false, err, nil
 	}
-	if checker.Check405(control_resp) && !checker.Check405(treatment_resp) && !checker.Check429(treatment_resp) {
-		return true, nil
+	treatmentReq.Header.Set(header, "GET")
+	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectClient)
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectClient)
+	if errCtrl != nil || errTreat != nil {
+		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
+		return false, errCtrl, errTreat
+	}
+	if checker.Check405(controlResp) && !checker.Check405(treatmentResp) && !checker.Check429(treatmentResp) {
+		return true, nil, nil
 	}
 
-	return false, nil
+	return false, nil, nil
 
 }

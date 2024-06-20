@@ -33,14 +33,17 @@ func divider(domainString string) {
 
 	common.CnameP.PublishMessage(domainString)
 
-	httpStatus, httpsStatus := checker.CheckHTTPAndHTTPSServers(domainString)
-	if httpsStatus.Online {
+	httpStatus, httpsStatus, errhttp, errhttps := checker.CheckHTTPAndHTTPSServers(domainString)
+	if errhttps != nil {
+		logger.Debugf("Error checking https server: %v\n", errhttps)
+	} else if httpsStatus.Online {
 		if checker.CheckRedirect(httpsStatus.StatusCode) {
 			common.RedirectP.PublishMessage(httpsStatus.Url)
 		}
 	}
-
-	if httpStatus.Online {
+	if errhttp != nil {
+		logger.Debugf("Error checking http server: %v\n", errhttp)
+	} else if httpStatus.Online {
 	}
 
 }

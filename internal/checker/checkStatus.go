@@ -1,9 +1,9 @@
 package checker
 
-import "github.com/lormars/requester/common"
+import "github.com/lormars/octohunter/common"
 
-func CheckAccess(resp *common.Response) bool {
-	if resp.Status >= 200 && resp.Status < 300 {
+func CheckAccess(resp *common.ServerResult) bool {
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return true
 	}
 	return false
@@ -16,10 +16,10 @@ func CheckRedirect(statusCode int) bool {
 	return false
 }
 
-func Check405(resp *common.Response) bool {
-	return resp.Status == 405
+func Check405(resp *common.ServerResult) bool {
+	return resp.StatusCode == 405
 }
 
-func Check429(resp *common.Response) bool {
-	return resp.Status == 429
+func Check429(resp *common.ServerResult) bool {
+	return resp.StatusCode == 429
 }

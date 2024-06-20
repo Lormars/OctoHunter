@@ -14,7 +14,6 @@ import (
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
-	"github.com/lormars/requester/pkg/runner"
 )
 
 var records []common.TakeoverRecord
@@ -79,76 +78,40 @@ func checkSig(domain string, opts *common.Opts) bool {
 			return false
 		}
 	}
-	//check if NXDomain
-	if dnsError != nil {
-		if errors.Is(dnsError, common.ErrNXDOMAIN) {
-			for _, record := range records {
-				if record.Nxdomain && record.Vulnerable {
-					for _, sig := range record.Cname {
-						if strings.Contains(temp_cname, sig) {
-							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
-							color.Red(msg)
-							if opts.Module.Contains("broker") {
-								common.OutputP.PublishMessage(msg)
-							}
-							return true
-						}
+	for _, record := range records {
+		if record.Vulnerable {
+			for _, sig := range record.Cname {
+				if strings.Contains(temp_cname, sig) {
+					msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
+					color.Red(msg)
+					if opts.Module.Contains("broker") {
+						common.OutputP.PublishMessage(msg)
 					}
+					return true
 				}
 			}
-		}
-		return false
-		//if not NXDomain
-	} else {
-		protocols := []string{"http://", "https://"}
-		for _, protocol := range protocols {
-			url := protocol + domain
-			config, err := runner.NewConfig(url)
-			if err != nil {
-				logger.Debugf("Error creating runner config for %s: %v\n", url, err)
-				continue
-			}
-			resp, err := runner.Run(config)
-			if err != nil {
+			httpResult, httpsResult, errHttp, errHttps := checker.CheckHTTPAndHTTPSServers(temp_cname)
+			if errHttp != nil && errHttps != nil {
 				//when the status is noerror but there is no ip address...
-				logger.Debugf("Error getting response from %s: %v\n", url, err)
-				continue
+				logger.Debugf("Error getting response from %s: %v\n", errHttp, errHttps)
+				return false
 			}
-			for _, record := range records {
 
-				for _, sig := range record.Cname {
-					if strings.Contains(temp_cname, sig) {
-						if !record.Vulnerable {
-							return false
-						} else {
-							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
-							color.Red(msg)
-							if opts.Module.Contains("broker") {
-								common.OutputP.PublishMessage(msg)
-							}
-							return true
-						}
+			serverResults := []common.ServerResult{*httpResult, *httpsResult}
+
+			for _, result := range serverResults {
+				if record.Fingerprint != "" && strings.Contains(result.Body, record.Fingerprint) {
+					msg := "[CNAME Potential] " + result.Url + " | Cname: " + temp_cname + " | Service: " + record.Service
+					color.Red(msg)
+					if opts.Module.Contains("broker") {
+						common.OutputP.PublishMessage(msg)
 					}
-				}
-
-				if record.Vulnerable {
-
-					if record.Fingerprint != "" && strings.Contains(resp.Body, record.Fingerprint) {
-						msg := "[CNAME Potential] " + url + " | Cname: " + temp_cname + " | Service: " + record.Service
-						color.Red(msg)
-						if opts.Module.Contains("broker") {
-							common.OutputP.PublishMessage(msg)
-						}
-						return true
-					}
-
+					return true
 				}
 			}
 		}
-
-		return false
-
 	}
+	return false
 
 }
 

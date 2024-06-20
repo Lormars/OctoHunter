@@ -3,13 +3,15 @@ package modules
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/comparer"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
-	"github.com/lormars/requester/pkg/runner"
 )
 
 func CheckHop(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
@@ -22,22 +24,29 @@ func CheckHop(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
 }
 
 func singleCheck(options *common.Opts) {
-	control_config, err1 := runner.NewConfig(options.Target)
-	treatment_config, err2 := runner.NewConfig(options.Target)
-	if err1 != nil || err2 != nil {
+	controlReq, err := http.NewRequest("GET", options.Target, nil)
+	if err != nil {
+		logger.Debugf("Error creating request: %v\n", err)
 		return
 	}
-	control_config.Header_input = "Connection: close"
-	treatment_config.Header_input = "Connection: close, X-Forwarded-For"
-	control_resp, err1 := runner.Run(control_config)
-	treatment_resp, err2 := runner.Run(treatment_config)
-	if err1 != nil || err2 != nil {
+	treatmentReq, err := http.NewRequest("GET", options.Target, nil)
+	if err != nil {
+		logger.Debugf("Error creating request: %v\n", err)
 		return
 	}
-	result, place := comparer.CompareResponse(control_resp, treatment_resp)
+
+	controlReq.Header.Set("Connection", "close")
+	treatmentReq.Header.Set("Connection", "close, X-Forwarded-For")
+	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectHTTP1Client)
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectHTTP1Client)
+	if errCtrl != nil || errTreat != nil {
+		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
+		return
+	}
+	result, place := comparer.CompareResponse(controlResp, treatmentResp)
 	if !result && place == "status" {
-		if treatment_resp.Status < 400 {
-			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, control_resp.Status, treatment_resp.Status)
+		if treatmentResp.StatusCode < 400 {
+			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, controlResp.StatusCode, treatmentResp.StatusCode)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
 				common.OutputP.PublishMessage(msg)

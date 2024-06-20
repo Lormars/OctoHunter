@@ -3,51 +3,33 @@ package checker
 import (
 	"fmt"
 	"io"
-	"sync"
+	"net/http"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
-func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.ServerResult) {
+func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.ServerResult, error, error) {
 	httpURL := fmt.Sprintf("http://%s", domain)
 	httpsURL := fmt.Sprintf("https://%s", domain)
 
-	resultChan := make(chan common.ServerResult, 2)
-	var wg sync.WaitGroup
-	wg.Add(2)
-	go checkServer(httpURL, resultChan, &wg)
-	go checkServer(httpsURL, resultChan, &wg)
+	httpResult, errhttp := checkServer(httpURL)
+	httpsResult, errhttps := checkServer(httpsURL)
 
-	wg.Wait()
-	close(resultChan)
-
-	var httpResult, httpsResult common.ServerResult
-	for result := range resultChan {
-		if result.Online {
-			if result.Url == httpURL {
-				httpResult = result
-			} else {
-				httpsResult = result
-			}
-		}
-	}
-	return &httpResult, &httpsResult
+	return httpResult, httpsResult, errhttp, errhttps
 }
 
-func checkServer(url string, resultChan chan<- common.ServerResult, wg *sync.WaitGroup) {
-	defer wg.Done()
+func checkServer(url string) (*common.ServerResult, error) {
 	resp, err := common.NoRedirectClient.Get(url)
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", url, err)
-		resultChan <- common.ServerResult{
+		return &common.ServerResult{
 			Url:        url,
 			Online:     false,
 			StatusCode: 0,
 			Headers:    nil,
 			Body:       "",
-		}
-		return
+		}, err
 	}
 	defer resp.Body.Close()
 	bodyBytes, err := io.ReadAll(resp.Body)
@@ -56,12 +38,42 @@ func checkServer(url string, resultChan chan<- common.ServerResult, wg *sync.Wai
 		body = string(bodyBytes)
 	}
 
-	resultChan <- common.ServerResult{
+	return &common.ServerResult{
 		Url:        url,
 		Online:     resp.StatusCode >= 100 && resp.StatusCode < 600,
 		StatusCode: resp.StatusCode,
 		Headers:    resp.Header,
 		Body:       body,
+	}, nil
+
+}
+func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerResult, error) {
+	resp, err := client.Do(req)
+	url := req.URL.String()
+
+	if err != nil {
+		logger.Debugf("Error getting response from %s: %v\n", url, err)
+		return &common.ServerResult{
+			Url:        url,
+			Online:     false,
+			StatusCode: 0,
+			Headers:    nil,
+			Body:       "",
+		}, err
 	}
+	defer resp.Body.Close()
+	bodyBytes, err := io.ReadAll(resp.Body)
+	body := ""
+	if err == nil {
+		body = string(bodyBytes)
+	}
+
+	return &common.ServerResult{
+		Url:        url,
+		Online:     resp.StatusCode >= 100 && resp.StatusCode < 600,
+		StatusCode: resp.StatusCode,
+		Headers:    resp.Header,
+		Body:       body,
+	}, nil
 
 }
