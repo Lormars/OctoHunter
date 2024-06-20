@@ -1,12 +1,30 @@
 package checker
 
 import (
+	"context"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/miekg/dns"
 )
+
+var resolver = &net.Resolver{
+	PreferGo: true,
+	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
+		d := net.Dialer{
+			Timeout: 5 * time.Second,
+		}
+		return d.DialContext(ctx, network, "1.1.1.1:53")
+	},
+}
+
+func ResolveDNS(domain string) bool {
+	_, err := resolver.LookupHost(context.Background(), domain)
+	return err == nil
+}
 
 func HasCname(hostname string) (bool, string, error) {
 	cname, err := net.LookupCNAME(hostname)
@@ -51,7 +69,7 @@ func FindImmediateCNAME(hostname string) (string, error) {
 	r, _, err := c.Exchange(m, dnsServer)
 
 	if err != nil {
-		//fmt.Printf("DNS query failed: %v\n", err)
+		logger.Debugf("DNS query failed: %v\n", err)
 		return "", err
 	}
 

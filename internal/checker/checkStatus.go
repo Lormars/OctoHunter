@@ -9,6 +9,13 @@ func CheckAccess(resp *common.Response) bool {
 	return false
 }
 
+func CheckRedirect(statusCode int) bool {
+	if statusCode >= 300 && statusCode < 400 {
+		return true
+	}
+	return false
+}
+
 func Check405(resp *common.Response) bool {
 	return resp.Status == 405
 }

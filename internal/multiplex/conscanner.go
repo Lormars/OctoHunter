@@ -3,7 +3,6 @@ package multiplex
 import (
 	"bufio"
 	"context"
-	"fmt"
 	"os"
 	"runtime"
 	"sync"
@@ -34,7 +33,7 @@ func Conscan(ctx context.Context, f common.Atomic, options *common.Opts, fileNam
 	}
 	file, err := os.Open(fileName)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln("Error opening file: ", err)
 		return
 	}
 	defer file.Close()
@@ -53,13 +52,14 @@ Loop:
 			logger.Infof("Loop Done for %s\n", cacheName)
 			break Loop
 		case request_ch <- &common.Opts{
-			Module:       options.Module,
-			Target:       line,
-			DorkFile:     options.DorkFile,
-			HopperFile:   options.HopperFile,
-			MethodFile:   options.MethodFile,
-			RedirectFile: options.RedirectFile,
-			CnameFile:    options.CnameFile,
+			Module:         options.Module,
+			Target:         line,
+			DorkFile:       options.DorkFile,
+			HopperFile:     options.HopperFile,
+			MethodFile:     options.MethodFile,
+			RedirectFile:   options.RedirectFile,
+			CnameFile:      options.CnameFile,
+			DispatcherFile: options.DispatcherFile,
 		}:
 			lineCount++
 			//logger.Infof("Sending %s to request_ch\n", line)

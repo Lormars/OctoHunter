@@ -10,6 +10,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/requester/pkg/runner"
 )
@@ -31,9 +32,10 @@ func singleMethodCheck(options *common.Opts) {
 			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s\n", options.Target, method)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
-				common.PublishMessage(msg)
+				common.OutputP.PublishMessage(msg)
 			}
 		} else if err != nil {
+			logger.Debugf("Error testing access control: %v\n", err)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -43,9 +45,10 @@ func singleMethodCheck(options *common.Opts) {
 			msg := fmt.Sprintf("[Method] Method Overwrite Bypassed for target %s using header %s\n", options.Target, header)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
-				common.PublishMessage(msg)
+				common.OutputP.PublishMessage(msg)
 			}
 		} else if err != nil {
+			logger.Debugf("Error testing method overwrite: %v\n", err)
 			break
 		}
 		time.Sleep(1 * time.Second)
@@ -57,12 +60,14 @@ func testAccessControl(options *common.Opts, verb string) (bool, error) {
 	control_config, err1 := runner.NewConfig(options.Target)
 	treatment_config, err2 := runner.NewConfig(options.Target)
 	if err1 != nil || err2 != nil {
+		logger.Debugf("Error creating runner config: err1 - %v | err2 - %v\n", err1, err2)
 		return false, err1 //err1 or 2 does not matter
 	}
 	treatment_config.Method = verb
 	control_resp, err1 := runner.Run(control_config)
 	treatment_resp, err2 := runner.Run(treatment_config)
 	if err1 != nil || err2 != nil {
+		logger.Debugf("Error running control or treatment: err1 - %v | err2 - %v\n", err1, err2)
 		return false, err1
 	}
 	if !checker.CheckAccess(control_resp) && checker.CheckAccess(treatment_resp) {
@@ -80,6 +85,7 @@ func checkMethodOverwrite(options *common.Opts, header string) (bool, error) {
 	control_config, err1 := runner.NewConfig(options.Target)
 	treatment_config, err2 := runner.NewConfig(options.Target)
 	if err1 != nil || err2 != nil {
+		logger.Debugf("Error creating runner config: err1 - %v | err2 - %v\n", err1, err2)
 		return false, err1
 	}
 	control_config.Method = "DELETE"
@@ -88,6 +94,7 @@ func checkMethodOverwrite(options *common.Opts, header string) (bool, error) {
 	control_resp, err1 := runner.Run(control_config)
 	treatment_resp, err2 := runner.Run(treatment_config)
 	if err1 != nil || err2 != nil {
+		logger.Debugf("Error running control or treatment: err1 - %v | err2 - %v\n", err1, err2)
 		return false, err1
 	}
 	if checker.Check405(control_resp) && !checker.Check405(treatment_resp) && !checker.Check429(treatment_resp) {

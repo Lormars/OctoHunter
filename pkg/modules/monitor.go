@@ -2,7 +2,6 @@ package modules
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -42,7 +41,7 @@ func Monitor(opts *common.Opts) {
 
 	handler := c.Handler(r)
 
-	fmt.Println("Starting server on :", port)
+	logger.Infoln("Starting server on :", port)
 	if err := http.ListenAndServe(":"+port, handler); err != nil {
 		log.Fatal("Error starting server: ", err)
 	}
@@ -78,7 +77,7 @@ func stopHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	fmt.Println(moduleName)
+	//fmt.Println(moduleName)
 
 	moduleManager.StopModule(moduleName)
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/requester/pkg/runner"
 )
@@ -25,19 +25,20 @@ func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts
 	defer wg.Done()
 	parseSignature("asset/fingerprints.json")
 	if options.Target == "none" {
-		multiplex.Conscan(ctx, takeover, options, options.CnameFile, "cname", 10)
+		multiplex.Conscan(ctx, Takeover, options, options.CnameFile, "cname", 10)
 	} else {
-		takeover(options)
+		Takeover(options)
 	}
 }
 
-func takeover(opts *common.Opts) {
+func Takeover(opts *common.Opts) {
+	logger.Debugln("Takeover module running")
 	domain := opts.Target
 	hasCname, cname, _ := checker.HasCname(domain)
 	if hasCname {
 		for _, s := range skip {
 			if strings.Contains(cname, s) {
-				//fmt.Println("skipped")
+				logger.Debugln("Skipping ", domain, " because of ", s, " is in skipping list.")
 				return
 			}
 		}
@@ -55,10 +56,11 @@ func checkSig(domain string, opts *common.Opts) bool {
 	for {
 		temp_cname, dnsError = checker.FindImmediateCNAME(temp_domain)
 		if temp_cname == "" || (dnsError != nil && !errors.Is(dnsError, common.ErrNXDOMAIN)) {
-			//fmt.Printf("Oops, something bad happened on checkSig with temp_cname: %s and dnsError: %v", temp_cname, dnsError)
+			logger.Debugf("Oops, something bad happened on checkSig with temp_cname: %s and dnsError: %v\n", temp_cname, dnsError)
 			return false
 		}
 		if temp_cname == temp_domain || count > 10 { //prevent circular cname
+			logger.Debugf("Circular CNAME detected on %s\n", domain)
 			break
 		}
 
@@ -68,10 +70,12 @@ func checkSig(domain string, opts *common.Opts) bool {
 	}
 	//just for elb...
 	if strings.Contains(temp_cname, "elb.") && strings.Contains(temp_cname, "amazonaws.com") {
+		logger.Debugf("Skipping %s because it's an ELB\n", temp_cname)
 		return false
 	}
 	for _, s := range skip {
 		if strings.Contains(temp_cname, s) {
+			logger.Debugf("Skipping %s because of %s is in skipping list.\n", temp_cname, s)
 			return false
 		}
 	}
@@ -85,7 +89,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
 							color.Red(msg)
 							if opts.Module.Contains("broker") {
-								common.PublishMessage(msg)
+								common.OutputP.PublishMessage(msg)
 							}
 							return true
 						}
@@ -101,11 +105,13 @@ func checkSig(domain string, opts *common.Opts) bool {
 			url := protocol + domain
 			config, err := runner.NewConfig(url)
 			if err != nil {
+				logger.Debugf("Error creating runner config for %s: %v\n", url, err)
 				continue
 			}
 			resp, err := runner.Run(config)
 			if err != nil {
 				//when the status is noerror but there is no ip address...
+				logger.Debugf("Error getting response from %s: %v\n", url, err)
 				continue
 			}
 			for _, record := range records {
@@ -118,7 +124,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 							msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
 							color.Red(msg)
 							if opts.Module.Contains("broker") {
-								common.PublishMessage(msg)
+								common.OutputP.PublishMessage(msg)
 							}
 							return true
 						}
@@ -131,7 +137,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 						msg := "[CNAME Potential] " + url + " | Cname: " + temp_cname + " | Service: " + record.Service
 						color.Red(msg)
 						if opts.Module.Contains("broker") {
-							common.PublishMessage(msg)
+							common.OutputP.PublishMessage(msg)
 						}
 						return true
 					}
@@ -149,20 +155,20 @@ func checkSig(domain string, opts *common.Opts) bool {
 func parseSignature(fileName string) {
 	file, err := os.Open(fileName)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln("Error opening file: ", fileName)
 		return
 	}
 	defer file.Close()
 
 	byteValue, err := io.ReadAll(file)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln("Error reading file: ", fileName)
 		return
 	}
 
 	err = json.Unmarshal(byteValue, &records)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorln("Error parsing file", err)
 		return
 	}
 }

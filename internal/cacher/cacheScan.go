@@ -2,12 +2,12 @@ package cacher
 
 import (
 	"database/sql"
-	"fmt"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/logger"
 )
 
 func init() {
@@ -34,7 +34,7 @@ func UpdateScanTime(endpoint, module string) {
 
 	tx, err := common.DB.Begin()
 	if err != nil {
-		fmt.Printf("Error starting transaction: %v\n", err)
+		logger.Errorf("Error starting transaction: %v\n", err)
 		return
 	}
 
@@ -42,12 +42,12 @@ func UpdateScanTime(endpoint, module string) {
 	_, err = tx.Exec(query, endpoint, module, currentTime)
 	if err != nil {
 		tx.Rollback()
-		fmt.Printf("Error updating cache: %v\n", err)
+		logger.Errorf("Error updating cache: %v\n", err)
 		return
 	}
 
 	if err = tx.Commit(); err != nil {
-		fmt.Printf("Error committing transaction: %v\n", err)
+		logger.Errorf("Error committing transaction: %v\n", err)
 	}
 }
 
@@ -58,7 +58,7 @@ func CanScan(endpoint, module string) bool {
 	query := `SELECT last_scanned FROM cache WHERE endpoint = ? AND module = ?;`
 	err := common.DB.QueryRow(query, endpoint, module).Scan(&LastScanned)
 	if err != nil && err != sql.ErrNoRows {
-		fmt.Printf("Error querying cache: %v\n", err)
+		logger.Errorf("Error querying cache: %v\n", err)
 		return true
 	}
 

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/parser"
 )
 
@@ -47,7 +48,7 @@ func checkStatus(target string) (int, string) {
 	}
 	resp, err := client.Get(target)
 	if err != nil {
-		fmt.Printf("Error crawling %s: %v\n", target, err)
+		logger.Errorf("Error crawling %s: %v\n", target, err)
 		return common.XERROR, ""
 	}
 	defer resp.Body.Close()

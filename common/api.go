@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"fmt"
+	"net/http"
 	"os/exec"
 	"strings"
+
+	"github.com/lormars/octohunter/internal/logger"
 )
 
 type ModuleList []string
@@ -38,13 +40,14 @@ func (m *ModuleList) UnmarshalJSON(data []byte) error {
 }
 
 type Opts struct {
-	Module       ModuleList `json:"modules"`
-	Target       string     `json:"target"`
-	DorkFile     string     `json:"dorkFile"`
-	HopperFile   string     `json:"hopperFile"`
-	MethodFile   string     `json:"methodFile"`
-	RedirectFile string     `json:"redirectFile"`
-	CnameFile    string     `json:"cnameFile"`
+	Module         ModuleList `json:"modules"`
+	Target         string     `json:"target"`
+	DorkFile       string     `json:"dorkFile"`
+	HopperFile     string     `json:"hopperFile"`
+	MethodFile     string     `json:"methodFile"`
+	RedirectFile   string     `json:"redirectFile"`
+	CnameFile      string     `json:"cnameFile"`
+	DispatcherFile string     `json:"dispatcherFile"`
 }
 
 type TakeoverRecord struct {
@@ -77,10 +80,18 @@ func RunCommand(name string, args []string) error {
 	cmd.Stderr = &out
 	err := cmd.Run()
 	if err != nil {
-		fmt.Printf("Error running command: %s\n", out.String())
+		logger.Errorf("Error running command: %s\n", out.String())
 		return err
 	}
 	return nil
 }
 
 var DB *sql.DB
+
+type ServerResult struct {
+	Url        string
+	Online     bool
+	StatusCode int
+	Headers    http.Header
+	Body       string
+}
