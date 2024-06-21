@@ -5,7 +5,9 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
+	"runtime"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	dispatcher "github.com/lormars/octohunter/Dispatcher"
@@ -17,13 +19,34 @@ import (
 	"github.com/lormars/octohunter/tools/controller"
 )
 
+func printMemUsage() {
+	for {
+		var m runtime.MemStats
+		runtime.ReadMemStats(&m)
+
+		// For more info, see: https://golang.org/pkg/runtime/#MemStats
+		logger.Debugf("Alloc = %v MiB", bToMb(m.Alloc))
+		logger.Debugf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+		logger.Debugf("\tSys = %v MiB", bToMb(m.Sys))
+		logger.Debugf("\tNumGC = %v\n", m.NumGC)
+		time.Sleep(1 * time.Second)
+	}
+}
+
+func bToMb(b uint64) uint64 {
+	return b / 1024 / 1024
+}
+
 func main() {
 
 	// go func() {
 	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
 	// }()
 
-	options, logLevel, cacheTime := parser.Parse_Options()
+	options, logLevel, cacheTime, mu := parser.Parse_Options()
+	if mu {
+		go printMemUsage()
+	}
 	logger.SetLogLevel(logger.ParseLogLevel(logLevel))
 	cacher.SetCacheTime(cacheTime)
 	err := godotenv.Load()
@@ -38,7 +61,7 @@ func main() {
 	}
 
 	if options.Module.Contains("dispatcher") {
-		dispatcher.Input(options)
+		go dispatcher.Input(options)
 	}
 
 	if options.Module.Contains("monitor") {
@@ -52,6 +75,7 @@ func main() {
 
 	sig := <-sigChan
 	logger.Infof("Received signal: %s. Shutting down gracefully...\n", sig)
+
 	common.Close()
 	logger.Infoln("Exiting...")
 }

@@ -37,12 +37,12 @@ func Divider(domainString string) {
 		logger.Debugf("Error checking https server: %v\n", errhttps)
 	} else if httpsStatus.Online {
 		if checker.CheckRedirect(httpsStatus.StatusCode) {
-			common.RedirectP.PublishMessage(httpsStatus.Url)
-			common.MethodP.PublishMessage(httpsStatus.Url)
+			go common.RedirectP.PublishMessage(httpsStatus.Url)
+			go common.MethodP.PublishMessage(httpsStatus.Url)
 		} else if checker.CheckRequestError(httpsStatus.StatusCode) {
-			common.HopP.PublishMessage(httpsStatus.Url)
+			go common.HopP.PublishMessage(httpsStatus.Url)
 		} else if checker.CheckAccess(httpsStatus) {
-			//common.CrawlP.PublishMessage(httpsStatus)
+			go common.CrawlP.PublishMessage(httpsStatus)
 			httpsCrawled = true
 		}
 	}
@@ -50,9 +50,9 @@ func Divider(domainString string) {
 		logger.Debugf("Error checking http server: %v\n", errhttp)
 	} else if httpStatus.Online {
 		if checker.CheckRequestError(httpStatus.StatusCode) {
-			common.HopP.PublishMessage(httpStatus.Url)
+			go common.HopP.PublishMessage(httpStatus.Url)
 		} else if checker.CheckAccess(httpStatus) && !httpsCrawled {
-			//common.CrawlP.PublishMessage(httpStatus)
+			go common.CrawlP.PublishMessage(httpStatus)
 		}
 		return
 	}
