@@ -32,6 +32,7 @@ func SingleRedirectCheck(opts *common.Opts) {
 	if err != nil {
 		return
 	}
+	logger.Debugf("finalURL: %s for original url: %s", finalURL, opts.Target)
 	if strings.Contains(finalURL.Path, "login") {
 		for _, p := range payload {
 			testPath := strings.Replace(finalURL.Path, "login", p, -1)

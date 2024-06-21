@@ -41,6 +41,7 @@ func (m *ModuleList) UnmarshalJSON(data []byte) error {
 
 type Opts struct {
 	Module         ModuleList `json:"modules"`
+	Concurrency    int        `json:"concurrency"`
 	Target         string     `json:"target"`
 	DorkFile       string     `json:"dorkFile"`
 	HopperFile     string     `json:"hopperFile"`
@@ -89,9 +90,9 @@ func RunCommand(name string, args []string) error {
 var DB *sql.DB
 
 type ServerResult struct {
-	Url        string
-	Online     bool
-	StatusCode int
-	Headers    http.Header
-	Body       string
+	Url        string      `json:"url"`
+	Online     bool        `json:"online"`
+	StatusCode int         `json:"status_code"`
+	Headers    http.Header `json:"headers"`
+	Body       string      `json:"body"`
 }

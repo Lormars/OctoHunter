@@ -3,10 +3,14 @@ package main
 import (
 	"log"
 	_ "net/http/pprof"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 	dispatcher "github.com/lormars/octohunter/Dispatcher"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/parser"
 	"github.com/lormars/octohunter/pkg/modules"
@@ -19,8 +23,9 @@ func main() {
 	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
 	// }()
 
-	options, logLevel := parser.Parse_Options()
+	options, logLevel, cacheTime := parser.Parse_Options()
 	logger.SetLogLevel(logger.ParseLogLevel(logLevel))
+	cacher.SetCacheTime(cacheTime)
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found")
@@ -30,7 +35,6 @@ func main() {
 
 	if options.Module.Contains("broker") {
 		common.Init()
-		defer common.Close()
 	}
 
 	if options.Module.Contains("dispatcher") {
@@ -43,5 +47,11 @@ func main() {
 		modules.Startup(moduleManager, options)
 	}
 
-	select {}
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+
+	sig := <-sigChan
+	logger.Infof("Received signal: %s. Shutting down gracefully...\n", sig)
+	common.Close()
+	logger.Infoln("Exiting...")
 }

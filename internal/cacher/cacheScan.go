@@ -10,6 +10,10 @@ import (
 	"github.com/lormars/octohunter/internal/logger"
 )
 
+type CacheTime int
+
+var cacheTime CacheTime
+
 func init() {
 	var err error
 	common.DB, err = sql.Open("sqlite3", "./cache.db")
@@ -27,6 +31,12 @@ func init() {
 	if _, err := common.DB.Exec(createTable); err != nil {
 		panic(err)
 	}
+
+	cacheTime = 15
+}
+
+func SetCacheTime(time int) {
+	cacheTime = CacheTime(time)
 }
 
 func UpdateScanTime(endpoint, module string) {
@@ -66,6 +76,6 @@ func CanScan(endpoint, module string) bool {
 		return true
 	}
 
-	return currentTime-LastScanned > 15*60
+	return currentTime-LastScanned > int64(cacheTime)*60
 
 }

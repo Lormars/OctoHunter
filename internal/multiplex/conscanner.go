@@ -53,6 +53,7 @@ Loop:
 			break Loop
 		case request_ch <- &common.Opts{
 			Module:         options.Module,
+			Concurrency:    options.Concurrency,
 			Target:         line,
 			DorkFile:       options.DorkFile,
 			HopperFile:     options.HopperFile,

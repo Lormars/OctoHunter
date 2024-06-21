@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/logger"
@@ -14,6 +15,7 @@ func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.Serv
 	httpsURL := fmt.Sprintf("https://%s", domain)
 
 	httpResult, errhttp := checkServer(httpURL)
+	time.Sleep(1 * time.Second) //avoid 429
 	httpsResult, errhttps := checkServer(httpsURL)
 
 	return httpResult, httpsResult, errhttp, errhttps

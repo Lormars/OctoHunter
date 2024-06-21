@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -20,6 +21,9 @@ var CnameP = Producer{name: "cname_broker"}
 var RedirectP = Producer{name: "redirect_broker"}
 var MethodP = Producer{name: "method_broker"}
 var HopP = Producer{name: "hopper_broker"}
+var DividerP = Producer{name: "divider_broker"}
+var CrawlP = Producer{name: "crawl_broker"}
+
 var (
 	conn *amqp.Connection
 	ch   *amqp.Channel
@@ -41,11 +45,14 @@ func Init() {
 
 	ch, err = conn.Channel()
 	failOnError(err, "Failed to open a channel")
-	DeclareQueue("dork_broker")
-	DeclareQueue("cname_broker")
-	DeclareQueue("redirect_broker")
-	DeclareQueue("method_broker")
-	DeclareQueue("hopper_broker")
+
+	queueNames := []string{
+		"dork_broker", "cname_broker", "redirect_broker",
+		"method_broker", "hopper_broker", "divider_broker", "crawl_broker",
+	}
+	for _, name := range queueNames {
+		DeclareQueue(name)
+	}
 
 }
 
@@ -62,25 +69,43 @@ func DeclareQueue(name string) {
 
 }
 
-func (p Producer) PublishMessage(body string) {
+func (p Producer) PublishMessage(body interface{}) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	err := ch.PublishWithContext(
+	var messageBody []byte
+	var contentType string
+	var err error
+
+	switch v := body.(type) {
+	case string:
+		messageBody = []byte(v)
+		contentType = "text/plain"
+	case *ServerResult:
+		messageBody, err = json.Marshal(v)
+		if err != nil {
+			failOnError(err, "Failed to marshal struct to JSON")
+		}
+		contentType = "application/json"
+	default:
+		failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
+
+	}
+	err = ch.PublishWithContext(
 		ctx,
 		"",
 		p.name,
 		false,
 		false,
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(body),
+			ContentType: contentType,
+			Body:        messageBody,
 		})
 	failOnError(err, "Failed to publish a message")
-	logger.Debugf(" [x] Sent %s to %s", body, p.name)
+	logger.Debugf(" [x] Sent to %s", p.name)
 }
 
-func (p Producer) ConsumeMessage(f Atomic, opts *Opts) {
+func (p Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 	msgs, err := ch.Consume(
 		p.name,
 		"",
@@ -91,27 +116,43 @@ func (p Producer) ConsumeMessage(f Atomic, opts *Opts) {
 		nil,
 	)
 	failOnError(err, "Failed to register a consumer")
+
 	var forever = make(chan struct{})
 	go func() {
 		for d := range msgs {
-			localOpts := &Opts{
-				Module:         opts.Module,
-				Target:         string(d.Body),
-				DorkFile:       opts.DorkFile,
-				HopperFile:     opts.HopperFile,
-				MethodFile:     opts.MethodFile,
-				RedirectFile:   opts.RedirectFile,
-				CnameFile:      opts.CnameFile,
-				DispatcherFile: opts.DispatcherFile,
+			switch handler := handlerFunc.(type) {
+			case func(string):
+				logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
+				handler(string(d.Body))
+			case func(*ServerResult):
+				var serverResult ServerResult
+				err := json.Unmarshal(d.Body, &serverResult)
+				if err != nil {
+					logger.Debugf("Error Unmarshalling JSON %s", err)
+					continue
+				}
+				logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
+				handler(&serverResult)
+			case func(*Opts):
+				localOpts := &Opts{
+					Module:         opts.Module,
+					Concurrency:    opts.Concurrency,
+					Target:         string(d.Body),
+					DorkFile:       opts.DorkFile,
+					HopperFile:     opts.HopperFile,
+					MethodFile:     opts.MethodFile,
+					RedirectFile:   opts.RedirectFile,
+					CnameFile:      opts.CnameFile,
+					DispatcherFile: opts.DispatcherFile,
+				}
+				logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
+				handler(localOpts)
+
 			}
-			logger.Debugf("Producer %s Received a message: %s\n", p.name, d.Body)
-			f(localOpts)
 		}
-
 	}()
-	logger.Infoln("Waiting for messages: ", p.name)
+	logger.Infof(" [*] %s Waiting for messages. To exit press CTRL+C\n", p.name)
 	<-forever
-
 }
 
 func Close() {

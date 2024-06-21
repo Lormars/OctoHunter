@@ -39,7 +39,7 @@ func SingleMethodCheck(options *common.Opts) {
 			logger.Debugf("Error testing access control: control - %v | treament - %v\n", errCtrl, errTreat)
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Second) //avoid 429
 	}
 	for _, header := range headers {
 		if ok, errCtrl, errTreat := checkMethodOverwrite(options, header); ok {
@@ -52,7 +52,7 @@ func SingleMethodCheck(options *common.Opts) {
 			logger.Debugf("Error testing method overwrite: control - %v | treament - %v\n", errCtrl, errTreat)
 			break
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(1 * time.Second) //avoid 429
 	}
 
 }
@@ -70,6 +70,7 @@ func testAccessControl(options *common.Opts, verb string) (bool, error, error) {
 	}
 
 	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectClient)
+	time.Sleep(1 * time.Second) //avoid 429
 	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectClient)
 	if errCtrl != nil || errTreat != nil {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
@@ -99,6 +100,7 @@ func checkMethodOverwrite(options *common.Opts, header string) (bool, error, err
 	}
 	treatmentReq.Header.Set(header, "GET")
 	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectClient)
+	time.Sleep(1 * time.Second) //avoid 429
 	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectClient)
 	if errCtrl != nil || errTreat != nil {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)

@@ -8,11 +8,13 @@ import (
 
 var modules common.ModuleList
 
-func Parse_Options() (*common.Opts, string) {
+func Parse_Options() (*common.Opts, string, int) {
 
 	flag.Var(&modules, "modules", "The module to run")
 	var (
 		target         = flag.String("target", "none", "The target to scan")
+		cacheTime      = flag.Int("cache", 15, "The cache time to use")
+		concurrency    = flag.Int("concurrency", 20, "The concurrency to use")
 		logLevel       = flag.String("loglevel", "info", "The log level to use")
 		cnameFile      = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")
 		dorkFile       = flag.String("dorkfile", "none", "The file to scan for Google dork")
@@ -24,6 +26,7 @@ func Parse_Options() (*common.Opts, string) {
 	flag.Parse()
 	return &common.Opts{
 		Module:         modules,
+		Concurrency:    *concurrency,
 		Target:         *target,
 		CnameFile:      *cnameFile,
 		DorkFile:       *dorkFile,
@@ -31,5 +34,5 @@ func Parse_Options() (*common.Opts, string) {
 		RedirectFile:   *redirectFile,
 		HopperFile:     *hopperFile,
 		DispatcherFile: *dispatcherFile,
-	}, *logLevel
+	}, *logLevel, *cacheTime
 }

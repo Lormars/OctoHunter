@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -39,6 +40,7 @@ func SingleHopCheck(options *common.Opts) {
 	controlReq.Header.Set("Connection", "close")
 	treatmentReq.Header.Set("Connection", "close, X-Forwarded-For")
 	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectHTTP1Client)
+	time.Sleep(1 * time.Second) //avoid 429
 	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectHTTP1Client)
 	if errCtrl != nil || errTreat != nil {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
@@ -46,7 +48,7 @@ func SingleHopCheck(options *common.Opts) {
 	}
 	result, place := comparer.CompareResponse(controlResp, treatmentResp)
 	if !result && place == "status" {
-		if treatmentResp.StatusCode < 400 {
+		if treatmentResp.StatusCode < 400 && controlResp.StatusCode != 429 {
 			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, controlResp.StatusCode, treatmentResp.StatusCode)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
