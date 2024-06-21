@@ -5,37 +5,18 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"os/signal"
-	"runtime"
 	"syscall"
-	"time"
 
 	"github.com/joho/godotenv"
 	dispatcher "github.com/lormars/octohunter/Dispatcher"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/bench"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/parser"
 	"github.com/lormars/octohunter/pkg/modules"
 	"github.com/lormars/octohunter/tools/controller"
 )
-
-func printMemUsage() {
-	for {
-		var m runtime.MemStats
-		runtime.ReadMemStats(&m)
-
-		// For more info, see: https://golang.org/pkg/runtime/#MemStats
-		logger.Debugf("Alloc = %v MiB", bToMb(m.Alloc))
-		logger.Debugf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
-		logger.Debugf("\tSys = %v MiB", bToMb(m.Sys))
-		logger.Debugf("\tNumGC = %v\n", m.NumGC)
-		time.Sleep(1 * time.Second)
-	}
-}
-
-func bToMb(b uint64) uint64 {
-	return b / 1024 / 1024
-}
 
 func main() {
 
@@ -45,7 +26,7 @@ func main() {
 
 	options, logLevel, cacheTime, mu := parser.Parse_Options()
 	if mu {
-		go printMemUsage()
+		go bench.PrintMemUsage(options)
 	}
 	logger.SetLogLevel(logger.ParseLogLevel(logLevel))
 	cacher.SetCacheTime(cacheTime)
