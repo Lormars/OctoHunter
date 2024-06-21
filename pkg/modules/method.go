@@ -18,13 +18,14 @@ import (
 func CheckMethod(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
 	defer wg.Done()
 	if options.Target != "none" {
-		singleMethodCheck(options)
+		SingleMethodCheck(options)
 	} else {
-		multiplex.Conscan(ctx, singleMethodCheck, options, options.MethodFile, "method", 10)
+		multiplex.Conscan(ctx, SingleMethodCheck, options, options.MethodFile, "method", 10)
 	}
 }
 
-func singleMethodCheck(options *common.Opts) {
+func SingleMethodCheck(options *common.Opts) {
+	logger.Debugln("SingleMethodCheck module running")
 	methods := []string{"POST", "FOO"}
 	headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
 	for _, method := range methods {

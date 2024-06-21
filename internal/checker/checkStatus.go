@@ -16,6 +16,13 @@ func CheckRedirect(statusCode int) bool {
 	return false
 }
 
+func CheckRequestError(statusCode int) bool {
+	if statusCode >= 400 && statusCode < 500 {
+		return true
+	}
+	return false
+}
+
 func Check405(resp *common.ServerResult) bool {
 	return resp.StatusCode == 405
 }

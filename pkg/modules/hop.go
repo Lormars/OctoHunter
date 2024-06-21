@@ -17,13 +17,14 @@ import (
 func CheckHop(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
 	defer wg.Done()
 	if options.Target != "none" {
-		singleCheck(options)
+		SingleHopCheck(options)
 	} else {
-		multiplex.Conscan(ctx, singleCheck, options, options.HopperFile, "hop", 10)
+		multiplex.Conscan(ctx, SingleHopCheck, options, options.HopperFile, "hop", 10)
 	}
 }
 
-func singleCheck(options *common.Opts) {
+func SingleHopCheck(options *common.Opts) {
+	logger.Debugln("SingleHopCheck module running")
 	controlReq, err := http.NewRequest("GET", options.Target, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)

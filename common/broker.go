@@ -18,6 +18,8 @@ type Producer struct {
 var OutputP = Producer{name: "dork_broker"}
 var CnameP = Producer{name: "cname_broker"}
 var RedirectP = Producer{name: "redirect_broker"}
+var MethodP = Producer{name: "method_broker"}
+var HopP = Producer{name: "hopper_broker"}
 var (
 	conn *amqp.Connection
 	ch   *amqp.Channel
@@ -42,6 +44,8 @@ func Init() {
 	DeclareQueue("dork_broker")
 	DeclareQueue("cname_broker")
 	DeclareQueue("redirect_broker")
+	DeclareQueue("method_broker")
+	DeclareQueue("hopper_broker")
 
 }
 
@@ -87,7 +91,7 @@ func (p Producer) ConsumeMessage(f Atomic, opts *Opts) {
 		nil,
 	)
 	failOnError(err, "Failed to register a consumer")
-	var forever chan struct{}
+	var forever = make(chan struct{})
 	go func() {
 		for d := range msgs {
 			localOpts := &Opts{
@@ -105,7 +109,7 @@ func (p Producer) ConsumeMessage(f Atomic, opts *Opts) {
 		}
 
 	}()
-	logger.Infoln("Waiting for messages.")
+	logger.Infoln("Waiting for messages: ", p.name)
 	<-forever
 
 }
