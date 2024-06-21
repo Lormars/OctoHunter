@@ -14,6 +14,7 @@ import (
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 var records []common.TakeoverRecord
@@ -85,6 +86,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 					msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
 					color.Red(msg)
 					if opts.Module.Contains("broker") {
+						notify.SendMessage(msg)
 						common.OutputP.PublishMessage(msg)
 					}
 					return true

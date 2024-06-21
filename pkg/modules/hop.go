@@ -13,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/internal/comparer"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 func CheckHop(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
@@ -52,6 +53,7 @@ func SingleHopCheck(options *common.Opts) {
 			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, controlResp.StatusCode, treatmentResp.StatusCode)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
+				notify.SendMessage(msg)
 				common.OutputP.PublishMessage(msg)
 			}
 		}

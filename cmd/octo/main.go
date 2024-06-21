@@ -35,8 +35,6 @@ func main() {
 		log.Println("No .env file found")
 	}
 
-	moduleManager := controller.NewModuleManager()
-
 	if options.Module.Contains("broker") {
 		common.Init()
 	}
@@ -48,6 +46,7 @@ func main() {
 	if options.Module.Contains("monitor") {
 		modules.Monitor(options)
 	} else {
+		moduleManager := controller.NewModuleManager()
 		modules.Startup(moduleManager, options)
 	}
 

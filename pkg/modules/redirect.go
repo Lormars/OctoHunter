@@ -13,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 var payload []string = []string{"admin", "dashboard", "user", "profile", "account", "portal", "home", "auth", "panel", "secure", "myaccount"}
@@ -58,6 +59,7 @@ func SingleRedirectCheck(opts *common.Opts) {
 					msg := fmt.Sprintf("[Redirect] from %s to %s\n", newUrl, finalURL.String())
 					color.Red(msg)
 					if opts.Module.Contains("broker") {
+						notify.SendMessage(msg)
 						common.OutputP.PublishMessage(msg)
 					}
 				}

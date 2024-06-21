@@ -13,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 func CheckMethod(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
@@ -33,6 +34,7 @@ func SingleMethodCheck(options *common.Opts) {
 			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s\n", options.Target, method)
 			color.Red(msg)
 			if options.Module.Contains("broker") {
+				notify.SendMessage(msg)
 				common.OutputP.PublishMessage(msg)
 			}
 		} else if errCtrl != nil || errTreat != nil {
@@ -47,6 +49,7 @@ func SingleMethodCheck(options *common.Opts) {
 			color.Red(msg)
 			if options.Module.Contains("broker") {
 				common.OutputP.PublishMessage(msg)
+				notify.SendMessage(msg)
 			}
 		} else if errCtrl != nil || errTreat != nil {
 			logger.Debugf("Error testing method overwrite: control - %v | treament - %v\n", errCtrl, errTreat)
