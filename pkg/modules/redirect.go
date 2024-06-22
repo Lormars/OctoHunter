@@ -7,9 +7,11 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
@@ -28,12 +30,16 @@ func CheckRedirect(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts) {
 }
 
 func SingleRedirectCheck(opts *common.Opts) {
+	if !cacher.CheckCache(opts.Target, "redirect") {
+		return
+	}
 	logger.Debugln("SingleRedirectCheck module running")
 	finalURL, err := getFinalURL(opts.Target)
 	if err != nil {
 		return
 	}
 	logger.Debugf("finalURL: %s for original url: %s", finalURL, opts.Target)
+	common.DividerP.PublishMessage(finalURL.String()) //send new-found finalURL to divider
 	if strings.Contains(finalURL.Path, "login") {
 		for _, p := range payload {
 			testPath := strings.Replace(finalURL.Path, "login", p, -1)
@@ -63,8 +69,14 @@ func SingleRedirectCheck(opts *common.Opts) {
 						common.OutputP.PublishMessage(msg)
 					}
 				}
+			} else {
+				common.DividerP.PublishMessage(newFinalURL.String()) //send new-found finalURL to divider
 			}
+			time.Sleep(1 * time.Second) //avoid 429
 		}
+		//if the redirected path is login page, but using oauth, try to bypass using different method
+	} else if strings.Contains(finalURL.Path, "oauth") {
+		common.MethodP.PublishMessage(opts.Target) //send new-found finalURL to method to try bypass
 	}
 }
 

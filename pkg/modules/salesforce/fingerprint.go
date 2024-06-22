@@ -8,8 +8,10 @@ import (
 	"strings"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/logger"
 )
 
+// Fingerprint checks if the target is running salesforce, taking url as input
 func Fingerprint(target string) (bool, string) {
 	path := []string{"/aura", "/s/sfsites/aura", "/sfsites/aura"}
 
@@ -20,17 +22,20 @@ func Fingerprint(target string) (bool, string) {
 
 		req, err := http.NewRequest("POST", newUrl, bytes.NewBuffer(jsonStr))
 		if err != nil {
-			return false, ""
+			logger.Debugf("Error creating request: %v", err)
+			continue
 		}
 
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := common.NormalClient.Do(req)
 		if err != nil {
-			return false, ""
+			logger.Debugf("Error getting response from %s: %v\n", newUrl, err)
+			continue
 		}
 
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
+			logger.Debugf("Error reading response body: %v\n", err)
 			continue
 		}
 

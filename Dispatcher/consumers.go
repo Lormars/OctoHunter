@@ -4,16 +4,20 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/pkg/modules"
+	"github.com/lormars/octohunter/pkg/modules/salesforce"
 	"github.com/lormars/octohunter/pkg/modules/takeover"
 )
 
 func Init(opts *common.Opts) {
-	go cnameConsumer(opts)
-	go redirectConsumer(opts)
-	go methodConsumer(opts)
-	go hopperConsumer(opts)
-	go dividerConsumer(opts)
-	go crawlerConsumer(opts)
+	for i := 0; i < opts.Concurrency/100; i++ {
+		go cnameConsumer(opts)
+		go redirectConsumer(opts)
+		go methodConsumer(opts)
+		go hopperConsumer(opts)
+		go crawlerConsumer(opts)
+		go dividerConsumer(opts)
+		go salesforceConsumer(opts)
+	}
 }
 
 func cnameConsumer(opts *common.Opts) {
@@ -38,4 +42,8 @@ func dividerConsumer(opts *common.Opts) {
 
 func crawlerConsumer(opts *common.Opts) {
 	common.CrawlP.ConsumeMessage(crawler.Crawl, opts)
+}
+
+func salesforceConsumer(opts *common.Opts) {
+	common.SalesforceP.ConsumeMessage(salesforce.SalesforceScan, opts)
 }

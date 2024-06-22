@@ -39,6 +39,18 @@ func SetCacheTime(time int) {
 	cacheTime = CacheTime(time)
 }
 
+func CheckCache(endpoint, module string) bool {
+	if CanScan(endpoint, module) {
+		logger.Debugf("Scanning %s for %s\n", endpoint, module)
+		UpdateScanTime(endpoint, module)
+		return true
+	} else {
+		logger.Debugf("Skipping %s for %s\n", endpoint, module)
+		return false
+	}
+
+}
+
 func UpdateScanTime(endpoint, module string) {
 	currentTime := time.Now().Unix()
 

@@ -2,11 +2,18 @@ package salesforce
 
 import (
 	"bufio"
+	"log"
 	"os"
 	"testing"
+
+	"github.com/joho/godotenv"
 )
 
 func TestFingerprint(t *testing.T) {
+	err := godotenv.Load("../../../.env")
+	if err != nil {
+		log.Println("No .env file found")
+	}
 	file, err := os.Open("../../../list/salesforceFile")
 	if err != nil {
 		t.Fatal(err)
@@ -18,7 +25,8 @@ func TestFingerprint(t *testing.T) {
 
 	for scanner.Scan() {
 		domain := scanner.Text()
-		res, _ := Fingerprint(domain)
-		t.Logf("res is %v\n", res)
+		SalesforceScan(domain)
+		//t.Logf("res is %v\n", res)
+
 	}
 }

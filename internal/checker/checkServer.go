@@ -10,6 +10,7 @@ import (
 	"github.com/lormars/octohunter/internal/logger"
 )
 
+// Usage: check if the server is online, using NoRedirectClient
 func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.ServerResult, error, error) {
 	httpURL := fmt.Sprintf("http://%s", domain)
 	httpsURL := fmt.Sprintf("https://%s", domain)

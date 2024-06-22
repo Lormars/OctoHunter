@@ -24,16 +24,21 @@ var MethodP = Producer{name: "method_broker"}
 var HopP = Producer{name: "hopper_broker"}
 var DividerP = Producer{name: "divider_broker"}
 var CrawlP = Producer{name: "crawl_broker"}
+var SalesforceP = Producer{name: "salesforce_broker"}
 
 var (
-	conn  *amqp.Connection
-	ch    *amqp.Channel
-	mutex sync.Mutex
+	conn      *amqp.Connection
+	ch        *amqp.Channel
+	mutex     sync.Mutex
+	semaphore map[string]int = make(map[string]int)
 )
 var queueNames = []string{
 	"dork_broker", "cname_broker", "redirect_broker",
 	"method_broker", "hopper_broker", "divider_broker", "crawl_broker",
+	"salesforce_broker",
 }
+
+var concurrency int
 
 func failOnError(err error, msg string) {
 	if err != nil {
@@ -41,43 +46,97 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func Init() {
+func Init(options *Opts) {
 	var err error
-	user := os.Getenv("RABBITMQ_USER")
-	password := os.Getenv("RABBITMQ_PASSWORD")
-	connStr := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, password)
-	conn, err = amqp.Dial(connStr)
+	concurrency = options.Concurrency
+	conn, ch, err = connectRabbitMQ()
 	failOnError(err, "Failed to connect to RabbitMQ")
 
-	ch, err = conn.Channel()
-	failOnError(err, "Failed to open a channel")
-
-	err = ch.Qos(
-		100,   // prefetch count
-		0,     // prefetch size
-		false, // global
-	)
-
-	failOnError(err, "Failed to set QoS")
-
-	for _, name := range queueNames {
-		DeclareQueue(name)
-	}
+	err = initQueues(ch)
+	failOnError(err, "Failed to initialize queues")
+	checkQueue()
 
 }
 
-func DeclareQueue(name string) {
-	_, err := ch.QueuePurge(name, false)
-	failOnError(err, "Failed to purge a queue")
-	_, err = ch.QueueDeclare(
-		name,
-		false,
-		false,
-		false,
-		false,
-		nil,
+func connectRabbitMQ() (*amqp.Connection, *amqp.Channel, error) {
+	user := os.Getenv("RABBITMQ_USER")
+	password := os.Getenv("RABBITMQ_PASSWORD")
+	connStr := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, password)
+	conn, err := amqp.Dial(connStr)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ch, err := conn.Channel()
+	if err != nil {
+		conn.Close()
+		return nil, nil, err
+	}
+
+	err = ch.Qos(
+		concurrency/5, // prefetch count
+		0,             // prefetch size
+		false,         // global
 	)
-	failOnError(err, "Failed to declare a queue")
+	if err != nil {
+		ch.Close()
+		conn.Close()
+		return nil, nil, err
+	}
+
+	return conn, ch, nil
+}
+
+func initQueues(ch *amqp.Channel) error {
+	for _, name := range queueNames {
+		_, err := ch.QueueDeclare(
+			name,
+			false,
+			false,
+			false,
+			false,
+			nil,
+		)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func reconnect() {
+	for {
+		var err error
+		conn, ch, err = connectRabbitMQ()
+		if err != nil {
+			logger.Warnf("Failed to reconnect to RabbitMQ, retrying in 2 seconds: %s", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		err = initQueues(ch)
+		if err != nil {
+			logger.Warnf("Failed to declare queues, retrying in 2 seconds: %s", err)
+			ch.Close()
+			conn.Close()
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		logger.Infof("Successfully reconnected to RabbitMQ")
+		break
+	}
+}
+
+func checkQueue() {
+	for _, name := range queueNames {
+		queueInfo, err := ch.QueueDeclarePassive(name, false, false, false, false, nil)
+		if err != nil {
+			failOnError(err, "Failed to inspect queue"+name)
+		}
+		semaphore[name] = queueInfo.Messages
+		logger.Debugf("Queue %s has %d messages ready", name, queueInfo.Messages)
+	}
 
 }
 
@@ -88,15 +147,17 @@ func (p Producer) PublishMessage(body interface{}) {
 
 	for {
 		mutex.Lock()
-		queueInfo, err := ch.QueueDeclarePassive(p.name, false, false, false, false, nil)
-		mutex.Unlock()
-		failOnError(err, "Failed to inspect a queue")
-		logger.Debugf("Queue %s has %d messages ready", p.name, queueInfo.Messages)
-		if queueInfo.Messages < 100 {
+		if semaphore[p.name] < concurrency {
+			logger.Debugf("Waiting for semaphore %s with queue: %d", p.name, semaphore[p.name])
+			mutex.Unlock()
 			break
 		}
-		time.Sleep(1 * time.Second)
+		mutex.Unlock()
+		time.Sleep(2 * time.Second)
 	}
+	mutex.Lock()
+	semaphore[p.name]++
+	mutex.Unlock()
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
@@ -175,9 +236,12 @@ func (p Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 
 			}
 			d.Ack(false)
+			mutex.Lock()
+			semaphore[p.name]--
+			mutex.Unlock()
 		}
 	}()
-	logger.Infof(" [*] %s Waiting for messages. To exit press CTRL+C\n", p.name)
+	logger.Debugf(" [*] %s Waiting for messages. To exit press CTRL+C\n", p.name)
 	<-forever
 }
 

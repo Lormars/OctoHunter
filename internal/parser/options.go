@@ -13,8 +13,8 @@ func Parse_Options() (*common.Opts, string, int, bool) {
 	flag.Var(&modules, "modules", "The module to run")
 	var (
 		target         = flag.String("target", "none", "The target to scan")
-		cacheTime      = flag.Int("cache", 15, "The cache time to use")
-		concurrency    = flag.Int("concurrency", 20, "The concurrency to use")
+		cacheTime      = flag.Int("cache", 60, "The cache time to use")
+		concurrency    = flag.Int("concurrency", 500, "The concurrency to use")
 		logLevel       = flag.String("loglevel", "info", "The log level to use")
 		memoryUsage    = flag.Bool("mu", false, "Print memory usage")
 		cnameFile      = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")

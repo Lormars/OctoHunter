@@ -11,6 +11,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
@@ -32,6 +33,9 @@ func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts
 }
 
 func Takeover(opts *common.Opts) {
+	if !cacher.CheckCache(opts.Target, "cname") {
+		return
+	}
 	logger.Debugln("Takeover module running")
 	domain := opts.Target
 	hasCname, cname, _ := checker.HasCname(domain)
@@ -63,11 +67,16 @@ func checkSig(domain string, opts *common.Opts) bool {
 			logger.Debugf("Circular CNAME detected on %s\n", domain)
 			break
 		}
+		//salesforce site, check salesforce
+		if strings.Contains(temp_cname, ".force.com") || strings.Contains(temp_cname, ".siteforce.com") {
+			common.SalesforceP.PublishMessage(temp_cname)
+		}
 
 		temp_domain = temp_cname
 		count++
 
 	}
+
 	//just for elb...
 	if strings.Contains(temp_cname, "elb.") && strings.Contains(temp_cname, "amazonaws.com") {
 		logger.Debugf("Skipping %s because it's an ELB\n", temp_cname)

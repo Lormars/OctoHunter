@@ -36,7 +36,7 @@ func main() {
 	}
 
 	if options.Module.Contains("broker") {
-		common.Init()
+		common.Init(options)
 	}
 
 	if options.Module.Contains("dispatcher") {
