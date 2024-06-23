@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -34,7 +34,7 @@ func SendMessage(message string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := common.NormalClient.Do(req)
+	resp, err := clients.NormalClient.Do(req)
 
 	if err != nil {
 		logger.Debugf("Error sending message: %v\n", err)

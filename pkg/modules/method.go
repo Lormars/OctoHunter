@@ -10,6 +10,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
@@ -34,7 +35,7 @@ func SingleMethodCheck(options *common.Opts) {
 	methods := []string{"POST", "FOO"}
 	//headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
 	for _, method := range methods {
-		if ok, errCtrl, errTreat, ccode, tcode := testAccessControl(options, method); ok {
+		if ok, ccode, tcode, errCtrl, errTreat := testAccessControl(options, method); ok {
 			if ccode == 429 {
 				time.Sleep(5 * time.Second)
 				continue
@@ -49,7 +50,6 @@ func SingleMethodCheck(options *common.Opts) {
 			logger.Debugf("Error testing access control: control - %v | treament - %v\n", errCtrl, errTreat)
 			break
 		}
-		time.Sleep(1 * time.Second) //avoid 429
 	}
 	//temporary disable due to high false positive
 	// for _, header := range headers {
@@ -64,38 +64,36 @@ func SingleMethodCheck(options *common.Opts) {
 	// 		logger.Debugf("Error testing method overwrite: control - %v | treament - %v\n", errCtrl, errTreat)
 	// 		break
 	// 	}
-	// 	time.Sleep(1 * time.Second) //avoid 429
 	// }
 
 }
 
-func testAccessControl(options *common.Opts, verb string) (bool, error, error, int, int) {
+func testAccessControl(options *common.Opts, verb string) (bool, int, int, error, error) {
 	controlReq, err := http.NewRequest("GET", options.Target, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)
-		return false, err, nil, 0, 0
+		return false, 0, 0, err, nil
 	}
 	treatmentReq, err := http.NewRequest(verb, options.Target, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)
-		return false, err, nil, 0, 0
+		return false, 0, 0, nil, err
 	}
 
-	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectClient)
-	time.Sleep(1 * time.Second) //avoid 429
-	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectClient)
+	controlResp, errCtrl := checker.CheckServerCustom(controlReq, clients.NoRedirectClient)
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirectClient)
 	if errCtrl != nil || errTreat != nil {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
-		return false, errCtrl, errTreat, 0, 0
+		return false, 0, 0, errCtrl, errTreat
 	}
 	if !checker.CheckAccess(controlResp) && checker.CheckAccess(treatmentResp) {
 		//to fix equifax false positive
 		if !strings.Contains(treatmentResp.Body, "Something went wrong") || !strings.Contains(treatmentResp.Body, "Equifax") {
-			return true, nil, nil, controlResp.StatusCode, treatmentResp.StatusCode
+			return true, controlResp.StatusCode, treatmentResp.StatusCode, nil, nil
 		}
 	}
 
-	return false, nil, nil, 0, 0
+	return false, 0, 0, nil, nil
 
 }
 
@@ -111,9 +109,8 @@ func checkMethodOverwrite(options *common.Opts, header string) (bool, error, err
 		return false, err, nil
 	}
 	treatmentReq.Header.Set(header, "GET")
-	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectClient)
-	time.Sleep(1 * time.Second) //avoid 429
-	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectClient)
+	controlResp, errCtrl := checker.CheckServerCustom(controlReq, clients.NoRedirectClient)
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirectClient)
 	if errCtrl != nil || errTreat != nil {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
 		return false, errCtrl, errTreat

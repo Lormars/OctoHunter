@@ -130,6 +130,9 @@ func reconnect() {
 
 func checkQueue() {
 	for _, name := range queueNames {
+		if name == "dork_broker" { //no need for rate limit on dork_broker
+			continue
+		}
 		queueInfo, err := ch.QueueDeclarePassive(name, false, false, false, false, nil)
 		if err != nil {
 			failOnError(err, "Failed to inspect queue"+name)
@@ -144,21 +147,24 @@ func (p Producer) PublishMessage(body interface{}) {
 	var messageBody []byte
 	var contentType string
 	var err error
-
-	for {
-		mutex.Lock()
-		if semaphore[p.name] < concurrency {
-			logger.Debugf("Waiting for semaphore %s with queue: %d", p.name, semaphore[p.name])
+	if p.name != "dork_broker" { //no need for rate limit on dork_broker
+		for {
+			mutex.Lock()
+			logger.Debugf("Semaphore %s: %d", p.name, semaphore[p.name])
+			if semaphore[p.name] < concurrency {
+				logger.Debugf("Waiting for semaphore %s with queue: %d", p.name, semaphore[p.name])
+				mutex.Unlock()
+				break
+			}
 			mutex.Unlock()
-			break
+			time.Sleep(2 * time.Second)
 		}
+
+		mutex.Lock()
+		semaphore[p.name]++
 		mutex.Unlock()
-		time.Sleep(2 * time.Second)
 	}
-	mutex.Lock()
-	semaphore[p.name]++
-	mutex.Unlock()
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	switch v := body.(type) {

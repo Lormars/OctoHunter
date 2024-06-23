@@ -8,7 +8,7 @@ import (
 
 var modules common.ModuleList
 
-func Parse_Options() (*common.Opts, string, int, bool) {
+func Parse_Options() (*common.Opts, *common.Config) {
 
 	flag.Var(&modules, "modules", "The module to run")
 	var (
@@ -17,6 +17,7 @@ func Parse_Options() (*common.Opts, string, int, bool) {
 		concurrency    = flag.Int("concurrency", 500, "The concurrency to use")
 		logLevel       = flag.String("loglevel", "info", "The log level to use")
 		memoryUsage    = flag.Bool("mu", false, "Print memory usage")
+		ratelimit      = flag.Int("ratelimit", 2, "The rate limit to use per second")
 		cnameFile      = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")
 		dorkFile       = flag.String("dorkfile", "none", "The file to scan for Google dork")
 		methodFile     = flag.String("methodfile", "none", "The file to scan for HTTP method checker")
@@ -26,14 +27,19 @@ func Parse_Options() (*common.Opts, string, int, bool) {
 	)
 	flag.Parse()
 	return &common.Opts{
-		Module:         modules,
-		Concurrency:    *concurrency,
-		Target:         *target,
-		CnameFile:      *cnameFile,
-		DorkFile:       *dorkFile,
-		MethodFile:     *methodFile,
-		RedirectFile:   *redirectFile,
-		HopperFile:     *hopperFile,
-		DispatcherFile: *dispatcherFile,
-	}, *logLevel, *cacheTime, *memoryUsage
+			Module:         modules,
+			Concurrency:    *concurrency,
+			Target:         *target,
+			CnameFile:      *cnameFile,
+			DorkFile:       *dorkFile,
+			MethodFile:     *methodFile,
+			RedirectFile:   *redirectFile,
+			HopperFile:     *hopperFile,
+			DispatcherFile: *dispatcherFile,
+		}, &common.Config{
+			Loglevel:    *logLevel,
+			CacheTime:   *cacheTime,
+			MemoryUsage: *memoryUsage,
+			RateLimit:   *ratelimit,
+		}
 }

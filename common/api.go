@@ -51,6 +51,13 @@ type Opts struct {
 	DispatcherFile string     `json:"dispatcherFile"`
 }
 
+type Config struct {
+	Loglevel    string
+	CacheTime   int
+	MemoryUsage bool
+	RateLimit   int
+}
+
 type TakeoverRecord struct {
 	CicdPass      bool     `json:"cicd_pass"`
 	Cname         []string `json:"cname"`

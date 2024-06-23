@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
@@ -72,7 +72,6 @@ func SingleRedirectCheck(opts *common.Opts) {
 			} else {
 				common.DividerP.PublishMessage(newFinalURL.String()) //send new-found finalURL to divider
 			}
-			time.Sleep(1 * time.Second) //avoid 429
 		}
 		//if the redirected path is login page, but using oauth, try to bypass using different method
 	} else if strings.Contains(finalURL.Path, "oauth") {
@@ -82,7 +81,7 @@ func SingleRedirectCheck(opts *common.Opts) {
 
 func getFinalURL(initialURL string) (*url.URL, error) {
 
-	resp, err := common.NormalClient.Get(initialURL)
+	resp, err := clients.NormalClient.Get(initialURL)
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", initialURL, err)
 		return nil, err

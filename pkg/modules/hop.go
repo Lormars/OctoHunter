@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
-	"time"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/comparer"
@@ -44,9 +44,8 @@ func SingleHopCheck(options *common.Opts) {
 
 	controlReq.Header.Set("Connection", "close")
 	treatmentReq.Header.Set("Connection", "close, X-Forwarded-For")
-	controlResp, errCtrl := checker.CheckServerCustom(controlReq, common.NoRedirectHTTP1Client)
-	time.Sleep(1 * time.Second) //avoid 429
-	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, common.NoRedirectHTTP1Client)
+	controlResp, errCtrl := checker.CheckServerCustom(controlReq, clients.NoRedirecth1Client)
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirecth1Client)
 	if errCtrl != nil || errTreat != nil {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
 		return

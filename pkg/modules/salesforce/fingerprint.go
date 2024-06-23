@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -27,7 +27,7 @@ func Fingerprint(target string) (bool, string) {
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := common.NormalClient.Do(req)
+		resp, err := clients.NormalClient.Do(req)
 		if err != nil {
 			logger.Debugf("Error getting response from %s: %v\n", newUrl, err)
 			continue

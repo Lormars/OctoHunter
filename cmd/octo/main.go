@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	dispatcher "github.com/lormars/octohunter/Dispatcher"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/bench"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
@@ -24,12 +25,13 @@ func main() {
 	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
 	// }()
 
-	options, logLevel, cacheTime, mu := parser.Parse_Options()
-	if mu {
+	options, config := parser.Parse_Options()
+	if config.MemoryUsage {
 		go bench.PrintMemUsage(options)
 	}
-	logger.SetLogLevel(logger.ParseLogLevel(logLevel))
-	cacher.SetCacheTime(cacheTime)
+	logger.SetLogLevel(logger.ParseLogLevel(config.Loglevel))
+	cacher.SetCacheTime(config.CacheTime)
+	clients.SetRateLimiter(config.RateLimit)
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found")

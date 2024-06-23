@@ -3,12 +3,12 @@ package getter
 import (
 	"fmt"
 
-	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
 func GetHeader(url, header string) (string, error) {
-	resp, err := common.NoRedirectClient.Get(url)
+	resp, err := clients.NoRedirectClient.Get(url)
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", url, err)
 		return "", err
