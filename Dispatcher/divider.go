@@ -50,6 +50,7 @@ func Divider(domainString string) {
 		if strings.Contains(httpsStatus.Url, "/aura") || strings.Contains(httpsStatus.Url, "/s/") || strings.Contains(httpsStatus.Url, "/sfsites/") {
 			go common.SalesforceP.PublishMessage(httpsStatus.Url)
 		}
+		go common.SplittingP.PublishMessage(httpsStatus)
 	}
 	if errhttp != nil {
 		logger.Debugf("Error checking http server: %v\n", errhttp)
@@ -60,7 +61,10 @@ func Divider(domainString string) {
 		} else if checker.CheckAccess(httpStatus) && !httpsCrawled {
 			go common.CrawlP.PublishMessage(httpStatus)
 		}
-		return
+
+		//module-specific checks irrelevant to the current status
+		go common.SplittingP.PublishMessage(httpStatus)
+
 	}
 
 }

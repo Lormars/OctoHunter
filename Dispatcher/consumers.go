@@ -4,6 +4,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/pkg/modules"
+	"github.com/lormars/octohunter/pkg/modules/request"
 	"github.com/lormars/octohunter/pkg/modules/salesforce"
 	"github.com/lormars/octohunter/pkg/modules/takeover"
 )
@@ -17,6 +18,7 @@ func Init(opts *common.Opts) {
 		go crawlerConsumer(opts)
 		go dividerConsumer(opts)
 		go salesforceConsumer(opts)
+		go splittingConsumer(opts)
 	}
 }
 
@@ -46,4 +48,8 @@ func crawlerConsumer(opts *common.Opts) {
 
 func salesforceConsumer(opts *common.Opts) {
 	common.SalesforceP.ConsumeMessage(salesforce.SalesforceScan, opts)
+}
+
+func splittingConsumer(opts *common.Opts) {
+	common.SplittingP.ConsumeMessage(request.RequestSplitting, opts)
 }

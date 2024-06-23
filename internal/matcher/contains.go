@@ -8,7 +8,7 @@ import (
 	"github.com/lormars/octohunter/internal/logger"
 )
 
-func HeadercontainsQueryParamValue(result *common.ServerResult) (bool, []string) {
+func HeadercontainsQueryParamValue(result *common.ServerResult, signature string) (bool, []string) {
 	contains := false
 	var found []string
 	urlStr := result.Url
@@ -24,10 +24,18 @@ outer:
 		for _, queryValue := range values {
 			for _, headerValues := range result.Headers {
 				for _, headerValue := range headerValues {
-					if strings.Contains(headerValue, queryValue) {
-						found = append(found, param)
-						contains = true
-						continue outer
+					if signature == "" {
+						if strings.Contains(headerValue, queryValue) {
+							found = append(found, param)
+							contains = true
+							continue outer
+						}
+					} else {
+						if strings.Contains(headerValue, signature) {
+							found = append(found, param)
+							contains = true
+							continue
+						}
 					}
 				}
 			}

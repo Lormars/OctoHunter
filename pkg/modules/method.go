@@ -34,7 +34,7 @@ func SingleMethodCheck(options *common.Opts) {
 	logger.Debugln("SingleMethodCheck module running")
 	methods := []string{"POST", "FOO"}
 	//headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
-	for _, method := range methods {
+	for _, method := range methods { //FIXME: not optimal, do not need to send GET request for each method
 		if ok, ccode, tcode, errCtrl, errTreat := testAccessControl(options, method); ok {
 			if ccode == 429 {
 				time.Sleep(5 * time.Second)
