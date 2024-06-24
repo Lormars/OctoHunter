@@ -8,6 +8,9 @@ import (
 	"github.com/lormars/octohunter/internal/logger"
 )
 
+// HeadercontainsQueryParamValue checks if the header contains the query parameter value
+// If signature is empty, it checks if the header contains the query parameter value
+// If signature is not empty, it checks if the header contains the signature
 func HeadercontainsQueryParamValue(result *common.ServerResult, signature string) (bool, []string) {
 	contains := false
 	var found []string
@@ -42,4 +45,15 @@ outer:
 		}
 	}
 	return contains, found
+}
+
+// HeaderValueContainsSignature checks if the header key contains the signature
+func HeaderKeyContainsSignature(result *common.ServerResult, signature string) bool {
+	for headerKey := range result.Headers {
+		if strings.Contains(headerKey, signature) {
+			return true
+		}
+	}
+
+	return false
 }

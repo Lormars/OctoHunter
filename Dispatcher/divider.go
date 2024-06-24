@@ -37,6 +37,8 @@ func Divider(domainString string) {
 		logger.Debugf("Error checking https server: %v\n", errhttps)
 	} else if httpsStatus.Online {
 		if checker.CheckRedirect(httpsStatus.StatusCode) {
+			//though param splitting does not happen only in redirect, most of it happens here, so...
+			go common.SplittingP.PublishMessage(httpsStatus)
 			go common.RedirectP.PublishMessage(httpsStatus.Url)
 		} else if checker.CheckRequestError(httpsStatus.StatusCode) {
 			go common.MethodP.PublishMessage(httpsStatus.Url)
@@ -50,7 +52,6 @@ func Divider(domainString string) {
 		if strings.Contains(httpsStatus.Url, "/aura") || strings.Contains(httpsStatus.Url, "/s/") || strings.Contains(httpsStatus.Url, "/sfsites/") {
 			go common.SalesforceP.PublishMessage(httpsStatus.Url)
 		}
-		go common.SplittingP.PublishMessage(httpsStatus)
 	}
 	if errhttp != nil {
 		logger.Debugf("Error checking http server: %v\n", errhttp)
@@ -60,10 +61,12 @@ func Divider(domainString string) {
 			go common.HopP.PublishMessage(httpStatus.Url)
 		} else if checker.CheckAccess(httpStatus) && !httpsCrawled {
 			go common.CrawlP.PublishMessage(httpStatus)
+		} else if checker.CheckRedirect(httpStatus.StatusCode) {
+			//to check for potentionally unsanitized redirect path through nginx from http to https
+			go common.SplittingP.PublishMessage(httpStatus)
 		}
 
 		//module-specific checks irrelevant to the current status
-		go common.SplittingP.PublishMessage(httpStatus)
 
 	}
 
