@@ -26,6 +26,7 @@ var DividerP = Producer{name: "divider_broker"}
 var CrawlP = Producer{name: "crawl_broker"}
 var SalesforceP = Producer{name: "salesforce_broker"}
 var SplittingP = Producer{name: "splitting_broker"}
+var Cl0P = Producer{name: "cl0_broker"}
 
 var (
 	conn      *amqp.Connection
@@ -36,7 +37,7 @@ var (
 var queueNames = []string{
 	"dork_broker", "cname_broker", "redirect_broker",
 	"method_broker", "hopper_broker", "divider_broker", "crawl_broker",
-	"salesforce_broker", "splitting_broker",
+	"salesforce_broker", "splitting_broker", "cl0_broker",
 }
 
 var concurrency int

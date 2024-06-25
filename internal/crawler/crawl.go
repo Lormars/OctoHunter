@@ -1,6 +1,8 @@
 package crawler
 
 import (
+	"strings"
+
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
@@ -17,6 +19,10 @@ func Crawl(response *common.ServerResult) {
 		if !cacher.CheckCache(url, "crawl") {
 			continue
 		}
-		common.DividerP.PublishMessage(url)
+		if strings.HasSuffix(url, ".svg") || strings.HasSuffix(url, ".png") || strings.HasSuffix(url, ".jpg") || strings.HasSuffix(url, ".gif") {
+			common.Cl0P.PublishMessage(url)
+		} else {
+			common.DividerP.PublishMessage(url)
+		}
 	}
 }

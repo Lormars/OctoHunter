@@ -18,7 +18,8 @@ func (t *H0Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.URL.Scheme == "https" {
 		// Attempt HTTP/2 first
 		ctx := req.Context()
-		tlsConn, err := t.h2Transport.DialTLSContext(ctx, "tcp", req.URL.Host, nil)
+		address := req.URL.Host + ":443"
+		tlsConn, err := t.h2Transport.DialTLSContext(ctx, "tcp", address, nil)
 		if err == nil {
 			http2ClientConn, err := t.h2Transport.NewClientConn(tlsConn)
 			if err == nil {
@@ -39,11 +40,7 @@ func createH0Transport() (*H0Transport, error) {
 		logger.Debugf("Error creating h2 transport: %v\n", err)
 		return nil, err
 	}
-	h1Transport, err := CreateCustomh1Transport()
-	if err != nil {
-		logger.Debugf("Error creating h1 transport: %v\n", err)
-		return nil, err
-	}
+	h1Transport := CreateCustomh1Transport()
 
 	return &H0Transport{
 		h1Transport: h1Transport,

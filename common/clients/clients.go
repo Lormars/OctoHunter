@@ -74,14 +74,12 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 
 	start := time.Now()
 
-	logger.Debugf("Making request: %s %s at %s\n", req.Method, currentHost, start)
+	logger.Debugf("Making request: %s %s/%s at %s\n", req.Method, currentHost, req.URL.Path, start)
 
 	randomIndex := rand.Intn(len(asset.Useragent))
 	randomAgent := asset.Useragent[randomIndex]
 	req.Header.Set("User-Agent", randomAgent)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
-	req.Header.Set("Accept-Encoding", "gzip, deflate, br")
+	req.Header.Set("Accept-Charset", "utf-8")
 	//fmt.Println(req.Header)
 	resp, err := lrt.Proxied.RoundTrip(req)
 	duration := time.Since(start)

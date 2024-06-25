@@ -30,7 +30,6 @@ func resolveURL(baseURL, href string) (string, error) {
 
 func ExtractUrls(baseUrl, response string) []string {
 	urls := []string{}
-
 	resp := strings.NewReader(response)
 
 	z := html.NewTokenizer(resp)
@@ -43,7 +42,7 @@ func ExtractUrls(baseUrl, response string) []string {
 			return urls
 		case html.StartTagToken, html.SelfClosingTagToken:
 			token := z.Token()
-			isLinkTag := token.Data == "a" || token.Data == "link" || token.Data == "script"
+			isLinkTag := token.Data == "a" || token.Data == "link" || token.Data == "script" || token.Data == "img"
 			if isLinkTag {
 				for _, attr := range token.Attr {
 					if attr.Key == "href" || attr.Key == "src" {
@@ -53,7 +52,7 @@ func ExtractUrls(baseUrl, response string) []string {
 							continue
 						}
 						logger.Debugf("Resolved URL: %s\n", resolvedUrl)
-						if !strings.HasSuffix(resolvedUrl, ".css") && !strings.HasSuffix(resolvedUrl, ".png") {
+						if !strings.HasSuffix(resolvedUrl, ".css") {
 							urls = append(urls, resolvedUrl)
 						}
 					}
