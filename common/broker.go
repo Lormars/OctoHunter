@@ -76,9 +76,9 @@ func connectRabbitMQ() (*amqp.Connection, *amqp.Channel, error) {
 	}
 
 	err = ch.Qos(
-		concurrency/5, // prefetch count
-		0,             // prefetch size
-		false,         // global
+		100,   // prefetch count
+		0,     // prefetch size
+		false, // global
 	)
 	if err != nil {
 		ch.Close()
@@ -153,7 +153,7 @@ func (p Producer) PublishMessage(body interface{}) {
 		for {
 			mutex.Lock()
 			logger.Debugf("Semaphore %s: %d", p.name, semaphore[p.name])
-			if semaphore[p.name] < concurrency {
+			if semaphore[p.name] < concurrency*100 {
 				logger.Debugf("Waiting for semaphore %s with queue: %d", p.name, semaphore[p.name])
 				mutex.Unlock()
 				break

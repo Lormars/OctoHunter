@@ -14,7 +14,7 @@ func Parse_Options() (*common.Opts, *common.Config) {
 	var (
 		target         = flag.String("target", "none", "The target to scan")
 		cacheTime      = flag.Int("cache", 60, "The cache time to use")
-		concurrency    = flag.Int("concurrency", 500, "The concurrency to use")
+		concurrency    = flag.Int("concurrency", 50, "The concurrency to use")
 		logLevel       = flag.String("loglevel", "info", "The log level to use")
 		memoryUsage    = flag.Bool("mu", false, "Print memory usage")
 		ratelimit      = flag.Int("ratelimit", 2, "The rate limit to use per second")

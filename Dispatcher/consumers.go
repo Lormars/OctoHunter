@@ -11,7 +11,7 @@ import (
 )
 
 func Init(opts *common.Opts) {
-	for i := 0; i < opts.Concurrency/100; i++ {
+	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
 		go redirectConsumer(opts)
 		go methodConsumer(opts)

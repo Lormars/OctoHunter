@@ -1,11 +1,13 @@
 package bench
 
 import (
+	"fmt"
 	"runtime"
 	"strconv"
 	"time"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
 )
@@ -13,6 +15,9 @@ import (
 func PrintMemUsage(opts *common.Opts) {
 	time.Sleep(5 * time.Second)
 	for {
+
+		fmt.Printf("Total data transferred: %.6f GB\n", clients.GetTotalDataTransferred())
+		fmt.Printf("Total requests made: %d\n", clients.GetConcurrentRequests())
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
 
