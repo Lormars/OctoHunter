@@ -45,9 +45,7 @@ type rateLimiterEntry struct {
 }
 
 type LoggingRoundTripper struct {
-	Proxied      http.RoundTripper
-	ratelimiters map[string]map[string]*rateLimiterEntry
-	mu           sync.Mutex
+	Proxied http.RoundTripper
 }
 
 func SetRateLimiter(r int) {
@@ -61,6 +59,8 @@ var AllClients = map[string]*http.Client{
 	"NoRedirecth2Client": NoRedirecth2Client,
 }
 
+var ratelimiters = make(map[string]map[string]*rateLimiterEntry)
+
 // A custom Roundtrip that can log, rate limit and cleanup rate limiters.
 // The ratelimiter works host-wise, so each host has its own rate limiter.
 // The rate limiting depends on the option rl, which is the rate limit per second.
@@ -69,7 +69,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	var proxy string
 	var ok bool
 	maxRetries := 3
-	retryDelay := 2 * time.Second
+	retryDelay := 1 * time.Second
 
 	// Retry loop
 	for attempt := 0; attempt < maxRetries; attempt++ {
@@ -85,18 +85,18 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		}
 
 		currentHost := req.URL.Host
-		lrt.mu.Lock()
+		mu.Lock()
 		//the rate limiter is host & proxy specific
-		proxyentry, exists := lrt.ratelimiters[currentHost]
+		proxyentry, exists := ratelimiters[currentHost]
 		if !exists {
 			proxyentry = make(map[string]*rateLimiterEntry)
-			lrt.ratelimiters[currentHost] = proxyentry
+			ratelimiters[currentHost] = proxyentry
 		}
 		entry, proxyExists := proxyentry[proxy]
 		if !proxyExists {
 			entry = &rateLimiterEntry{
 				//TODO: dynamic rate limiter
-				ratelimiter: common.NewDynamicRateLimiter(float64(rl), 1),
+				ratelimiter: common.NewDynamicRateLimiter(float64(2), rl),
 				lastUsed:    time.Now(),
 			}
 			proxyentry[proxy] = entry
@@ -105,15 +105,19 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			entry.lastUsed = time.Now()
 		}
 
-		lrt.mu.Unlock()
-		logger.Debugf("Rate limit for %s at %s\n", currentHost, time.Now())
+		logger.Debugf("Rate limit for %s at %f\n", currentHost, entry.ratelimiter.GetRPS())
+
+		mu.Unlock()
 		err := entry.ratelimiter.Wait(req.Context())
 		if err != nil {
 			logger.Warnf("Rate limit Error for %s: %v\n", currentHost, err)
 			//mostly it is because exceeding context deadline
-			lrt.mu.Lock()
-			entry.ratelimiter.Update(entry.ratelimiter.GetRPS()+1, entry.ratelimiter.GetBurst()+1)
-			lrt.mu.Unlock()
+			mu.Lock()
+			newrl := entry.ratelimiter.GetRPS() + 1
+			newbt := entry.ratelimiter.GetBurst() + 1
+			entry.ratelimiter.Update(newrl, newbt)
+			logger.Warnf("Increase Rate limit for %s to %f\n", currentHost, newrl)
+			mu.Unlock()
 			return nil, err
 		}
 
@@ -192,6 +196,13 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			duration:   duration,
 		}
 		resStats[currentHost] = append(resStats[currentHost], respStats)
+
+		if resp.StatusCode == 429 {
+			newrl := entry.ratelimiter.GetRPS() - 1
+			newbt := entry.ratelimiter.GetBurst() - 1
+			entry.ratelimiter.Update(newrl, newbt)
+			logger.Warnf("Decrease Rate limit for %s to %f\n", currentHost, newrl)
+		}
 		mu.Unlock()
 
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
@@ -207,29 +218,28 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	return nil, fmt.Errorf("request failed after %d attempts", maxRetries)
 }
 
-func (lrt *LoggingRoundTripper) cleanupRateLimiters() {
+func cleanupRateLimiters() {
 	for {
 		time.Sleep(cleanupInterval)
 		now := time.Now()
-		lrt.mu.Lock()
-		for host, proxyentry := range lrt.ratelimiters {
+		mu.Lock()
+		for host, proxyentry := range ratelimiters {
 			for _, entry := range proxyentry {
 				if now.Sub(entry.lastUsed) > maxIdleTime {
 					logger.Debugf("Cleaning up rate limiter for %s\n", host)
-					delete(lrt.ratelimiters, host)
+					delete(ratelimiters, host)
 				}
 			}
 		}
-		lrt.mu.Unlock()
+		mu.Unlock()
 	}
 }
 
 func WrapTransport(transport http.RoundTripper) http.RoundTripper {
 	lrt := &LoggingRoundTripper{
-		Proxied:      transport,
-		ratelimiters: make(map[string]map[string]*rateLimiterEntry),
+		Proxied: transport,
 	}
-	go lrt.cleanupRateLimiters()
+	go cleanupRateLimiters()
 	return lrt
 }
 
