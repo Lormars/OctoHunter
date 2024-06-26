@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/lormars/octohunter/asset"
+	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/logger"
-	"golang.org/x/time/rate"
 )
 
 //h0 clients are normal clients, support h2 and h1.
@@ -40,7 +40,7 @@ type responseStats struct {
 }
 
 type rateLimiterEntry struct {
-	ratelimiter *rate.Limiter
+	ratelimiter *common.DynamicRateLimiter
 	lastUsed    time.Time
 }
 
@@ -96,7 +96,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		if !proxyExists {
 			entry = &rateLimiterEntry{
 				//TODO: dynamic rate limiter
-				ratelimiter: rate.NewLimiter(rate.Limit(2), rl),
+				ratelimiter: common.NewDynamicRateLimiter(float64(rl), 1),
 				lastUsed:    time.Now(),
 			}
 			proxyentry[proxy] = entry
@@ -110,6 +110,10 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		err := entry.ratelimiter.Wait(req.Context())
 		if err != nil {
 			logger.Warnf("Rate limit Error for %s: %v\n", currentHost, err)
+			//mostly it is because exceeding context deadline
+			lrt.mu.Lock()
+			entry.ratelimiter.Update(entry.ratelimiter.GetRPS()+1, entry.ratelimiter.GetBurst()+1)
+			lrt.mu.Unlock()
 			return nil, err
 		}
 
