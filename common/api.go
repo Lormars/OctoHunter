@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"strings"
 
@@ -98,6 +99,7 @@ var DB *sql.DB
 
 type ServerResult struct {
 	Url        string      `json:"url"`
+	FinalUrl   *url.URL    `json:"final_url"`
 	Online     bool        `json:"online"`
 	StatusCode int         `json:"status_code"`
 	Headers    http.Header `json:"headers"`

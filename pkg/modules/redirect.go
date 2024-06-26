@@ -3,6 +3,7 @@ package modules
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/multiplex"
@@ -80,16 +82,18 @@ func SingleRedirectCheck(opts *common.Opts) {
 }
 
 func getFinalURL(initialURL string) (*url.URL, error) {
-
-	resp, err := clients.NormalClient.Get(initialURL)
+	req, err := http.NewRequest("GET", initialURL, nil)
+	if err != nil {
+		logger.Debugf("Error creating request: %v", err)
+		return nil, err
+	}
+	resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", initialURL, err)
 		return nil, err
 	}
 
-	defer resp.Body.Close()
-
-	finalURL := resp.Request.URL
+	finalURL := resp.FinalUrl
 
 	return finalURL, nil
 

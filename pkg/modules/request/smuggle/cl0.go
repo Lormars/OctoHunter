@@ -2,10 +2,12 @@ package smuggle
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
+	"time"
 
 	"math/rand"
 
@@ -18,7 +20,13 @@ import (
 // 1. static image file like svg or png or jpg or gif from crawler
 // 2. static file from divider. (checked by cache signature)
 func CheckCl0(urlstr string) {
-	//check cache on path
+
+	//Due to the nature of the check, we need to use a custom client for each goroutine
+	client := &http.Client{
+		Transport: clients.WrapTransport(clients.KeepAliveh1Transport()),
+		Timeout:   120 * time.Second,
+	}
+	defer client.CloseIdleConnections()
 
 	logger.Debugf("Checking for CL0 on %s\n", urlstr)
 	parsedURL, err := url.Parse(urlstr)
@@ -37,8 +45,6 @@ func CheckCl0(urlstr string) {
 		return
 	}
 
-	GetHostMutex(hostName).Lock()
-	defer GetHostMutex(hostName).Unlock()
 	proxy := clients.Proxies[rand.Intn(len(clients.Proxies))]
 	ctx := context.WithValue(context.Background(), "proxy", proxy)
 	postBody := "GET /HopefullyMustBe404 HTTP/1.1\r\nFoo: x"
@@ -47,27 +53,33 @@ func CheckCl0(urlstr string) {
 		logger.Warnf("Error creating POST request: %v\n", err)
 		return
 	}
-	postResponse, err := clients.KeepAliveh1Client.Do(postRequest)
-	if err != nil {
-		logger.Debugf("Error performing POST request: %v\n", err)
-		return
-	}
 
-	defer postResponse.Body.Close()
 	getRequest, err := http.NewRequestWithContext(ctx, "GET", urlstr, nil)
 	if err != nil {
 		logger.Warnf("Error creating GET request: %v\n", err)
 		return
 	}
 	getRequest.Header.Set("Connection", "close")
+	respChan := clients.AddToQueue(getRequest.Host, []*http.Request{postRequest, getRequest}, client)
+	responses := <-respChan
+	postResponse := responses[0]
+	getResponse := responses[1]
+	if postResponse.Err != nil {
+		logger.Debugf("Error performing POST request: %v\n", err)
+		return
+	}
 
-	getResponse, err := clients.KeepAliveh1Client.Do(getRequest)
-	if err != nil {
+	defer postResponse.Resp.Body.Close()
+
+	if getResponse.Err != nil {
 		logger.Debugf("Error performing GET request: %v\n", err)
 		return
 	}
-	defer getResponse.Body.Close()
-	if getResponse.StatusCode == 404 && postResponse.StatusCode != 404 {
+	defer getResponse.Resp.Body.Close()
+	fmt.Println(getRequest.URL.String())
+	fmt.Println(postResponse.Resp.StatusCode)
+	fmt.Println(getResponse.Resp.StatusCode)
+	if getResponse.Resp.StatusCode == 404 && postResponse.Resp.StatusCode != 404 {
 		logger.Warnf("Potential CL0: %s\n", urlstr)
 	}
 }

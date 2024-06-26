@@ -92,6 +92,7 @@ func CreateCustomh1Transport() *http.Transport {
 
 func KeepAliveh1Transport() *http.Transport {
 	transport := &http.Transport{
+		DialContext:         customDialContext,
 		DialTLSContext:      customh1DialTLSContext,
 		ForceAttemptHTTP2:   false,
 		DisableKeepAlives:   false,
@@ -104,14 +105,12 @@ func KeepAliveh1Transport() *http.Transport {
 var customh1Transport = CreateCustomh1Transport()
 var loggingh1Transport = WrapTransport(customh1Transport)
 
-var keepAliveh1Transport = WrapTransport(KeepAliveh1Transport())
-
 var Normalh1Client = &http.Client{
 	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 		return nil
 	},
 	Transport: loggingh1Transport,
-	Timeout:   30 * time.Second,
+	Timeout:   120 * time.Second,
 }
 
 var NoRedirecth1Client = &http.Client{
@@ -119,10 +118,5 @@ var NoRedirecth1Client = &http.Client{
 		return http.ErrUseLastResponse
 	},
 	Transport: loggingh1Transport,
-	Timeout:   30 * time.Second,
-}
-
-var KeepAliveh1Client = &http.Client{
-	Transport: keepAliveh1Transport,
-	Timeout:   30 * time.Second,
+	Timeout:   120 * time.Second,
 }

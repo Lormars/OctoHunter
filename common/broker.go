@@ -90,8 +90,12 @@ func connectRabbitMQ() (*amqp.Connection, *amqp.Channel, error) {
 }
 
 func initQueues(ch *amqp.Channel) error {
+	var err error
 	for _, name := range queueNames {
-		_, err := ch.QueueDeclare(
+		//first purge queue
+		_, err = ch.QueuePurge(name, false)
+		logger.Debugf("Purging queue error: %v", err)
+		_, err = ch.QueueDeclare(
 			name,
 			false,
 			false,

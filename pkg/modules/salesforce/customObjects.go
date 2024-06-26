@@ -2,13 +2,13 @@ package salesforce
 
 import (
 	"bytes"
-	"io"
 	"net/http"
 	"os"
 	"regexp"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -25,21 +25,14 @@ func PullCustomObjects(urlString string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := clients.NormalClient.Do(req)
+	resp, err := checker.CheckServerCustom(req, clients.NormalClient)
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", urlString, err)
 		return err
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Debugf("Error reading response body: %v\n", err)
-		return err
-	}
-
-	resp.Body.Close()
 	re := regexp.MustCompile(`\b\w+__c\b`)
-	matches := re.FindAllString(string(body), -1)
+	matches := re.FindAllString(string(resp.Body), -1)
 	for _, match := range matches {
 		msg := "[Salesforce] Custom Object Found: " + match
 		common.OutputP.PublishMessage(msg)

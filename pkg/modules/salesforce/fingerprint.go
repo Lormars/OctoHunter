@@ -3,11 +3,11 @@ package salesforce
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
 	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -27,20 +27,13 @@ func Fingerprint(target string) (bool, string) {
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := clients.NormalClient.Do(req)
+		resp, err := checker.CheckServerCustom(req, clients.NormalClient)
 		if err != nil {
 			logger.Debugf("Error getting response from %s: %v\n", newUrl, err)
 			continue
 		}
 
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			logger.Debugf("Error reading response body: %v\n", err)
-			continue
-		}
-
-		resp.Body.Close()
-		if bytes.Contains(body, []byte("aura:invalidSession")) {
+		if bytes.Contains([]byte(resp.Body), []byte("aura:invalidSession")) {
 			return true, newUrl
 		}
 	}

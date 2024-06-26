@@ -32,6 +32,7 @@ var (
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
 	errRequestsCount = 0
+	Sliding          = NewSlidingWindow()
 )
 
 type responseStats struct {
@@ -152,6 +153,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		mu.Unlock()
 
 		//fmt.Println(req.Header)
+		Sliding.AddRequest(currentHost)
 		resp, err := lrt.Proxied.RoundTrip(req)
 		duration := time.Since(start)
 
