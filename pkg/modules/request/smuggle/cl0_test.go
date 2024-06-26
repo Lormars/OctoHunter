@@ -11,5 +11,4 @@ func TestCheckCl0(t *testing.T) {
 		time.Sleep(5 * time.Second)
 	}
 
-	select {}
 }

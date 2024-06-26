@@ -3,6 +3,7 @@ package clients
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
@@ -21,14 +22,22 @@ import (
 //All of these clients use utls to mimic browser fingerprints.
 
 var (
-	rl                    = 2
-	cleanupInterval       = 60 * time.Second
-	maxIdleTime           = 120 * time.Second
-	totalData       int64 = 0
-	concurrentReq         = 0
-	mu              sync.Mutex
-	Proxies         = ParseProxies()
+	rl                     = 4
+	cleanupInterval        = 60 * time.Second
+	maxIdleTime            = 120 * time.Second
+	totalData        int64 = 0
+	concurrentReq          = 0
+	mu               sync.Mutex
+	Proxies          = ParseProxies()
+	resStats         = make(map[string][]*responseStats)
+	allRequestsCount = 0
+	errRequestsCount = 0
 )
+
+type responseStats struct {
+	statusCode int
+	duration   time.Duration
+}
 
 type rateLimiterEntry struct {
 	ratelimiter *rate.Limiter
@@ -59,82 +68,104 @@ var AllClients = map[string]*http.Client{
 func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	var proxy string
 	var ok bool
-	//first check if the request has a proxy set
-	proxy, ok = req.Context().Value("proxy").(string)
-	if ok {
-		//fmt.Println("Using proxy: ", proxy)
-	} else {
-		//if not, randomly select a proxy from the list
-		proxy = Proxies[rand.Intn(len(Proxies))]
-		ctx := context.WithValue(req.Context(), "proxy", proxy)
-		req = req.WithContext(ctx)
-	}
+	maxRetries := 3
+	retryDelay := 2 * time.Second
 
-	currentHost := req.URL.Host
-	lrt.mu.Lock()
-	//the rate limiter is host & proxy specific
-	proxyentry, exists := lrt.ratelimiters[currentHost]
-	if !exists {
-		proxyentry = make(map[string]*rateLimiterEntry)
-		lrt.ratelimiters[currentHost] = proxyentry
-	}
-	entry, proxyExists := proxyentry[proxy]
-	if !proxyExists {
-		entry = &rateLimiterEntry{
-			//TODO: dynamic rate limiter
-			ratelimiter: rate.NewLimiter(rate.Limit(1), rl),
-			lastUsed:    time.Now(),
+	// Retry loop
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		//first check if the request has a proxy set
+		proxy, ok = req.Context().Value("proxy").(string)
+		if ok {
+			//fmt.Println("Using proxy: ", proxy)
+		} else {
+			//if not, randomly select a proxy from the list
+			proxy = Proxies[rand.Intn(len(Proxies))]
+			ctx := context.WithValue(req.Context(), "proxy", proxy)
+			req = req.WithContext(ctx)
 		}
-		proxyentry[proxy] = entry
 
-	} else {
-		entry.lastUsed = time.Now()
-	}
-
-	lrt.mu.Unlock()
-	logger.Debugf("Rate limit for %s at %s\n", currentHost, time.Now())
-	err := entry.ratelimiter.Wait(req.Context())
-	if err != nil {
-		logger.Warnf("Rate limit Error for %s: %v\n", currentHost, err)
-		return nil, err
-	}
-
-	start := time.Now()
-
-	logger.Debugf("Making request: %s %s/%s at %s\n", req.Method, currentHost, req.URL.Path, start)
-
-	randomIndex := rand.Intn(len(asset.Useragent))
-	randomAgent := asset.Useragent[randomIndex]
-	req.Header.Set("User-Agent", randomAgent)
-	req.Header.Set("Accept-Charset", "utf-8")
-
-	// Measure request size
-	requestSize := int64(0)
-	if req.Body != nil {
-		body, _ := io.ReadAll(req.Body)
-		requestSize = int64(len(body))
-		req.Body = io.NopCloser(io.MultiReader(bytes.NewReader(body)))
-	}
-	// Add the size of request headers
-	requestSize += int64(len(req.Method) + len(req.URL.String()) + len(req.Proto) + 4) // request line size
-	for name, values := range req.Header {
-		for _, value := range values {
-			requestSize += int64(len(name) + len(value) + 4) // header field size
+		currentHost := req.URL.Host
+		lrt.mu.Lock()
+		//the rate limiter is host & proxy specific
+		proxyentry, exists := lrt.ratelimiters[currentHost]
+		if !exists {
+			proxyentry = make(map[string]*rateLimiterEntry)
+			lrt.ratelimiters[currentHost] = proxyentry
 		}
-	}
+		entry, proxyExists := proxyentry[proxy]
+		if !proxyExists {
+			entry = &rateLimiterEntry{
+				//TODO: dynamic rate limiter
+				ratelimiter: rate.NewLimiter(rate.Limit(2), rl),
+				lastUsed:    time.Now(),
+			}
+			proxyentry[proxy] = entry
 
-	// Measure concurrent requests
-	mu.Lock()
-	concurrentReq++
-	mu.Unlock()
+		} else {
+			entry.lastUsed = time.Now()
+		}
 
-	//fmt.Println(req.Header)
-	resp, err := lrt.Proxied.RoundTrip(req)
-	duration := time.Since(start)
+		lrt.mu.Unlock()
+		logger.Debugf("Rate limit for %s at %s\n", currentHost, time.Now())
+		err := entry.ratelimiter.Wait(req.Context())
+		if err != nil {
+			logger.Warnf("Rate limit Error for %s: %v\n", currentHost, err)
+			return nil, err
+		}
 
-	if err != nil {
-		logger.Debugf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
-	} else {
+		start := time.Now()
+
+		logger.Debugf("Making request: %s %s%s at %s\n", req.Method, currentHost, req.URL.Path, start)
+
+		randomIndex := rand.Intn(len(asset.Useragent))
+		randomAgent := asset.Useragent[randomIndex]
+		req.Header.Set("User-Agent", randomAgent)
+		req.Header.Set("Accept-Charset", "utf-8")
+
+		// Measure request size
+		requestSize := int64(0)
+		if req.Body != nil {
+			body, _ := io.ReadAll(req.Body)
+			requestSize = int64(len(body))
+			req.Body = io.NopCloser(io.MultiReader(bytes.NewReader(body)))
+		}
+		// Add the size of request headers
+		requestSize += int64(len(req.Method) + len(req.URL.String()) + len(req.Proto) + 4) // request line size
+		for name, values := range req.Header {
+			for _, value := range values {
+				requestSize += int64(len(name) + len(value) + 4) // header field size
+			}
+		}
+
+		// Measure concurrent requests
+		mu.Lock()
+		concurrentReq++
+		allRequestsCount++
+		mu.Unlock()
+
+		//fmt.Println(req.Header)
+		resp, err := lrt.Proxied.RoundTrip(req)
+		duration := time.Since(start)
+
+		if err != nil {
+			logger.Debugf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
+
+			// If this was not the last attempt, wait before retrying
+			if attempt < maxRetries-1 {
+				mu.Lock()
+				concurrentReq--
+				allRequestsCount--
+				mu.Unlock()
+				time.Sleep(retryDelay)
+				retryDelay *= 2 // Exponential backoff
+				continue
+			}
+			mu.Lock()
+			errRequestsCount++
+			mu.Unlock()
+			return nil, err
+		}
+
 		// Measure response size
 		responseSize := int64(0)
 		if resp.Body != nil {
@@ -152,15 +183,24 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 
 		mu.Lock()
 		totalData += requestSize + responseSize
+		respStats := &responseStats{
+			statusCode: resp.StatusCode,
+			duration:   duration,
+		}
+		resStats[currentHost] = append(resStats[currentHost], respStats)
 		mu.Unlock()
 
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
+
+		mu.Lock()
+		concurrentReq--
+		mu.Unlock()
+
+		return resp, nil
 	}
 
-	mu.Lock()
-	concurrentReq--
-	mu.Unlock()
-	return resp, err
+	// If we exit the loop, it means all retries failed
+	return nil, fmt.Errorf("request failed after %d attempts", maxRetries)
 }
 
 func (lrt *LoggingRoundTripper) cleanupRateLimiters() {
@@ -201,4 +241,52 @@ func GetConcurrentRequests() int {
 	mu.Lock()
 	defer mu.Unlock()
 	return concurrentReq
+}
+
+func PrintResStats() string {
+	mu.Lock()
+	defer mu.Unlock()
+	// Iterate through each host and count status codes
+	count := 0
+	all := 0
+	for _, stats := range resStats {
+		counts := map[string]int{
+			"200-300": 0,
+			"300-400": 0,
+			"400-500": 0,
+			"500+":    0,
+			"403":     0,
+		}
+		total := 0
+
+		for _, stat := range stats {
+			total++
+			switch {
+			case stat.statusCode >= 200 && stat.statusCode < 300:
+				counts["200-300"]++
+			case stat.statusCode >= 300 && stat.statusCode < 400:
+				counts["300-400"]++
+			case stat.statusCode >= 400 && stat.statusCode < 500:
+				if stat.statusCode == 403 {
+					counts["403"]++
+				} else {
+					counts["400-500"]++
+				}
+			case stat.statusCode >= 500:
+				counts["500+"]++
+			}
+		}
+		threshold := 50.0
+		percentage403 := float64(counts["403"]) / float64(total) * 100
+		if percentage403 > threshold {
+			// Print the results for the current host in a single line
+			//fmt.Printf("Host: %s | 200-300: %d | 300-400: %d | 400-500 (except 403): %d | 500+: %d | 403: %d\n",
+			//	host, counts["200-300"], counts["300-400"], counts["400-500"], counts["500+"], counts["403"])
+			count++
+		}
+		all++
+	}
+	percentageBad := float64(count) / float64(all) * 100
+	percentageErr := float64(errRequestsCount) / float64(allRequestsCount) * 100
+	return fmt.Sprintf("Bad rate: %.2f. Err rate: %.2f", percentageBad, percentageErr)
 }

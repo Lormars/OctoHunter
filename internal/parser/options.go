@@ -17,7 +17,7 @@ func Parse_Options() (*common.Opts, *common.Config) {
 		concurrency    = flag.Int("concurrency", 50, "The concurrency to use")
 		logLevel       = flag.String("loglevel", "info", "The log level to use")
 		memoryUsage    = flag.Bool("mu", false, "Print memory usage")
-		ratelimit      = flag.Int("ratelimit", 2, "The rate limit to use per second")
+		ratelimit      = flag.Int("ratelimit", 4, "The rate limit to use per second")
 		cnameFile      = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")
 		dorkFile       = flag.String("dorkfile", "none", "The file to scan for Google dork")
 		methodFile     = flag.String("methodfile", "none", "The file to scan for HTTP method checker")

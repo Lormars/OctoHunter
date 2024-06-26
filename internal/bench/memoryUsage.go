@@ -15,9 +15,6 @@ import (
 func PrintMemUsage(opts *common.Opts) {
 	time.Sleep(5 * time.Second)
 	for {
-
-		fmt.Printf("Total data transferred: %.6f GB\n", clients.GetTotalDataTransferred())
-		fmt.Printf("Total requests made: %d\n", clients.GetConcurrentRequests())
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
 
@@ -27,13 +24,16 @@ func PrintMemUsage(opts *common.Opts) {
 		logger.Debugf("\tSys = %v MiB", bToMb(m.Sys))
 		logger.Debugf("\tNumGC = %v\n", m.NumGC)
 		if opts.Module.Contains("broker") {
-			msg := "[MU] Alloc = " + bToMb(m.Alloc) + " MiB." + "\tTotalAlloc = " + bToMb(m.TotalAlloc) + " MiB." + "\tSys = " + bToMb(m.Sys) + " MiB."
+			msg := "[MU] Alloc = " + bToMb(m.Alloc) + " MiB." + "\tSys = " + bToMb(m.Sys) + " MiB. "
+			msg += fmt.Sprintf("Data: %.6f GB. ", clients.GetTotalDataTransferred())
+			msg += fmt.Sprintf("Concurrent: %d. ", clients.GetConcurrentRequests())
+			msg += clients.PrintResStats()
 			common.OutputP.PublishMessage(msg)
-			alloc, err := strconv.Atoi(bToMb(m.Sys))
+			sys, err := strconv.Atoi(bToMb(m.Sys))
 			if err != nil {
 				logger.Debugf("Error converting Alloc to int: %v\n", err)
 			}
-			if alloc > 5000 {
+			if sys > 5000 {
 				notify.SendMessage(msg)
 			}
 			time.Sleep(1 * time.Second)

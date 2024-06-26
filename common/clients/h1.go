@@ -2,7 +2,6 @@ package clients
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -15,12 +14,12 @@ import (
 
 // Custom dialer for utls
 func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	proxyStr, ok := ctx.Value("proxy").(string)
-	if ok {
-		fmt.Println("Using proxy: ", proxyStr)
-	} else {
-		fmt.Println("No proxy")
-	}
+	proxyStr, _ := ctx.Value("proxy").(string)
+	// if ok {
+	// 	fmt.Println("Using proxy: ", proxyStr)
+	// } else {
+	// 	fmt.Println("No proxy")
+	// }
 	// dialer := &net.Dialer{
 	// 	Timeout: 30 * time.Second,
 	// }
@@ -54,12 +53,12 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 }
 
 func customDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	proxyStr, ok := ctx.Value("proxy").(string)
-	if ok {
-		fmt.Println("Using proxy: ", proxyStr)
-	} else {
-		fmt.Println("No proxy")
-	}
+	proxyStr, _ := ctx.Value("proxy").(string)
+	// if ok {
+	// 	fmt.Println("Using proxy: ", proxyStr)
+	// } else {
+	// 	fmt.Println("No proxy")
+	// }
 	// dialer := &net.Dialer{
 	// 	Timeout: 30 * time.Second,
 	// }
@@ -85,6 +84,7 @@ func CreateCustomh1Transport() *http.Transport {
 		DialContext:       customDialContext,
 		DialTLSContext:    customh1DialTLSContext,
 		ForceAttemptHTTP2: false,
+		DisableKeepAlives: true,
 	}
 
 	return transport

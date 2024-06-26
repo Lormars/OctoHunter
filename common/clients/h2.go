@@ -3,7 +3,6 @@ package clients
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -16,12 +15,12 @@ import (
 )
 
 func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-	proxyStr, ok := ctx.Value("proxy").(string)
-	if ok {
-		fmt.Println("h2 Using proxy: ", proxyStr)
-	} else {
-		fmt.Println("h2 No proxy")
-	}
+	proxyStr, _ := ctx.Value("proxy").(string)
+	// if ok {
+	// 	fmt.Println("h2 Using proxy: ", proxyStr)
+	// } else {
+	// 	fmt.Println("h2 No proxy")
+	// }
 	// dialer := &net.Dialer{
 	// 	Timeout: 30 * time.Second,
 	// }

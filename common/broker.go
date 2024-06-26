@@ -183,18 +183,26 @@ func (p Producer) PublishMessage(body interface{}) {
 		failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 
 	}
-	mutex.Lock()
-	err = ch.PublishWithContext(
-		ctx,
-		"",
-		p.name,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType: contentType,
-			Body:        messageBody,
-		})
-	mutex.Unlock()
+	for {
+		mutex.Lock()
+		err = ch.PublishWithContext(
+			ctx,
+			"",
+			p.name,
+			false,
+			false,
+			amqp.Publishing{
+				ContentType: contentType,
+				Body:        messageBody,
+			})
+		mutex.Unlock()
+		if err != nil {
+			logger.Warnf("Failed to publish a message, attempting to reconnect: %s", err)
+			reconnect()
+		} else {
+			break
+		}
+	}
 	failOnError(err, "Failed to publish a message")
 	logger.Debugf(" [x] Sent to %s", p.name)
 }

@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
 type WebhookMessage struct {
 	Content string `json:"content"`
 }
+
+var client = &http.Client{}
 
 func SendMessage(message string) error {
 	webhookURL := os.Getenv("DISCORD")
@@ -33,8 +34,8 @@ func SendMessage(message string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := clients.NormalClient.Do(req)
+	//use separate client for this
+	resp, err := client.Do(req)
 
 	if err != nil {
 		logger.Debugf("Error sending message: %v\n", err)
