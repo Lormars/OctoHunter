@@ -18,7 +18,13 @@ func (t *H0Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.URL.Scheme == "https" {
 		// Attempt HTTP/2 first
 		ctx := req.Context()
-		address := req.URL.Host + ":443"
+		address := req.URL.Hostname()
+		port := req.URL.Port()
+		if port != "" {
+			address = address + ":" + port
+		} else {
+			address = address + ":443"
+		}
 		tlsConn, err := t.h2Transport.DialTLSContext(ctx, "tcp", address, nil)
 		if err == nil {
 			http2ClientConn, err := t.h2Transport.NewClientConn(tlsConn)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 )
@@ -14,7 +15,7 @@ func GetHeader(urlStr, header string) (string, error) {
 		logger.Debugf("Error creating request: %v", err)
 		return "", err
 	}
-	resp, err := checker.CheckServerCustom(req, http.DefaultClient)
+	resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", urlStr, err)
 		return "", err

@@ -14,28 +14,34 @@ import (
 
 // Custom dialer for utls
 func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	proxyStr, _ := ctx.Value("proxy").(string)
-	// if ok {
-	// 	fmt.Println("Using proxy: ", proxyStr)
-	// } else {
-	// 	fmt.Println("No proxy")
-	// }
-	// dialer := &net.Dialer{
-	// 	Timeout: 30 * time.Second,
-	// }
-	auth := &proxy.Auth{
-		User:     os.Getenv("PROXY_USER"),
-		Password: os.Getenv("PROXY_PASS"),
-	}
-	dialer, err := proxy.SOCKS5("tcp", proxyStr, auth, proxy.Direct)
-	if err != nil {
-		logger.Warnf("Error dialing: %v\n", err)
-		return nil, err
-	}
-	conn, err := dialer.Dial(network, addr)
-	if err != nil {
-		logger.Debugf("Error dialing: %v\n", err)
-		return nil, err
+	var conn net.Conn
+	var err error
+	if UseProxy {
+		proxyStr, _ := ctx.Value("proxy").(string)
+		auth := &proxy.Auth{
+			User:     os.Getenv("PROXY_USER"),
+			Password: os.Getenv("PROXY_PASS"),
+		}
+		dialer, err := proxy.SOCKS5("tcp", proxyStr, auth, proxy.Direct)
+		if err != nil {
+			logger.Warnf("Error dialing: %v\n", err)
+			return nil, err
+		}
+
+		conn, err = dialer.Dial(network, addr)
+		if err != nil {
+			logger.Debugf("Error dialing: %v\n", err)
+			return nil, err
+		}
+	} else {
+		dialer := &net.Dialer{
+			Timeout: 30 * time.Second,
+		}
+		conn, err = dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			logger.Debugf("Error dialing: %v\n", err)
+			return nil, err
+		}
 	}
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
@@ -53,28 +59,34 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 }
 
 func customDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
-	proxyStr, _ := ctx.Value("proxy").(string)
-	// if ok {
-	// 	fmt.Println("Using proxy: ", proxyStr)
-	// } else {
-	// 	fmt.Println("No proxy")
-	// }
-	// dialer := &net.Dialer{
-	// 	Timeout: 30 * time.Second,
-	// }
-	auth := &proxy.Auth{
-		User:     os.Getenv("PROXY_USER"),
-		Password: os.Getenv("PROXY_PASS"),
-	}
-	dialer, err := proxy.SOCKS5("tcp", proxyStr, auth, proxy.Direct)
-	if err != nil {
-		logger.Warnf("Error dialing: %v\n", err)
-		return nil, err
-	}
-	conn, err := dialer.Dial(network, addr)
-	if err != nil {
-		logger.Debugf("Error dialing: %v\n", err)
-		return nil, err
+	var conn net.Conn
+	var err error
+	if UseProxy {
+		proxyStr, _ := ctx.Value("proxy").(string)
+		auth := &proxy.Auth{
+			User:     os.Getenv("PROXY_USER"),
+			Password: os.Getenv("PROXY_PASS"),
+		}
+		dialer, err := proxy.SOCKS5("tcp", proxyStr, auth, proxy.Direct)
+		if err != nil {
+			logger.Warnf("Error dialing: %v\n", err)
+			return nil, err
+		}
+
+		conn, err = dialer.Dial(network, addr)
+		if err != nil {
+			logger.Debugf("Error dialing: %v\n", err)
+			return nil, err
+		}
+	} else {
+		dialer := &net.Dialer{
+			Timeout: 30 * time.Second,
+		}
+		conn, err = dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			logger.Debugf("Error dialing: %v\n", err)
+			return nil, err
+		}
 	}
 	return conn, nil
 }

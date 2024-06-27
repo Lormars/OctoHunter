@@ -52,6 +52,9 @@ func Divider(domainString string) {
 		if strings.Contains(httpsStatus.Url, "/aura") || strings.Contains(httpsStatus.Url, "/s/") || strings.Contains(httpsStatus.Url, "/sfsites/") {
 			go common.SalesforceP.PublishMessage(httpsStatus.Url)
 		}
+
+		//quirks check
+		go common.QuirksP.PublishMessage(httpsStatus)
 	}
 	if errhttp != nil {
 		logger.Debugf("Error checking http server: %v\n", errhttp)
@@ -67,7 +70,7 @@ func Divider(domainString string) {
 		}
 
 		//module-specific checks irrelevant to the current status
-
+		go common.QuirksP.PublishMessage(httpStatus)
 	}
 
 }

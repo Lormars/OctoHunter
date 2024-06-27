@@ -32,6 +32,7 @@ func main() {
 	logger.SetLogLevel(logger.ParseLogLevel(config.Loglevel))
 	cacher.SetCacheTime(config.CacheTime)
 	clients.SetRateLimiter(config.RateLimit)
+	clients.SetUseProxy(config.UseProxy)
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found")

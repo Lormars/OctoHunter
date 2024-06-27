@@ -27,6 +27,7 @@ var CrawlP = Producer{name: "crawl_broker"}
 var SalesforceP = Producer{name: "salesforce_broker"}
 var SplittingP = Producer{name: "splitting_broker"}
 var Cl0P = Producer{name: "cl0_broker"}
+var QuirksP = Producer{name: "quirks_broker"}
 
 var (
 	conn      *amqp.Connection
@@ -37,7 +38,7 @@ var (
 var queueNames = []string{
 	"dork_broker", "cname_broker", "redirect_broker",
 	"method_broker", "hopper_broker", "divider_broker", "crawl_broker",
-	"salesforce_broker", "splitting_broker", "cl0_broker",
+	"salesforce_broker", "splitting_broker", "cl0_broker", "quirks_broker",
 }
 
 var concurrency int
@@ -57,7 +58,7 @@ func Init(options *Opts, purgebroker bool) {
 	conn, ch, err = connectRabbitMQ()
 	failOnError(err, "Failed to connect to RabbitMQ")
 
-	err = initQueues(ch)
+	err = initQueues(ch, true)
 	failOnError(err, "Failed to initialize queues")
 	checkQueue()
 
@@ -92,11 +93,15 @@ func connectRabbitMQ() (*amqp.Connection, *amqp.Channel, error) {
 	return conn, ch, nil
 }
 
-func initQueues(ch *amqp.Channel) error {
+// initQueues initializes the queues
+// It decides whether to purge queue by checking the purge option and check.
+// If check is true, it will purge the queue, which happens on initialization.
+// If check is false, it will not purge the queue, which happens on reconnection.
+func initQueues(ch *amqp.Channel, check bool) error {
 	var err error
 	for _, name := range queueNames {
 		//first purge queue
-		if purge {
+		if purge && check {
 			_, err = ch.QueuePurge(name, false)
 		}
 		logger.Debugf("Purging queue error: %v", err)
@@ -125,7 +130,7 @@ func reconnect() {
 			continue
 		}
 
-		err = initQueues(ch)
+		err = initQueues(ch, false)
 		if err != nil {
 			logger.Warnf("Failed to declare queues, retrying in 2 seconds: %s", err)
 			ch.Close()
@@ -133,12 +138,13 @@ func reconnect() {
 			time.Sleep(2 * time.Second)
 			continue
 		}
-
+		checkQueue()
 		logger.Infof("Successfully reconnected to RabbitMQ")
 		break
 	}
 }
 
+// checkQueue checks the number of messages in each queue and sets the semaphore
 func checkQueue() {
 	for _, name := range queueNames {
 		if name == "dork_broker" { //no need for rate limit on dork_broker
@@ -163,10 +169,10 @@ func (p Producer) PublishMessage(body interface{}) {
 			mutex.Lock()
 			logger.Debugf("Semaphore %s: %d", p.name, semaphore[p.name])
 			if semaphore[p.name] < concurrency*100 {
-				logger.Debugf("Waiting for semaphore %s with queue: %d", p.name, semaphore[p.name])
 				mutex.Unlock()
 				break
 			}
+			logger.Debugf("Waiting for semaphore %s with queue: %d", p.name, semaphore[p.name])
 			mutex.Unlock()
 			time.Sleep(2 * time.Second)
 		}
@@ -239,7 +245,7 @@ func (p Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 				var serverResult ServerResult
 				err := json.Unmarshal(d.Body, &serverResult)
 				if err != nil {
-					logger.Debugf("Error Unmarshalling JSON %s", err)
+					logger.Warnf("Error Unmarshalling JSON %s", err)
 					continue
 				}
 				logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)

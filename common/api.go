@@ -58,6 +58,7 @@ type Config struct {
 	MemoryUsage bool
 	RateLimit   int
 	PurgeBroker bool
+	UseProxy    bool
 }
 
 type TakeoverRecord struct {

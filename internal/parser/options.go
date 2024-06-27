@@ -18,6 +18,7 @@ func Parse_Options() (*common.Opts, *common.Config) {
 		logLevel       = flag.String("loglevel", "info", "The log level to use")
 		memoryUsage    = flag.Bool("mu", false, "Print memory usage")
 		purgeBroker    = flag.Bool("pb", false, "Purge the broker")
+		useProxy       = flag.Bool("px", false, "Use proxy")
 		ratelimit      = flag.Int("ratelimit", 4, "The rate limit to use per second")
 		cnameFile      = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")
 		dorkFile       = flag.String("dorkfile", "none", "The file to scan for Google dork")
@@ -43,5 +44,6 @@ func Parse_Options() (*common.Opts, *common.Config) {
 			MemoryUsage: *memoryUsage,
 			RateLimit:   *ratelimit,
 			PurgeBroker: *purgeBroker,
+			UseProxy:    *useProxy,
 		}
 }

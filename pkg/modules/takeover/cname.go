@@ -1,6 +1,7 @@
 package takeover
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
@@ -19,8 +20,26 @@ import (
 )
 
 var records []common.TakeoverRecord
-
+var targetDomains []string
 var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "sendgrid.net", "akamaiedge"}
+
+func init() {
+	fileName := "list/takeover_domains"
+	file, err := os.Open(fileName)
+	if err != nil {
+		logger.Errorln("Error opening file: ", fileName)
+		return
+	}
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		targetDomains = append(targetDomains, line)
+	}
+	if err := scanner.Err(); err != nil {
+		logger.Errorln("Error reading file: ", err)
+	}
+}
 
 func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
 	defer wg.Done()
@@ -32,6 +51,7 @@ func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts
 	}
 }
 
+// TODO: can add the ability to only target specific domains
 func Takeover(opts *common.Opts) {
 	if !cacher.CheckCache(opts.Target, "cname") {
 		return

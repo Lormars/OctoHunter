@@ -4,6 +4,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/pkg/modules"
+	"github.com/lormars/octohunter/pkg/modules/quirks"
 	"github.com/lormars/octohunter/pkg/modules/request"
 	"github.com/lormars/octohunter/pkg/modules/request/smuggle"
 	"github.com/lormars/octohunter/pkg/modules/salesforce"
@@ -21,6 +22,7 @@ func Init(opts *common.Opts) {
 		go salesforceConsumer(opts)
 		go splittingConsumer(opts)
 		go cl0Consumer(opts)
+		go quirksConsumer(opts)
 	}
 }
 
@@ -58,4 +60,8 @@ func splittingConsumer(opts *common.Opts) {
 
 func cl0Consumer(opts *common.Opts) {
 	common.Cl0P.ConsumeMessage(smuggle.CheckCl0, opts)
+}
+
+func quirksConsumer(opts *common.Opts) {
+	common.QuirksP.ConsumeMessage(quirks.CheckQuirks, opts)
 }

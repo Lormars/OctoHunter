@@ -34,6 +34,7 @@ var (
 	allRequestsCount = 0
 	errRequestsCount = 0
 	Sliding          = NewSlidingWindow()
+	UseProxy         = false
 )
 
 type responseStats struct {
@@ -249,6 +250,10 @@ func WrapTransport(transport http.RoundTripper) http.RoundTripper {
 	}
 	go cleanupRateLimiters()
 	return lrt
+}
+
+func SetUseProxy(useProxy bool) {
+	UseProxy = useProxy
 }
 
 // TODO: clean up these two functions' call in mu
