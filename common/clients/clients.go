@@ -12,6 +12,8 @@ import (
 
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients/health"
+	"github.com/lormars/octohunter/common/clients/proxyP"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -28,7 +30,6 @@ var (
 	totalData        int64 = 0
 	concurrentReq          = 0
 	mu               sync.Mutex
-	Proxies          = ParseProxies()
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
 	errRequestsCount = 0
@@ -80,12 +81,14 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			//fmt.Println("Using proxy: ", proxy)
 		} else {
 			//if not, randomly select a proxy from the list
-			proxy = Proxies[rand.Intn(len(Proxies))]
+			proxyP.Proxies.Mu.Lock()
+			proxy = proxyP.Proxies.Proxies[rand.Intn(len(proxyP.Proxies.Proxies))]
+			proxyP.Proxies.Mu.Unlock()
 			ctx := context.WithValue(req.Context(), "proxy", proxy)
 			req = req.WithContext(ctx)
 		}
 
-		currentHost := req.URL.Host
+		currentHost := req.URL.Hostname()
 		mu.Lock()
 		//the rate limiter is host & proxy specific
 		proxyentry, exists := ratelimiters[currentHost]
@@ -96,7 +99,6 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		entry, proxyExists := proxyentry[proxy]
 		if !proxyExists {
 			entry = &rateLimiterEntry{
-				//TODO: dynamic rate limiter
 				ratelimiter: common.NewDynamicRateLimiter(float64(2), rl),
 				lastUsed:    time.Now(),
 			}
@@ -111,13 +113,13 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		mu.Unlock()
 		err := entry.ratelimiter.Wait(req.Context())
 		if err != nil {
-			logger.Warnf("Rate limit Error for %s: %v\n", currentHost, err)
+			logger.Debugf("Rate limit Error for %s: %v\n", currentHost, err)
 			//mostly it is because exceeding context deadline
 			mu.Lock()
 			newrl := entry.ratelimiter.GetRPS() + 1
 			newbt := entry.ratelimiter.GetBurst() + 1
 			entry.ratelimiter.Update(newrl, newbt)
-			logger.Warnf("Increase Rate limit for %s to %f\n", currentHost, newrl)
+			logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
 			mu.Unlock()
 			return nil, err
 		}
@@ -159,7 +161,6 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 
 		if err != nil {
 			logger.Debugf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
-
 			// If this was not the last attempt, wait before retrying
 			if attempt < maxRetries-1 {
 				mu.Lock()
@@ -171,6 +172,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				continue
 			}
 			mu.Lock()
+			health.ProxyHealthInstance.AddBad(proxy)
 			errRequestsCount++
 			mu.Unlock()
 			return nil, err
@@ -203,7 +205,11 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			newrl := entry.ratelimiter.GetRPS() - 1
 			newbt := entry.ratelimiter.GetBurst() - 1
 			entry.ratelimiter.Update(newrl, newbt)
-			logger.Warnf("Decrease Rate limit for %s to %f\n", currentHost, newrl)
+			logger.Debugf("Decrease Rate limit for %s to %f\n", currentHost, newrl)
+		} else if resp.StatusCode == 403 {
+			health.ProxyHealthInstance.AddBad(proxy)
+		} else {
+			health.ProxyHealthInstance.AddGood(proxy)
 		}
 		mu.Unlock()
 

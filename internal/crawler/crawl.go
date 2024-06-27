@@ -2,6 +2,7 @@ package crawler
 
 import (
 	"strings"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/cacher"
@@ -24,5 +25,6 @@ func Crawl(response *common.ServerResult) {
 		} else {
 			common.DividerP.PublishMessage(url)
 		}
+		time.Sleep(100 * time.Millisecond)
 	}
 }

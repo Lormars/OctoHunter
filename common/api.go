@@ -57,6 +57,7 @@ type Config struct {
 	CacheTime   int
 	MemoryUsage bool
 	RateLimit   int
+	PurgeBroker bool
 }
 
 type TakeoverRecord struct {

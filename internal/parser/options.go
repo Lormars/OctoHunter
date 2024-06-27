@@ -17,13 +17,14 @@ func Parse_Options() (*common.Opts, *common.Config) {
 		concurrency    = flag.Int("concurrency", 50, "The concurrency to use")
 		logLevel       = flag.String("loglevel", "info", "The log level to use")
 		memoryUsage    = flag.Bool("mu", false, "Print memory usage")
+		purgeBroker    = flag.Bool("pb", false, "Purge the broker")
 		ratelimit      = flag.Int("ratelimit", 4, "The rate limit to use per second")
 		cnameFile      = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")
 		dorkFile       = flag.String("dorkfile", "none", "The file to scan for Google dork")
 		methodFile     = flag.String("methodfile", "none", "The file to scan for HTTP method checker")
 		redirectFile   = flag.String("redirectfile", "none", "The file to scan for redirect checker")
 		hopperFile     = flag.String("hopperfile", "none", "The file to scan for hopper")
-		dispatcherFile = flag.String("dispatcherfile", "none", "The file to scan for dispatcher")
+		dispatcherFile = flag.String("dispatcherfile", "list/distest", "The file to scan for dispatcher")
 	)
 	flag.Parse()
 	return &common.Opts{
@@ -41,5 +42,6 @@ func Parse_Options() (*common.Opts, *common.Config) {
 			CacheTime:   *cacheTime,
 			MemoryUsage: *memoryUsage,
 			RateLimit:   *ratelimit,
+			PurgeBroker: *purgeBroker,
 		}
 }

@@ -2,7 +2,6 @@ package smuggle
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"net/url"
 	"path"
@@ -12,6 +11,7 @@ import (
 	"math/rand"
 
 	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/common/clients/proxyP"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 )
@@ -44,8 +44,9 @@ func CheckCl0(urlstr string) {
 		logger.Debugf("Cache hit for %s\n", urlstr)
 		return
 	}
-
-	proxy := clients.Proxies[rand.Intn(len(clients.Proxies))]
+	proxyP.Proxies.Mu.Lock()
+	proxy := proxyP.Proxies.Proxies[rand.Intn(len(proxyP.Proxies.Proxies))]
+	proxyP.Proxies.Mu.Unlock()
 	ctx := context.WithValue(context.Background(), "proxy", proxy)
 	postBody := "GET /HopefullyMustBe404 HTTP/1.1\r\nFoo: x"
 	postRequest, err := http.NewRequestWithContext(ctx, "POST", urlstr, strings.NewReader(postBody))
@@ -76,9 +77,9 @@ func CheckCl0(urlstr string) {
 		return
 	}
 	defer getResponse.Resp.Body.Close()
-	fmt.Println(getRequest.URL.String())
-	fmt.Println(postResponse.Resp.StatusCode)
-	fmt.Println(getResponse.Resp.StatusCode)
+	// fmt.Println(getRequest.URL.String())
+	// fmt.Println(postResponse.Resp.StatusCode)
+	// fmt.Println(getResponse.Resp.StatusCode)
 	if getResponse.Resp.StatusCode == 404 && postResponse.Resp.StatusCode != 404 {
 		logger.Warnf("Potential CL0: %s\n", urlstr)
 	}

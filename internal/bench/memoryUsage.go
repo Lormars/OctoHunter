@@ -28,6 +28,7 @@ func PrintMemUsage(opts *common.Opts) {
 			msg += fmt.Sprintf("Data: %.6f GB. ", clients.GetTotalDataTransferred())
 			msg += fmt.Sprintf("Concurrent: %d. ", clients.GetConcurrentRequests())
 			msg += clients.PrintResStats()
+			msg += fmt.Sprintf(" Diversity: %.2f. ", clients.Sliding.GetHostDiversityScore())
 			common.OutputP.PublishMessage(msg)
 			sys, err := strconv.Atoi(bToMb(m.Sys))
 			if err != nil {

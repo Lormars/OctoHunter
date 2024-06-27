@@ -38,7 +38,7 @@ func main() {
 	}
 
 	if options.Module.Contains("broker") {
-		common.Init(options)
+		common.Init(options, config.PurgeBroker)
 	}
 
 	if options.Module.Contains("dispatcher") {

@@ -48,9 +48,12 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func Init(options *Opts) {
+var purge bool
+
+func Init(options *Opts, purgebroker bool) {
 	var err error
 	concurrency = options.Concurrency
+	purge = purgebroker
 	conn, ch, err = connectRabbitMQ()
 	failOnError(err, "Failed to connect to RabbitMQ")
 
@@ -93,7 +96,9 @@ func initQueues(ch *amqp.Channel) error {
 	var err error
 	for _, name := range queueNames {
 		//first purge queue
-		_, err = ch.QueuePurge(name, false)
+		if purge {
+			_, err = ch.QueuePurge(name, false)
+		}
 		logger.Debugf("Purging queue error: %v", err)
 		_, err = ch.QueueDeclare(
 			name,
