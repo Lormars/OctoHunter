@@ -84,6 +84,9 @@ func dispatch() {
 			go func(req *Queue) {
 				var responses []Response
 				for _, r := range req.Request.Reqs {
+					if r.Header.Get("Connection") == "" {
+						r.Close = true
+					}
 					resp, err := req.Request.Client.Do(r)
 					responses = append(responses, Response{Resp: resp, Err: err})
 				}

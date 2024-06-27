@@ -50,6 +50,7 @@ func CheckCl0(urlstr string) {
 	ctx := context.WithValue(context.Background(), "proxy", proxy)
 	postBody := "GET /HopefullyMustBe404 HTTP/1.1\r\nFoo: x"
 	postRequest, err := http.NewRequestWithContext(ctx, "POST", urlstr, strings.NewReader(postBody))
+	postRequest.Header.Set("Connection", "keep-alive")
 	if err != nil {
 		logger.Warnf("Error creating POST request: %v\n", err)
 		return

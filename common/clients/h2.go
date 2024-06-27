@@ -67,7 +67,7 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 func CreateCustomh2Transport() (*http2.Transport, error) {
 	transport := &http2.Transport{
 		DialTLSContext:     customh2DialTLSContext,
-		DisableCompression: true,
+		DisableCompression: false,
 		AllowHTTP:          false,
 	}
 

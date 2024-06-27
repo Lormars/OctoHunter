@@ -16,26 +16,13 @@ type H0Transport struct {
 // RoundTrip implements the RoundTripper interface
 func (t *H0Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	if req.URL.Scheme == "https" {
-		// Attempt HTTP/2 first
-		ctx := req.Context()
-		address := req.URL.Hostname()
-		port := req.URL.Port()
-		if port != "" {
-			address = address + ":" + port
-		} else {
-			address = address + ":443"
-		}
-		tlsConn, err := t.h2Transport.DialTLSContext(ctx, "tcp", address, nil)
+		logger.Debugf("Attempting HTTP/2 for %s\n", req.URL.String())
+		resp, err := t.h2Transport.RoundTrip(req)
 		if err == nil {
-			http2ClientConn, err := t.h2Transport.NewClientConn(tlsConn)
-			if err == nil {
-				return http2ClientConn.RoundTrip(req)
-			}
+			return resp, nil
 		}
+		logger.Debugf("HTTP/2 request failed: %v, falling back to HTTP/1.1 for %s\n", err, req.URL.String())
 	}
-	logger.Debugf("Falling back to HTTP/1.1 for %s\n", req.URL.String())
-
-	// Fallback to HTTP/1.1
 	return t.h1Transport.RoundTrip(req)
 }
 
