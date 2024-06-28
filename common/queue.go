@@ -1,0 +1,171 @@
+package common
+
+import (
+	"container/heap"
+	"net/http"
+	"sync"
+	"time"
+)
+
+type Queue struct {
+	Request  Request
+	RespChan chan []Response
+}
+
+type Response struct {
+	Resp *http.Response
+	Err  error
+}
+
+type Request struct {
+	Host   string
+	Client *http.Client
+	Reqs   []*http.Request
+}
+
+type BrokerQueue struct {
+	Host string
+	ch   chan bool
+}
+
+type PriorityQueueItem interface {
+	*Queue | *BrokerQueue
+}
+
+type PriorityQueue[T PriorityQueueItem] struct {
+	items []T
+	less  func(i, j int) bool
+}
+
+func (pq PriorityQueue[T]) Len() int { return len(pq.items) }
+
+func (pq PriorityQueue[T]) Less(i, j int) bool {
+	return pq.less(i, j)
+}
+
+func (pq PriorityQueue[T]) Swap(i, j int) {
+	pq.items[i], pq.items[j] = pq.items[j], pq.items[i]
+}
+
+func (pq *PriorityQueue[T]) Push(x interface{}) {
+	item := x.(T)
+	pq.items = append(pq.items, item)
+}
+
+func (pq *PriorityQueue[T]) Pop() interface{} {
+	old := pq.items
+	n := len(old)
+	item := old[n-1]
+	pq.items = old[0 : n-1]
+	return item
+}
+
+var (
+	queueLock sync.Mutex
+	pq        *PriorityQueue[*Queue]       //for request queue
+	bq        *PriorityQueue[*BrokerQueue] //for broker queue
+)
+
+func NewQueuePriorityQueue() *PriorityQueue[*Queue] {
+	return &PriorityQueue[*Queue]{
+		items: []*Queue{},
+		less: func(i, j int) bool {
+			return Sliding.GetRequestCount(pq.items[i].Request.Host) < Sliding.GetRequestCount(pq.items[j].Request.Host)
+		},
+	}
+}
+
+func NewQueueBrokerQueue() *PriorityQueue[*BrokerQueue] {
+	return &PriorityQueue[*BrokerQueue]{
+		items: []*BrokerQueue{},
+		less: func(i, j int) bool {
+			return BrokerSliding.GetRequestCount(bq.items[i].Host) < Sliding.GetRequestCount(bq.items[j].Host)
+		},
+	}
+}
+
+func AddToQueue(host string, reqs []*http.Request, client *http.Client) chan []Response {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+	respChan := make(chan []Response)
+	heap.Push(pq, &Queue{Request: Request{Host: host, Client: client, Reqs: reqs}, RespChan: respChan})
+	return respChan
+}
+
+func AddToBrokerQueue(host string) chan bool {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+	respChan := make(chan bool)
+	heap.Push(bq, &BrokerQueue{Host: host, ch: respChan})
+	return respChan
+}
+
+func getNextRequest() *Queue {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+
+	if pq.Len() == 0 {
+		return nil
+	}
+
+	return heap.Pop(pq).(*Queue)
+}
+
+func getNextBrokerMessage() *BrokerQueue {
+	queueLock.Lock()
+	defer queueLock.Unlock()
+
+	if bq.Len() == 0 {
+		return nil
+	}
+
+	return heap.Pop(bq).(*BrokerQueue)
+}
+
+func init() {
+	pq = NewQueuePriorityQueue()
+	bq = NewQueueBrokerQueue()
+	heap.Init(bq)
+	heap.Init(pq)
+	go dispatch()
+	go dispatchBroker()
+}
+
+// This function is used to dispatch the request queue.
+// The sleep time must be greater than the dispatchBroker function.
+func dispatch() {
+	for {
+
+		req := getNextRequest()
+		if req != nil {
+			go func(req *Queue) {
+				var responses []Response
+				for _, r := range req.Request.Reqs {
+					if r.Header.Get("Connection") == "" {
+						r.Close = true
+					}
+					resp, err := req.Request.Client.Do(r)
+					responses = append(responses, Response{Resp: resp, Err: err})
+				}
+				req.RespChan <- responses
+				close(req.RespChan)
+			}(req)
+		}
+
+		time.Sleep(time.Duration(1/(pq.Len()+1)) * 1 * time.Second)
+	}
+}
+
+// This function is used to dispatch the broker queue.
+// The sleep time must be less than the dispatch function.
+func dispatchBroker() {
+	for {
+		//fmt.Println("length: ", bq.Len())
+		broker := getNextBrokerMessage()
+		if broker != nil {
+			broker.ch <- true
+			close(broker.ch)
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}

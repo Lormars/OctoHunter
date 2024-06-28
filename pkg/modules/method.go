@@ -89,7 +89,10 @@ func testAccessControl(options *common.Opts, verb string) (bool, int, int, error
 	if !checker.CheckAccess(controlResp) && checker.CheckAccess(treatmentResp) {
 		//to fix equifax false positive
 		if !strings.Contains(treatmentResp.Body, "Something went wrong") || !strings.Contains(treatmentResp.Body, "Equifax") {
-			return true, controlResp.StatusCode, treatmentResp.StatusCode, nil, nil
+			//to fix other false positive
+			if !strings.Contains(treatmentResp.Body, "request blocked") {
+				return true, controlResp.StatusCode, treatmentResp.StatusCode, nil, nil
+			}
 		}
 	}
 

@@ -19,7 +19,7 @@ type Producer struct {
 	pubChannel  *amqp.Channel
 	consChannel *amqp.Channel
 	mutex       sync.Mutex
-	semaphore   int
+	semaphore   chan struct{}
 	consumers   []func()
 }
 
@@ -34,6 +34,7 @@ var SalesforceP = NewProducer("salesforce_broker")
 var SplittingP = NewProducer("splitting_broker")
 var Cl0P = NewProducer("cl0_broker")
 var QuirksP = NewProducer("quirks_broker")
+var mu sync.Mutex
 
 var (
 	queueProducers []*Producer
@@ -60,6 +61,7 @@ func Init(options *Opts, purgebroker bool) {
 	}
 	for _, p := range queueProducers {
 		p.initConnection()
+		p.semaphore = make(chan struct{}, concurrency*100)
 	}
 }
 
@@ -74,7 +76,7 @@ func (p *Producer) initConnection() {
 	err = p.initQueue(pubCh, true)
 	failOnError(err, "Failed to initialize queue")
 
-	go p.checkQueue()
+	//go p.checkQueue()
 	go p.registerConsumers()
 }
 
@@ -173,59 +175,61 @@ func (p *Producer) reconnect() {
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		p.checkQueue()
+		//p.checkQueue()
 		p.registerConsumers()
 		logger.Infof("Successfully reconnected to RabbitMQ for queue %s", p.name)
 		break
 	}
 }
 
-func (p *Producer) checkQueue() {
-	queueInfo, err := p.pubChannel.QueueDeclarePassive(p.name, false, false, false, false, nil)
-	if err != nil {
-		failOnError(err, "Failed to inspect queue"+p.name)
-	}
-	p.semaphore = queueInfo.Messages
-	logger.Debugf("Queue %s has %d messages ready", p.name, queueInfo.Messages)
-	time.Sleep(10 * time.Second)
-}
+// func (p *Producer) checkQueue() {
+// 	queueInfo, err := p.pubChannel.QueueDeclarePassive(p.name, false, false, false, false, nil)
+// 	if err != nil {
+// 		failOnError(err, "Failed to inspect queue"+p.name)
+// 	}
+// 	p.semaphore = queueInfo.Messages
+// 	logger.Debugf("Queue %s has %d messages ready", p.name, queueInfo.Messages)
+// 	time.Sleep(10 * time.Second)
+// }
 
 func (p *Producer) PublishMessage(body interface{}) {
 	var messageBody []byte
 	var contentType string
 	var err error
-	if p.name != "dork_broker" {
-		for {
-			p.mutex.Lock()
-			logger.Debugf("Semaphore %s: %d", p.name, p.semaphore)
-			if p.semaphore < concurrency*100 {
-				p.mutex.Unlock()
-				break
-			}
-			logger.Debugf("Waiting for semaphore %s with queue: %d", p.name, p.semaphore)
-			p.mutex.Unlock()
-			time.Sleep(2 * time.Second)
-		}
 
-		p.mutex.Lock()
-		p.semaphore++
-		p.mutex.Unlock()
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
-
-	switch v := body.(type) {
-	case string:
-		messageBody = []byte(v)
-		contentType = "text/plain"
-	case *ServerResult:
-		messageBody, err = json.Marshal(v)
-		if err != nil {
-			failOnError(err, "Failed to marshal struct to JSON")
+	if p.name != "dork_broker" {
+		p.semaphore <- struct{}{}
+		defer func() { <-p.semaphore }()
+		var waitCh chan bool
+		switch v := body.(type) {
+		case string:
+			messageBody = []byte(v)
+			hostname := GetHostname(v)
+			mu.Lock()
+			BrokerSliding.AddRequest(hostname)
+			mu.Unlock()
+			waitCh = AddToBrokerQueue(hostname)
+			contentType = "text/plain"
+		case *ServerResult:
+			messageBody, err = json.Marshal(v)
+			hostname := GetHostname(v.Url)
+			mu.Lock()
+			BrokerSliding.AddRequest(hostname)
+			mu.Unlock()
+			waitCh = AddToBrokerQueue(hostname)
+			if err != nil {
+				failOnError(err, "Failed to marshal struct to JSON")
+			}
+			contentType = "application/json"
+		default:
+			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
-		contentType = "application/json"
-	default:
-		failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
+		<-waitCh
+	} else {
+		messageBody = []byte(body.(string))
+		contentType = "text/plain"
 	}
 	for {
 		p.mutex.Lock()
@@ -303,9 +307,6 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 				handler(localOpts)
 			}
 			d.Ack(false)
-			p.mutex.Lock()
-			p.semaphore--
-			p.mutex.Unlock()
 		}
 	}()
 	logger.Debugf(" [*] %s Waiting for messages. To exit press CTRL+C\n", p.name)

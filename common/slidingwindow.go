@@ -1,4 +1,4 @@
-package clients
+package common
 
 import (
 	"sync"
@@ -9,6 +9,9 @@ type SlidingWindow struct {
 	requests map[string][]time.Time
 	mu       sync.Mutex
 }
+
+var Sliding = NewSlidingWindow()
+var BrokerSliding = NewSlidingWindow()
 
 func NewSlidingWindow() *SlidingWindow {
 	return &SlidingWindow{
@@ -27,10 +30,10 @@ func (sw *SlidingWindow) AddRequest(host string) {
 
 func (sw *SlidingWindow) cleanup(host string) {
 	now := time.Now()
-	tenSecondsAgo := now.Add(-10 * time.Second)
+	SecondsAgo := now.Add(-1 * time.Second)
 	i := 0
 	for _, t := range sw.requests[host] {
-		if t.After(tenSecondsAgo) {
+		if t.After(SecondsAgo) {
 			break
 		}
 		i++
@@ -44,12 +47,11 @@ func (sw *SlidingWindow) GetRequestCount(host string) int {
 	return len(sw.requests[host])
 }
 
-func (sw *SlidingWindow) GetHostDiversityScore() float64 {
+func (sw *SlidingWindow) GetHostDiversityScore() (float64, float64) {
 	sw.mu.Lock()
 	defer sw.mu.Unlock()
-
 	now := time.Now()
-	tenSecondsAgo := now.Add(-10 * time.Second)
+	SecondsAgo := now.Add(-1 * time.Second)
 	uniqueHosts := 0
 	totalRequests := 0
 
@@ -57,7 +59,7 @@ func (sw *SlidingWindow) GetHostDiversityScore() float64 {
 		// Clean up old requests for the host
 		i := 0
 		for _, t := range timestamps {
-			if t.After(tenSecondsAgo) {
+			if t.After(SecondsAgo) {
 				break
 			}
 			i++
@@ -72,10 +74,13 @@ func (sw *SlidingWindow) GetHostDiversityScore() float64 {
 	}
 
 	if totalRequests == 0 {
-		return 0.0
+		return 0.0, 0.0
 	}
+
+	//request rate
+	rate := float64(totalRequests) / 1.0
 
 	// Calculate the diversity score
 	diversityScore := float64(uniqueHosts) / float64(totalRequests)
-	return diversityScore
+	return diversityScore, rate
 }

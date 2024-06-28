@@ -176,6 +176,7 @@ func (ph *ProxyHealth) GetHealth(proxy string) float64 {
 
 //var test = true
 
+// This monitors the health of proxies based on the most recent 500 requests
 func (ph *ProxyHealth) Monitor() {
 	ph.mu.Lock()
 	defer ph.mu.Unlock()

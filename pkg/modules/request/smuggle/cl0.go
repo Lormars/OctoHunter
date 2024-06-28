@@ -10,6 +10,7 @@ import (
 
 	"math/rand"
 
+	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/common/clients/proxyP"
 	"github.com/lormars/octohunter/internal/cacher"
@@ -62,7 +63,7 @@ func CheckCl0(urlstr string) {
 		return
 	}
 	getRequest.Header.Set("Connection", "close")
-	respChan := clients.AddToQueue(getRequest.Host, []*http.Request{postRequest, getRequest}, client)
+	respChan := common.AddToQueue(getRequest.Host, []*http.Request{postRequest, getRequest}, client)
 	responses := <-respChan
 	postResponse := responses[0]
 	getResponse := responses[1]

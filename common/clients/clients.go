@@ -33,7 +33,6 @@ var (
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
 	errRequestsCount = 0
-	Sliding          = NewSlidingWindow()
 	UseProxy         = false
 )
 
@@ -153,10 +152,9 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		mu.Lock()
 		concurrentReq++
 		allRequestsCount++
+		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
 
-		//fmt.Println(req.Header)
-		Sliding.AddRequest(currentHost)
 		resp, err := lrt.Proxied.RoundTrip(req)
 		duration := time.Since(start)
 
@@ -271,6 +269,7 @@ func GetConcurrentRequests() int {
 	return concurrentReq
 }
 
+// This calculates the bad rate and error rate for all hosts for all requests.
 func PrintResStats() string {
 	mu.Lock()
 	defer mu.Unlock()

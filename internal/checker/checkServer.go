@@ -60,7 +60,7 @@ func checkServer(urlStr string) (*common.ServerResult, error) {
 
 // The ultra-important requester for (nearly) all request...
 func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerResult, error) {
-	respCh := clients.AddToQueue(req.URL.Hostname(), []*http.Request{req}, client)
+	respCh := common.AddToQueue(req.URL.Hostname(), []*http.Request{req}, client)
 	resps := <-respCh
 	resp := resps[0].Resp
 	err := resps[0].Err

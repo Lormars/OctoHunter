@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/notify"
 )
@@ -15,6 +16,11 @@ import (
 var result *common.ServerResult
 
 func CheckQuirks(res *common.ServerResult) {
+
+	if !cacher.CheckCache(res.Url, "quirks") {
+		return
+	}
+
 	result = res
 	doubleHTML()
 	jsonwithHTML()

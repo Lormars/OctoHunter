@@ -2,6 +2,8 @@ package cacher
 
 import (
 	"database/sql"
+	"net/url"
+	"strings"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -39,10 +41,21 @@ func SetCacheTime(time int) {
 	cacheTime = CacheTime(time)
 }
 
+func cleanURL(endpoint string) string {
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		return endpoint
+	}
+	parsedURL.Fragment = ""
+	cleanedURL := strings.TrimRight(parsedURL.String(), "/")
+	return cleanedURL
+}
+
 func CheckCache(endpoint, module string) bool {
-	if CanScan(endpoint, module) {
+	cleaned := cleanURL(endpoint)
+	if CanScan(cleaned, module) {
 		logger.Debugf("Scanning %s for %s\n", endpoint, module)
-		UpdateScanTime(endpoint, module)
+		UpdateScanTime(cleaned, module)
 		return true
 	} else {
 		logger.Debugf("Skipping %s for %s\n", endpoint, module)
