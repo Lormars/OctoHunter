@@ -18,6 +18,7 @@ func CheckQuirks(res *common.ServerResult) {
 	result = res
 	doubleHTML()
 	jsonwithHTML()
+	leakenv()
 }
 
 func doubleHTML() {
@@ -45,6 +46,14 @@ func jsonwithHTML() {
 	}
 	if strings.HasPrefix(result.Body, "{") || strings.HasPrefix(result.Body, "[") {
 		msg := fmt.Sprintf("[Quirks] JSON with HTML mime in %s", result.Url)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+	}
+}
+
+func leakenv() {
+	if strings.Count(result.Body, "HTTP_") > 2 {
+		msg := fmt.Sprintf("[Quirks] HTTP_ ENV leak in %s", result.Url)
 		common.OutputP.PublishMessage(msg)
 		notify.SendMessage(msg)
 	}

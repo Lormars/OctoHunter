@@ -173,6 +173,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				continue
 			}
 			mu.Lock()
+			concurrentReq--
 			health.ProxyHealthInstance.AddBad(proxy)
 			errRequestsCount++
 			mu.Unlock()
