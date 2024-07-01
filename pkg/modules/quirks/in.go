@@ -16,9 +16,17 @@ import (
 var result *common.ServerResult
 
 func CheckQuirks(res *common.ServerResult) {
-
-	if !cacher.CheckCache(res.Url, "quirks") {
-		return
+	//there are just so many websites with the same quirks on all the endpoints under a path,
+	//so need to cache a little more agressively to cache the first path as well
+	firstPath, err := cacher.GetFirstPath(res.Url)
+	if err != nil {
+		if !cacher.CheckCache(res.Url, "quirks") {
+			return
+		}
+	} else {
+		if !cacher.CheckCache(firstPath, "quirks") {
+			return
+		}
 	}
 
 	result = res

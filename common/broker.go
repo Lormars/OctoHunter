@@ -14,13 +14,14 @@ import (
 )
 
 type Producer struct {
-	name        string
-	conn        *amqp.Connection
-	pubChannel  *amqp.Channel
-	consChannel *amqp.Channel
-	mutex       sync.Mutex
-	semaphore   chan struct{}
-	consumers   []func()
+	name         string
+	conn         *amqp.Connection
+	pubChannel   *amqp.Channel
+	consChannel  *amqp.Channel
+	mutex        sync.Mutex
+	semaphore    chan struct{}
+	consumers    []func()
+	ShutdownChan chan struct{}
 }
 
 var OutputP = NewProducer("dork_broker")
@@ -49,10 +50,10 @@ func failOnError(err error, msg string) {
 }
 
 func NewProducer(name string) *Producer {
-	return &Producer{name: name}
+	return &Producer{name: name, ShutdownChan: make(chan struct{})}
 }
 
-func Init(options *Opts, purgebroker bool) {
+func Init(options *Opts, purgebroker bool) []*Producer {
 	concurrency = options.Concurrency
 	purge = purgebroker
 	queueProducers = []*Producer{
@@ -63,6 +64,8 @@ func Init(options *Opts, purgebroker bool) {
 		p.initConnection()
 		p.semaphore = make(chan struct{}, concurrency*100)
 	}
+
+	return queueProducers
 }
 
 func (p *Producer) initConnection() {
@@ -84,7 +87,10 @@ func connectRabbitMQ() (*amqp.Connection, *amqp.Channel, *amqp.Channel, error) {
 	user := os.Getenv("RABBITMQ_USER")
 	password := os.Getenv("RABBITMQ_PASSWORD")
 	connStr := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, password)
-	conn, err := amqp.Dial(connStr)
+	conn, err := amqp.DialConfig(connStr,
+		amqp.Config{
+			Heartbeat: 10 * time.Second,
+		})
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -182,26 +188,16 @@ func (p *Producer) reconnect() {
 	}
 }
 
-// func (p *Producer) checkQueue() {
-// 	queueInfo, err := p.pubChannel.QueueDeclarePassive(p.name, false, false, false, false, nil)
-// 	if err != nil {
-// 		failOnError(err, "Failed to inspect queue"+p.name)
-// 	}
-// 	p.semaphore = queueInfo.Messages
-// 	logger.Debugf("Queue %s has %d messages ready", p.name, queueInfo.Messages)
-// 	time.Sleep(10 * time.Second)
-// }
-
 func (p *Producer) PublishMessage(body interface{}) {
 	var messageBody []byte
 	var contentType string
 	var err error
 
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-	defer cancel()
 	if p.name != "dork_broker" {
 		p.semaphore <- struct{}{}
-		defer func() { <-p.semaphore }()
+		defer func() {
+			<-p.semaphore
+		}()
 		var waitCh chan bool
 		switch v := body.(type) {
 		case string:
@@ -232,11 +228,13 @@ func (p *Producer) PublishMessage(body interface{}) {
 		contentType = "text/plain"
 	}
 	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 		p.mutex.Lock()
 		if p.pubChannel == nil || p.pubChannel.IsClosed() {
 			logger.Warnf("Failed to publish a message, attempting to reconnect: %s", p.name)
 			p.reconnect()
 			p.mutex.Unlock()
+			cancel()
 			continue
 		}
 		err = p.pubChannel.PublishWithContext(
@@ -252,8 +250,10 @@ func (p *Producer) PublishMessage(body interface{}) {
 		p.mutex.Unlock()
 		if err != nil {
 			logger.Warnf("Failed to publish a message, attempting to reconnect: %s", err)
+			cancel()
 			p.reconnect()
 		} else {
+			cancel()
 			break
 		}
 	}
@@ -262,55 +262,80 @@ func (p *Producer) PublishMessage(body interface{}) {
 }
 
 func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
-	msgs, err := p.consChannel.Consume(
-		p.name,
-		"",
-		false,
-		false,
-		false,
-		false,
-		nil,
-	)
-	failOnError(err, "Failed to register a consumer")
+	for {
+		select {
+		case <-p.ShutdownChan:
+			logger.Debugf("Consumer %s Shutting down", p.name)
+			return
+		default:
 
-	p.consumers = append(p.consumers, func() { p.ConsumeMessage(handlerFunc, opts) })
-
-	var forever = make(chan struct{})
-	go func() {
-		for d := range msgs {
-			switch handler := handlerFunc.(type) {
-			case func(string):
-				logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
-				handler(string(d.Body))
-			case func(*ServerResult):
-				var serverResult ServerResult
-				err := json.Unmarshal(d.Body, &serverResult)
-				if err != nil {
-					logger.Warnf("Error Unmarshalling JSON %s", err)
-					continue
-				}
-				logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
-				handler(&serverResult)
-			case func(*Opts):
-				localOpts := &Opts{
-					Module:         opts.Module,
-					Concurrency:    opts.Concurrency,
-					Target:         string(d.Body),
-					DorkFile:       opts.DorkFile,
-					HopperFile:     opts.HopperFile,
-					MethodFile:     opts.MethodFile,
-					RedirectFile:   opts.RedirectFile,
-					CnameFile:      opts.CnameFile,
-					DispatcherFile: opts.DispatcherFile,
-				}
-				logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
-				handler(localOpts)
+			msgs, err := p.consChannel.Consume(
+				p.name,
+				"",
+				false,
+				false,
+				false,
+				false,
+				nil,
+			)
+			if err != nil {
+				logger.Warnf("Failed to register a consumer: %s", err)
+				p.mutex.Lock()
+				p.reconnect()
+				p.mutex.Unlock()
+				continue
 			}
-			d.Ack(false)
+
+			p.consumers = append(p.consumers, func() { p.ConsumeMessage(handlerFunc, opts) })
+			closeChan := p.consChannel.NotifyClose(make(chan *amqp.Error))
+			var forever = make(chan struct{})
+			go func() {
+
+				for {
+					select {
+					case d := <-msgs:
+						d.Ack(false)
+						switch handler := handlerFunc.(type) {
+						case func(string):
+							logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
+							handler(string(d.Body))
+						case func(*ServerResult):
+							var serverResult ServerResult
+							err := json.Unmarshal(d.Body, &serverResult)
+							if err != nil {
+								logger.Warnf("Error Unmarshalling JSON %s", err)
+								continue
+							}
+							logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
+							handler(&serverResult)
+						case func(*Opts):
+							localOpts := &Opts{
+								Module:         opts.Module,
+								Concurrency:    opts.Concurrency,
+								Target:         string(d.Body),
+								DorkFile:       opts.DorkFile,
+								HopperFile:     opts.HopperFile,
+								MethodFile:     opts.MethodFile,
+								RedirectFile:   opts.RedirectFile,
+								CnameFile:      opts.CnameFile,
+								DispatcherFile: opts.DispatcherFile,
+							}
+							logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
+							handler(localOpts)
+						}
+					case <-closeChan:
+						logger.Warnf("Consumer %s Connection closed, attempting to reconnect", p.name)
+						close(forever)
+						return
+					case <-p.ShutdownChan:
+						return
+					}
+				}
+			}()
+			logger.Debugf(" [*] %s Waiting for messages. To exit press CTRL+C\n", p.name)
+			<-forever
 		}
-	}()
-	logger.Debugf(" [*] %s Waiting for messages. To exit press CTRL+C\n", p.name)
-	<-forever
+	}
 }
 
 func (p *Producer) registerConsumers() {

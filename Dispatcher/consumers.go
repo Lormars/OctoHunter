@@ -12,17 +12,19 @@ import (
 )
 
 func Init(opts *common.Opts) {
-	for i := 0; i < opts.Concurrency; i++ {
-		go cnameConsumer(opts)
+	for i := 0; i < opts.Concurrency/10; i++ {
 		go redirectConsumer(opts)
 		go methodConsumer(opts)
 		go hopperConsumer(opts)
-		go crawlerConsumer(opts)
-		go dividerConsumer(opts)
 		go salesforceConsumer(opts)
 		go splittingConsumer(opts)
 		go cl0Consumer(opts)
 		go quirksConsumer(opts)
+		go dividerConsumer(opts)
+	}
+	for i := 0; i < opts.Concurrency; i++ {
+		go cnameConsumer(opts)
+		go crawlerConsumer(opts)
 	}
 }
 

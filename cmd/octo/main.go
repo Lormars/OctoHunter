@@ -34,12 +34,15 @@ func main() {
 	clients.SetRateLimiter(config.RateLimit)
 	clients.SetUseProxy(config.UseProxy)
 	err := godotenv.Load()
+
+	var producers []*common.Producer
+
 	if err != nil {
 		log.Println("No .env file found")
 	}
 
 	if options.Module.Contains("broker") {
-		common.Init(options, config.PurgeBroker)
+		producers = common.Init(options, config.PurgeBroker)
 	}
 
 	if options.Module.Contains("dispatcher") {
@@ -58,6 +61,9 @@ func main() {
 
 	sig := <-sigChan
 	logger.Infof("Received signal: %s. Shutting down gracefully...\n", sig)
+	for _, producer := range producers {
+		close(producer.ShutdownChan)
+	}
 
 	common.Close()
 	logger.Infoln("Exiting...")

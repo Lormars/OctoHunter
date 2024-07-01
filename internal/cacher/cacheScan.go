@@ -104,3 +104,19 @@ func CanScan(endpoint, module string) bool {
 	return currentTime-LastScanned > int64(cacheTime)*60
 
 }
+
+func GetFirstPath(urlStr string) (string, error) {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		logger.Debugf("Error parsing URL: %v", err)
+		return "", err
+	}
+
+	hostname := parsedURL.Hostname()
+	pathSegments := strings.Split(parsedURL.Path, "/")
+	var fistPathSegment string
+	if len(pathSegments) > 1 {
+		fistPathSegment = pathSegments[1]
+	}
+	return hostname + "/" + fistPathSegment, nil
+}

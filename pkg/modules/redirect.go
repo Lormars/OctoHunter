@@ -41,7 +41,14 @@ func SingleRedirectCheck(opts *common.Opts) {
 	}
 
 	logger.Debugf("finalURL: %s for original url: %s", finalURL, opts.Target)
-	common.DividerP.PublishMessage(finalURL.String()) //send new-found finalURL to divider
+
+	req, err := http.NewRequest("GET", finalURL.String(), nil)
+	if err == nil {
+		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		if err == nil {
+			common.DividerP.PublishMessage(resp) //send new-found finalURL to divider
+		}
+	}
 
 	length, err := getLength(opts.Target)
 	if err != nil {

@@ -111,26 +111,29 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		logger.Debugf("Rate limit for %s at %f\n", currentHost, entry.ratelimiter.GetRPS())
 
 		mu.Unlock()
-		err := entry.ratelimiter.Wait(req.Context())
-		if err != nil {
-			logger.Debugf("Rate limit Error for %s: %v\n", currentHost, err)
-			//mostly it is because exceeding context deadline
-			mu.Lock()
-			newrl := entry.ratelimiter.GetRPS() + 1
-			newbt := entry.ratelimiter.GetBurst() + 1
-			entry.ratelimiter.Update(newrl, newbt)
-			logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
-			mu.Unlock()
-			return nil, err
+		//does not apply rate limit when testing for race condition
+		_, ok := req.Context().Value("race").(string)
+		if !ok {
+			err := entry.ratelimiter.Wait(req.Context())
+			if err != nil {
+				logger.Debugf("Rate limit Error for %s: %v\n", currentHost, err)
+				//mostly it is because exceeding context deadline
+				mu.Lock()
+				newrl := entry.ratelimiter.GetRPS() + 1
+				newbt := entry.ratelimiter.GetBurst() + 1
+				entry.ratelimiter.Update(newrl, newbt)
+				logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
+				mu.Unlock()
+				return nil, err
+			}
 		}
-
 		start := time.Now()
 
 		logger.Debugf("Making request: %s %s%s at %s\n", req.Method, currentHost, req.URL.Path, start)
 
 		randomIndex := rand.Intn(len(asset.Useragent))
 		randomAgent := asset.Useragent[randomIndex]
-		req.Header.Set("User-Agent", randomAgent)
+		req.Header.Add("User-Agent", randomAgent) //use ADD as RC would set the user agent
 		req.Header.Set("Accept-Charset", "utf-8")
 
 		// Measure request size

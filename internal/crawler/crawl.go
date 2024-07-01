@@ -1,11 +1,13 @@
 package crawler
 
 import (
+	"net/http"
 	"strings"
-	"time"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/parser"
 )
@@ -23,8 +25,17 @@ func Crawl(response *common.ServerResult) {
 		if strings.HasSuffix(url, ".svg") || strings.HasSuffix(url, ".png") || strings.HasSuffix(url, ".jpg") || strings.HasSuffix(url, ".gif") {
 			common.Cl0P.PublishMessage(url)
 		} else {
-			common.DividerP.PublishMessage(url)
+			req, err := http.NewRequest("GET", url, nil)
+			if err != nil {
+				logger.Debugf("Error creating request: %v", err)
+				continue
+			}
+			resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+			if err != nil {
+				logger.Debugf("Error getting response from %s: %v\n", url, err)
+				continue
+			}
+			common.DividerP.PublishMessage(resp)
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 }

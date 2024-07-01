@@ -4,9 +4,11 @@ import (
 	"bufio"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -21,12 +23,30 @@ func Input(opts *common.Opts) {
 		}
 
 		lineCh := make(chan string, opts.Concurrency)
-		go func() {
-			for line := range lineCh {
-				common.DividerP.PublishMessage(line)
-			}
-		}()
+		var wg sync.WaitGroup
+		for i := 0; i < opts.Concurrency; i++ {
+			wg.Add(1)
+			go func() {
+				for domainString := range lineCh {
+					if !checker.ResolveDNS(domainString) {
+						logger.Debugln("DNS resolution failed for: ", domainString)
+						go common.CnameP.PublishMessage(domainString)
+						continue
+					}
 
+					go common.CnameP.PublishMessage(domainString)
+
+					httpStatus, httpsStatus, errhttp, errhttps := checker.CheckHTTPAndHTTPSServers(domainString)
+					if errhttp == nil && httpStatus.Online {
+						go common.DividerP.PublishMessage(httpStatus)
+					}
+					if errhttps == nil && httpsStatus.Online {
+						go common.DividerP.PublishMessage(httpsStatus)
+					}
+				}
+				wg.Done()
+			}()
+		}
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
@@ -38,5 +58,6 @@ func Input(opts *common.Opts) {
 		}
 		file.Close()
 		close(lineCh)
+		wg.Wait()
 	}
 }

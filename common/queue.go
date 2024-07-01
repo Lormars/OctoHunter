@@ -79,7 +79,7 @@ func NewQueueBrokerQueue() *PriorityQueue[*BrokerQueue] {
 	return &PriorityQueue[*BrokerQueue]{
 		items: []*BrokerQueue{},
 		less: func(i, j int) bool {
-			return BrokerSliding.GetRequestCount(bq.items[i].Host) < Sliding.GetRequestCount(bq.items[j].Host)
+			return BrokerSliding.GetRequestCount(bq.items[i].Host) < BrokerSliding.GetRequestCount(bq.items[j].Host)
 		},
 	}
 }
