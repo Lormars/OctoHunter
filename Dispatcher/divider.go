@@ -17,16 +17,16 @@ func Divider(result *common.ServerResult) {
 		return
 	}
 
-	useHttps := strings.HasPrefix(urlStr, "https")
+	//useHttps := strings.HasPrefix(urlStr, "https")
 
 	//tweaks
 
 	if checker.CheckRedirect(result.StatusCode) {
 		//though param splitting does not happen only in redirect, most of it happens here, so...
 		go common.SplittingP.PublishMessage(result)
-		if useHttps {
-			go common.RedirectP.PublishMessage(result.Url)
-		}
+		// if useHttps {
+		go common.RedirectP.PublishMessage(result.Url)
+		// }
 	} else if checker.CheckRequestError(result.StatusCode) {
 		go common.MethodP.PublishMessage(result.Url)
 		go common.HopP.PublishMessage(result.Url)

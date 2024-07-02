@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/fatih/color"
@@ -50,6 +51,12 @@ func SingleRedirectCheck(opts *common.Opts) {
 		}
 	}
 
+	checkUnusualLength(finalURL, opts)
+	checkOpenRedirect(finalURL, opts)
+
+}
+
+func checkUnusualLength(finalURL *url.URL, opts *common.Opts) {
 	length, err := getLength(opts.Target)
 	if err != nil {
 		return
@@ -62,7 +69,59 @@ func SingleRedirectCheck(opts *common.Opts) {
 			common.OutputP.PublishMessage(msg)
 		}
 	}
+}
 
+func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
+	parsedURL, err := url.Parse(opts.Target)
+	if err != nil {
+		logger.Warnf("Error parsing URL: %v\n", err)
+		return
+	}
+
+	queries := parsedURL.Query()
+	for key, values := range queries {
+		for _, value := range values {
+			//first check whether the finalURL exists in the original URL's query
+			if strings.Contains(finalURL.String(), value) {
+				parsedOriginalURL, err := url.Parse(opts.Target)
+				if err != nil {
+					logger.Warnf("Error parsing URL: %v\n", err)
+					continue
+				}
+				originalQueries := parsedOriginalURL.Query()
+				var newValue string
+				//replace the value with example.com based on the scheme
+				if strings.HasPrefix(value, "http://") {
+					newValue = "http://example.com"
+				} else if strings.HasPrefix(value, "https://") {
+					newValue = "https://example.com"
+				} else {
+					newValue = "example.com"
+				}
+				originalQueries.Set(key, newValue)
+				parsedOriginalURL.RawQuery = originalQueries.Encode()
+				req, err := http.NewRequest("GET", parsedOriginalURL.String(), nil)
+				if err != nil {
+					logger.Warnf("Error creating request: %v\n", err)
+					continue
+				}
+				resp, err := checker.CheckServerCustom(req, clients.NormalClient)
+				if err != nil {
+					logger.Warnf("Error getting response from %s: %v\n", parsedOriginalURL.String(), err)
+					continue
+				}
+				//since example.com contains "illustrative examples", we can check for that
+				if strings.Contains(resp.Body, "illustrative examples") {
+					msg := fmt.Sprintf("[Open Redirect] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
+					color.Red(msg)
+					if opts.Module.Contains("broker") {
+						notify.SendMessage(msg)
+						common.OutputP.PublishMessage(msg)
+					}
+				}
+			}
+		}
+	}
 }
 
 func getLength(url string) (int, error) {

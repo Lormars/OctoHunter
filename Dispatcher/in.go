@@ -28,14 +28,17 @@ func Input(opts *common.Opts) {
 			wg.Add(1)
 			go func() {
 				for domainString := range lineCh {
-					if !checker.ResolveDNS(domainString) {
-						logger.Debugln("DNS resolution failed for: ", domainString)
+					if !strings.HasPrefix(domainString, "http") {
+						if !checker.ResolveDNS(domainString) {
+							logger.Debugln("DNS resolution failed for: ", domainString)
+							go common.CnameP.PublishMessage(domainString)
+							continue
+						}
+
 						go common.CnameP.PublishMessage(domainString)
-						continue
 					}
-
-					go common.CnameP.PublishMessage(domainString)
-
+					domainString = strings.TrimPrefix(domainString, "http://")
+					domainString = strings.TrimPrefix(domainString, "https://")
 					httpStatus, httpsStatus, errhttp, errhttps := checker.CheckHTTPAndHTTPSServers(domainString)
 					if errhttp == nil && httpStatus.Online {
 						go common.DividerP.PublishMessage(httpStatus)
@@ -59,5 +62,6 @@ func Input(opts *common.Opts) {
 		file.Close()
 		close(lineCh)
 		wg.Wait()
+		time.Sleep(1 * time.Hour)
 	}
 }
