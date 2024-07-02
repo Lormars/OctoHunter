@@ -44,6 +44,13 @@ func doubleHTML() {
 		return
 	}
 	if strings.Count(result.Body, "</html>") > 1 {
+		//if result.Depth > 0, it means this url is the result of a crawl
+		//then it is worthy to crawl it to get further endpoint
+		//if result.Depth = 0, then it must already be crawled by crawler, so no need to crawl it again
+		if result.Depth > 0 {
+			common.CrawlP.PublishMessage(result)
+		}
+
 		msg := fmt.Sprintf("[Quirks] Double HTML in %s", result.Url)
 		common.OutputP.PublishMessage(msg)
 		notify.SendMessage(msg)

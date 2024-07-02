@@ -4,11 +4,14 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"sync"
+	"time"
+
+	"math/rand"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -16,7 +19,6 @@ import (
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
-	"golang.org/x/exp/rand"
 )
 
 // target must be a valid URL
@@ -27,7 +29,7 @@ func RaceCondition(urlStr string) {
 	var wg sync.WaitGroup
 	var mu sync.Mutex
 	var treatResponses []*common.ServerResult
-	var controlResponses []*common.ServerResult
+	// var controlResponses []*common.ServerResult
 
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
@@ -35,7 +37,7 @@ func RaceCondition(urlStr string) {
 		return
 	}
 
-	pattern := `wxoyvz\d`
+	pattern := `wxoyvz\d{1,2}`
 	re, err := regexp.Compile(pattern)
 	if err != nil {
 		logger.Warnf("Failed to compile regex: %v", err)
@@ -50,11 +52,11 @@ func RaceCondition(urlStr string) {
 	// Function to send a request
 	sendRequest := func(id int) {
 		defer wg.Done()
-		buster := "wxoyvz" + string(id)
+		buster := "wxoyvz" + strconv.Itoa(id)
 		cachebuster := "boqpz=" + buster
 		payloadURL := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + "?" + cachebuster
 
-		req, err := http.NewRequestWithContext(ctx, "GET", urlStr, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", payloadURL, nil)
 		if err != nil {
 			logger.Warnf("Goroutine %d: Failed to create request: %v", id, err)
 			return
@@ -66,11 +68,10 @@ func RaceCondition(urlStr string) {
 
 		resp, err := clients.NoRedirectRCClient.Do(req)
 		if err != nil {
-			log.Printf("Goroutine %d: Failed to send request: %v", id, err)
+			logger.Debugf("Goroutine %d: Failed to send request: %v", id, err)
 			return
 		}
 		defer resp.Body.Close()
-		fmt.Printf("Goroutine %d: %s\n", id, resp.Status)
 		body, err := io.ReadAll(resp.Body)
 		if err != nil {
 			logger.Debugf("Goroutine %d: Failed to read response body: %v", id, err)
@@ -86,7 +87,7 @@ func RaceCondition(urlStr string) {
 		match := re.FindString(response.Body)
 
 		if match != "" && match != buster {
-			msg := fmt.Sprintf("[RC Confirmed] Race Condition on endpoint %s", response.Url)
+			msg := fmt.Sprintf("[RC Confirmed] Race Condition on endpoint %s (match is %s)", response.Url, match)
 			common.OutputP.PublishMessage(msg)
 			notify.SendMessage(msg)
 		}
@@ -98,20 +99,34 @@ func RaceCondition(urlStr string) {
 	}
 
 	//control group
-	for i := 1; i <= 20; i++ {
-		req, err := http.NewRequest("GET", urlStr, nil)
-		if err != nil {
-			logger.Warnf("Failed to create request: %v", i, err)
-			return
-		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirecth2Client)
-		if err != nil {
-			logger.Warnf("Failed to send request: %v", i, err)
-			return
-		}
-		controlResponses = append(controlResponses, resp)
+	// for i := 1; i <= 20; i++ {
+	// 	req, err := http.NewRequest("GET", urlStr, nil)
+	// 	if err != nil {
+	// 		logger.Warnf("Failed to create request: %v", i, err)
+	// 		return
+	// 	}
+	// 	resp, err := checker.CheckServerCustom(req, clients.NoRedirecth2Client)
+	// 	if err != nil {
+	// 		logger.Warnf("Failed to send request: %v", i, err)
+	// 		return
+	// 	}
+	// 	controlResponses = append(controlResponses, resp)
 
+	// }
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		logger.Warnf("Failed to create request: %v", err)
+		return
 	}
+	resp, err := checker.CheckServerCustom(req, clients.NoRedirecth2Client)
+	if err != nil { //first check with a normal http2 request to see if the server accepts HTTP2 protocol
+		logger.Debugf("Failed to send request: %v", err)
+		return
+	}
+	controlStatus := resp.StatusCode
+
+	time.Sleep(1 * time.Second)
 
 	// Launch 20 goroutines to send requests concurrently
 	for i := 1; i <= 20; i++ {
@@ -123,11 +138,11 @@ func RaceCondition(urlStr string) {
 	wg.Wait()
 
 	for _, resp := range treatResponses {
-		if resp.StatusCode != 429 && resp.StatusCode != 502 && resp.StatusCode != 503 && resp.StatusCode != 403 {
-			msg := fmt.Sprintf("[RC Suspect] Race Condition on %s", resp.Url)
+		if resp.StatusCode != controlStatus && resp.StatusCode > 300 && resp.StatusCode != 429 && resp.StatusCode != 502 && resp.StatusCode != 503 && resp.StatusCode != 403 {
+			msg := fmt.Sprintf("[RC Suspect] Race Condition on %s with status %d", resp.Url, resp.StatusCode)
 			common.OutputP.PublishMessage(msg)
 			notify.SendMessage(msg)
-
+			break
 		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/pkg/modules"
 	"github.com/lormars/octohunter/pkg/modules/quirks"
+	racecondition "github.com/lormars/octohunter/pkg/modules/raceCondition"
 	"github.com/lormars/octohunter/pkg/modules/request"
 	"github.com/lormars/octohunter/pkg/modules/request/smuggle"
 	"github.com/lormars/octohunter/pkg/modules/salesforce"
@@ -21,6 +22,7 @@ func Init(opts *common.Opts) {
 		go cl0Consumer(opts)
 		go quirksConsumer(opts)
 		go dividerConsumer(opts)
+		go raceConditionConsumer(opts)
 	}
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
@@ -66,4 +68,8 @@ func cl0Consumer(opts *common.Opts) {
 
 func quirksConsumer(opts *common.Opts) {
 	common.QuirksP.ConsumeMessage(quirks.CheckQuirks, opts)
+}
+
+func raceConditionConsumer(opts *common.Opts) {
+	common.RCP.ConsumeMessage(racecondition.RaceCondition, opts)
 }

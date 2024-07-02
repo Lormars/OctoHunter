@@ -1,6 +1,7 @@
 package checker
 
 import (
+	"net/url"
 	"strings"
 
 	"github.com/lormars/octohunter/common"
@@ -46,4 +47,13 @@ func CheckMimeType(contentType, mimeToCheck string) bool {
 	mimeType = strings.TrimSpace(mimeType)
 	// Check if MIME type is "text/html"
 	return mimeType == mimeToCheck
+}
+
+func CheckHomePage(urlStr string) bool {
+	parsedURL, err := url.Parse(urlStr)
+	if err != nil {
+		return false
+	}
+
+	return parsedURL.Path == "/" || parsedURL.Path == ""
 }

@@ -35,6 +35,7 @@ var SalesforceP = NewProducer("salesforce_broker")
 var SplittingP = NewProducer("splitting_broker")
 var Cl0P = NewProducer("cl0_broker")
 var QuirksP = NewProducer("quirks_broker")
+var RCP = NewProducer("rc_broker")
 var mu sync.Mutex
 
 var (
@@ -58,7 +59,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	purge = purgebroker
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
-		SalesforceP, SplittingP, Cl0P, QuirksP,
+		SalesforceP, SplittingP, Cl0P, QuirksP, RCP,
 	}
 	for _, p := range queueProducers {
 		p.initConnection()
@@ -268,7 +269,6 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 			logger.Debugf("Consumer %s Shutting down", p.name)
 			return
 		default:
-
 			msgs, err := p.consChannel.Consume(
 				p.name,
 				"",

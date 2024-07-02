@@ -89,31 +89,34 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		}
 
 		currentHost := req.URL.Hostname()
-		mu.Lock()
-		//the rate limiter is host & proxy specific
-		proxyentry, exists := ratelimiters[currentHost]
-		if !exists {
-			proxyentry = make(map[string]*rateLimiterEntry)
-			ratelimiters[currentHost] = proxyentry
-		}
-		entry, proxyExists := proxyentry[proxy]
-		if !proxyExists {
-			entry = &rateLimiterEntry{
-				ratelimiter: common.NewDynamicRateLimiter(float64(2), rl),
-				lastUsed:    time.Now(),
-			}
-			proxyentry[proxy] = entry
-
-		} else {
-			entry.lastUsed = time.Now()
-		}
-
-		logger.Debugf("Rate limit for %s at %f\n", currentHost, entry.ratelimiter.GetRPS())
-
-		mu.Unlock()
+		var entry *rateLimiterEntry
+		var proxyExists bool
 		//does not apply rate limit when testing for race condition
-		_, ok := req.Context().Value("race").(string)
-		if !ok {
+		_, okrace := req.Context().Value("race").(string)
+		if !okrace {
+			mu.Lock()
+			//the rate limiter is host & proxy specific
+			proxyentry, exists := ratelimiters[currentHost]
+			if !exists {
+				proxyentry = make(map[string]*rateLimiterEntry)
+				ratelimiters[currentHost] = proxyentry
+			}
+			entry, proxyExists = proxyentry[proxy]
+			if !proxyExists {
+				entry = &rateLimiterEntry{
+					ratelimiter: common.NewDynamicRateLimiter(float64(2), rl),
+					lastUsed:    time.Now(),
+				}
+				proxyentry[proxy] = entry
+
+			} else {
+				entry.lastUsed = time.Now()
+			}
+
+			logger.Debugf("Rate limit for %s at %f\n", currentHost, entry.ratelimiter.GetRPS())
+
+			mu.Unlock()
+
 			err := entry.ratelimiter.Wait(req.Context())
 			if err != nil {
 				logger.Debugf("Rate limit Error for %s: %v\n", currentHost, err)
@@ -205,10 +208,14 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		resStats[currentHost] = append(resStats[currentHost], respStats)
 
 		if resp.StatusCode == 429 {
-			newrl := entry.ratelimiter.GetRPS() - 1
-			newbt := entry.ratelimiter.GetBurst() - 1
-			entry.ratelimiter.Update(newrl, newbt)
-			logger.Debugf("Decrease Rate limit for %s to %f\n", currentHost, newrl)
+			if !okrace {
+				if entry != nil {
+					newrl := entry.ratelimiter.GetRPS() - 1
+					newbt := entry.ratelimiter.GetBurst() - 1
+					entry.ratelimiter.Update(newrl, newbt)
+					logger.Debugf("Decrease Rate limit for %s to %f\n", currentHost, newrl)
+				}
+			}
 		} else if resp.StatusCode == 403 {
 			health.ProxyHealthInstance.AddBad(proxy)
 		} else {

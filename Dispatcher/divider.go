@@ -31,8 +31,15 @@ func Divider(result *common.ServerResult) {
 		go common.MethodP.PublishMessage(result.Url)
 		go common.HopP.PublishMessage(result.Url)
 	} else if checker.CheckAccess(result) {
-		if result.Depth < 3 { //limit depth
+		if result.Depth < 1 { //limit depth
+			//crawler should get its input mostly from other modules
+			//instead of getting it from crawler itself to avoid reinforcement loop,
+			//which would lead to memory explosion no matter what...
 			go common.CrawlP.PublishMessage(result)
+		}
+
+		if checker.CheckHomePage(result.Url) {
+			go common.RCP.PublishMessage(result.Url)
 		}
 	}
 
