@@ -31,7 +31,9 @@ func Divider(result *common.ServerResult) {
 		go common.MethodP.PublishMessage(result.Url)
 		go common.HopP.PublishMessage(result.Url)
 	} else if checker.CheckAccess(result) {
-		go common.CrawlP.PublishMessage(result)
+		if result.Depth < 3 { //limit depth
+			go common.CrawlP.PublishMessage(result)
+		}
 	}
 
 	//module-specific checks irrelevant to the current status

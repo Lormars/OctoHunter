@@ -31,6 +31,7 @@ func Crawl(response *common.ServerResult) {
 				continue
 			}
 			resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+			resp.Depth = response.Depth + 1
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", url, err)
 				continue

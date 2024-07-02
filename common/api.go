@@ -106,4 +106,5 @@ type ServerResult struct {
 	StatusCode int         `json:"status_code"`
 	Headers    http.Header `json:"headers"`
 	Body       string      `json:"body"`
+	Depth      int         `json:"depth"` // Used to limit the depth of the crawler
 }
