@@ -47,6 +47,10 @@ func Divider(result *common.ServerResult) {
 	if strings.Contains(result.Url, "/aura") || strings.Contains(result.Url, "/s/") || strings.Contains(result.Url, "/sfsites/") {
 		go common.SalesforceP.PublishMessage(result.Url)
 	}
+	contentType := result.Headers.Get("Content-Type")
+	if checker.CheckMimeType(contentType, "application/json") {
+		go common.CorsP.PublishMessage(result)
+	}
 
 	//quirks check
 	go common.QuirksP.PublishMessage(result)

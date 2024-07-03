@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -60,10 +61,12 @@ func Crawl(response *common.ServerResult) {
 				// 	common.OutputP.PublishMessage(msg)
 				// 	notify.SendMessage(msg)
 				// }
+
 				resp.Depth = response.Depth + 1
 				common.DividerP.PublishMessage(resp)
 			}
 		}(url)
+		time.Sleep(200 * time.Millisecond)
 	}
 
 	wg.Wait()

@@ -53,6 +53,9 @@ func SingleHopCheck(options *common.Opts) {
 	result, place := comparer.CompareResponse(controlResp, treatmentResp)
 	if !result && place == "status" {
 		if treatmentResp.StatusCode < 400 && controlResp.StatusCode != 429 {
+			if checker.CheckAccess(treatmentResp) {
+				common.CrawlP.PublishMessage(treatmentResp)
+			}
 			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, controlResp.StatusCode, treatmentResp.StatusCode)
 			color.Red(msg)
 			if options.Module.Contains("broker") {

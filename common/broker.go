@@ -36,6 +36,8 @@ var SplittingP = NewProducer("splitting_broker")
 var Cl0P = NewProducer("cl0_broker")
 var QuirksP = NewProducer("quirks_broker")
 var RCP = NewProducer("rc_broker")
+var CorsP = NewProducer("cors_broker")
+
 var mu sync.Mutex
 
 var (
@@ -59,7 +61,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	purge = purgebroker
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
-		SalesforceP, SplittingP, Cl0P, QuirksP, RCP,
+		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP,
 	}
 	for _, p := range queueProducers {
 		p.initConnection()

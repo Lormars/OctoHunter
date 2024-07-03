@@ -23,6 +23,7 @@ func Init(opts *common.Opts) {
 		go quirksConsumer(opts)
 		go dividerConsumer(opts)
 		go raceConditionConsumer(opts)
+		go corsConsumer(opts)
 	}
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
@@ -72,4 +73,8 @@ func quirksConsumer(opts *common.Opts) {
 
 func raceConditionConsumer(opts *common.Opts) {
 	common.RCP.ConsumeMessage(racecondition.RaceCondition, opts)
+}
+
+func corsConsumer(opts *common.Opts) {
+	common.CorsP.ConsumeMessage(modules.CheckCors, opts)
 }

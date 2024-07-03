@@ -2,7 +2,6 @@ package salesforce
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
 	"strings"
 
@@ -17,7 +16,6 @@ func Fingerprint(target string) (bool, string) {
 
 	for _, p := range path {
 		newUrl := strings.TrimSuffix(target, "/") + p
-		fmt.Println(newUrl)
 		jsonStr := []byte(`{}`)
 
 		req, err := http.NewRequest("POST", newUrl, bytes.NewBuffer(jsonStr))
