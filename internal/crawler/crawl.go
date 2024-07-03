@@ -1,9 +1,7 @@
 package crawler
 
 import (
-	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"sync"
 
@@ -12,7 +10,6 @@ import (
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
-	"github.com/lormars/octohunter/internal/notify"
 	"github.com/lormars/octohunter/internal/parser"
 )
 
@@ -28,11 +25,12 @@ func Crawl(response *common.ServerResult) {
 	urls := parser.ExtractUrls(response.Url, response.Body)
 	var wg sync.WaitGroup
 
-	pattern := `window\.location\.href\s*=\s*|window\.location\s*=\s*|location\s*=\s*|location\.href\s*=\s*`
-	re, err := regexp.Compile(pattern)
-	if err != nil {
-		logger.Warnf("Error compiling regex: %v\n", err)
-	}
+	//too much false positive, need another way
+	// pattern := `window\.location\.href\s*=\s*|window\.location\s*=\s*|location\s*=\s*|location\.href\s*=\s*`
+	// re, err := regexp.Compile(pattern)
+	// if err != nil {
+	// 	logger.Warnf("Error compiling regex: %v\n", err)
+	// }
 
 	for _, url := range urls {
 		if !cacher.CheckCache(url, "crawl") {
@@ -56,12 +54,12 @@ func Crawl(response *common.ServerResult) {
 					logger.Debugf("Error getting response from %s: %v\n", url, err)
 					return
 				}
-				match := re.MatchString(resp.Body)
-				if match {
-					msg := fmt.Sprintf("[OR Suspect] %s might have a DOM-OR (window.location match) on %s", response.Url, url)
-					common.OutputP.PublishMessage(msg)
-					notify.SendMessage(msg)
-				}
+				// match := re.MatchString(resp.Body)
+				// if match && strings.Contains(resp.Body, "URLSearchParams") {
+				// 	msg := fmt.Sprintf("[OR Suspect] %s might have a DOM-OR (window.location match) on %s", response.Url, url)
+				// 	common.OutputP.PublishMessage(msg)
+				// 	notify.SendMessage(msg)
+				// }
 				resp.Depth = response.Depth + 1
 				common.DividerP.PublishMessage(resp)
 			}
