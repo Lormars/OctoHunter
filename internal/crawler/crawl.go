@@ -10,6 +10,7 @@ import (
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/filter"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/parser"
 )
@@ -23,7 +24,9 @@ func Crawl(response *common.ServerResult) {
 	}
 
 	logger.Debugf("Crawler running on %s\n", response.Url)
-	urls := parser.ExtractUrls(response.Url, response.Body)
+	rawUrls := parser.ExtractUrls(response.Url, response.Body)
+	urls := filter.GroupAndFilterURLs(rawUrls)
+	logger.Debugf("Urls reduced from %d to %d\n", len(rawUrls), len(urls))
 	var wg sync.WaitGroup
 
 	//too much false positive, need another way
