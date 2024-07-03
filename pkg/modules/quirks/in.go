@@ -30,7 +30,9 @@ func CheckQuirks(res *common.ServerResult) {
 	}
 
 	result = res
-	doubleHTML()
+	//too much false positive
+	//doubleHTML()
+
 	jsonwithHTML()
 	leakenv()
 }

@@ -87,8 +87,9 @@ func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
 			if err == nil {
 				value = string(attemptDecode)
 			}
-			//first check whether the finalURL exists in the original URL's query
-			if strings.Contains(finalURL.String(), value) {
+			//first check whether the finalURL's hostname exists in the original URL's query
+			//this is necessary to filter out false positive on query parameters
+			if strings.Contains(value, finalURL.Hostname()) {
 
 				msg := fmt.Sprintf("[OR Suspect] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
 				color.Red(msg)
