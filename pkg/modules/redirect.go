@@ -2,6 +2,7 @@ package modules
 
 import (
 	"context"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -81,8 +82,21 @@ func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
 	queries := parsedURL.Query()
 	for key, values := range queries {
 		for _, value := range values {
+			//first attempt to base64 decode the value as the value might be encoded
+			attemptDecode, err := base64.URLEncoding.DecodeString(value)
+			if err == nil {
+				value = string(attemptDecode)
+			}
 			//first check whether the finalURL exists in the original URL's query
 			if strings.Contains(finalURL.String(), value) {
+
+				msg := fmt.Sprintf("[OR Suspect] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
+				color.Red(msg)
+				if opts.Module.Contains("broker") {
+					notify.SendMessage(msg)
+					common.OutputP.PublishMessage(msg)
+				}
+
 				parsedOriginalURL, err := url.Parse(opts.Target)
 				if err != nil {
 					logger.Warnf("Error parsing URL: %v\n", err)
@@ -112,7 +126,7 @@ func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
 				}
 				//since example.com contains "illustrative examples", we can check for that
 				if strings.Contains(resp.Body, "illustrative examples") {
-					msg := fmt.Sprintf("[Open Redirect] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
+					msg := fmt.Sprintf("[OR Confirmed] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
 					color.Red(msg)
 					if opts.Module.Contains("broker") {
 						notify.SendMessage(msg)
