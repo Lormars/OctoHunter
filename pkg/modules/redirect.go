@@ -63,7 +63,7 @@ func checkUnusualLength(finalURL *url.URL, opts *common.Opts) {
 		return
 	}
 	if length > 1000 {
-		msg := fmt.Sprintf("[Redirect] from %s to %s\n", opts.Target, finalURL.String())
+		msg := fmt.Sprintf("[Redirect] from %s to %s with length %d\n", opts.Target, finalURL.String(), length)
 		color.Red(msg)
 		if opts.Module.Contains("broker") {
 			notify.SendMessage(msg)
