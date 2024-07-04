@@ -54,11 +54,9 @@ func cleanURL(endpoint string) string {
 func CheckCache(endpoint, module string) bool {
 	cleaned := cleanURL(endpoint)
 	if CanScan(cleaned, module) {
-		logger.Debugf("Scanning %s for %s\n", endpoint, module)
 		UpdateScanTime(cleaned, module)
 		return true
 	} else {
-		logger.Debugf("Skipping %s for %s\n", endpoint, module)
 		return false
 	}
 

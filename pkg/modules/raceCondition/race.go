@@ -16,6 +16,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/common/clients/proxyP"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -24,6 +25,9 @@ import (
 // target must be a valid URL
 func RaceCondition(urlStr string) {
 	//check cache
+	if !cacher.CheckCache(urlStr, "race") {
+		return
+	}
 
 	// WaitGroup to wait for all goroutines to finish
 	var wg sync.WaitGroup
