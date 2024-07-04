@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -40,64 +41,71 @@ func CheckPathConfusion(urlStr string) {
 		return
 	}
 
+	var wg sync.WaitGroup
+
 	for _, encoding := range encodings {
-		signature1, err := generator.GenerateSignature()
-		if err != nil {
-			logger.Debugf("Error generating signature: %v\n", err)
-			continue
-		}
-
-		payload1 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature1 + ".css"
-		req1, err := http.NewRequest("GET", payload1, nil)
-		if err != nil {
-			logger.Debugf("Error creating request: %v", err)
-			continue
-		}
-
-		resp1, err := checker.CheckServerCustom(req1, clients.NoRedirectClient)
-		if err != nil {
-			logger.Debugf("Error getting response from %s: %v\n", payload1, err)
-			continue
-		}
-
-		if resp1.StatusCode == 200 {
-			signature2, err := generator.GenerateSignature()
+		wg.Add(1)
+		go func(encoding string) {
+			defer wg.Done()
+			signature1, err := generator.GenerateSignature()
 			if err != nil {
 				logger.Debugf("Error generating signature: %v\n", err)
-				continue
+				return
 			}
 
-			payload2 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature2 + ".css"
-
-			req2, err := http.NewRequest("GET", payload2, nil)
+			payload1 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature1 + ".css"
+			req1, err := http.NewRequest("GET", payload1, nil)
 			if err != nil {
 				logger.Debugf("Error creating request: %v", err)
-				continue
+				return
 			}
 
-			resp2, err := checker.CheckServerCustom(req2, clients.NoRedirectClient)
+			resp1, err := checker.CheckServerCustom(req1, clients.NoRedirectClient)
 			if err != nil {
-				logger.Debugf("Error getting response from %s: %v\n", payload2, err)
-				continue
+				logger.Debugf("Error getting response from %s: %v\n", payload1, err)
+				return
 			}
 
-			same, _ := comparer.CompareResponse(resp1, resp2)
-			if !same && matcher.HeaderKeyContainsSignature(resp1, "cache") && matcher.HeaderValueContainsSignature(resp1, "miss") {
-				resp2, err = checker.CheckServerCustom(req1, clients.NoRedirectClient)
+			if resp1.StatusCode == 200 {
+				signature2, err := generator.GenerateSignature()
+				if err != nil {
+					logger.Debugf("Error generating signature: %v\n", err)
+					return
+				}
+
+				payload2 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature2 + ".css"
+
+				req2, err := http.NewRequest("GET", payload2, nil)
+				if err != nil {
+					logger.Debugf("Error creating request: %v", err)
+					return
+				}
+
+				resp2, err := checker.CheckServerCustom(req2, clients.NoRedirectClient)
 				if err != nil {
 					logger.Debugf("Error getting response from %s: %v\n", payload2, err)
-					continue
+					return
 				}
-				same, _ = comparer.CompareResponse(resp1, resp2)
-				if same && matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit") {
-					msg := fmt.Sprintf("[WCD Suspect] Found using %s", payload1)
-					color.Red(msg)
-					common.OutputP.PublishMessage(msg)
-					notify.SendMessage(msg)
-					break
-				}
-			}
 
-		}
+				same, _ := comparer.CompareResponse(resp1, resp2)
+				if !same && matcher.HeaderKeyContainsSignature(resp1, "cache") && matcher.HeaderValueContainsSignature(resp1, "miss") {
+					resp2, err = checker.CheckServerCustom(req1, clients.NoRedirectClient)
+					if err != nil {
+						logger.Debugf("Error getting response from %s: %v\n", payload2, err)
+						return
+					}
+					same, _ = comparer.CompareResponse(resp1, resp2)
+					if same && matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit") {
+						msg := fmt.Sprintf("[WCD Suspect] Found using %s", payload1)
+						color.Red(msg)
+						common.OutputP.PublishMessage(msg)
+						notify.SendMessage(msg)
+					}
+				}
+
+			}
+		}(encoding)
 	}
+
+	wg.Done()
 }

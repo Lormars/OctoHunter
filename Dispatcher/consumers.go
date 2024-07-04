@@ -24,12 +24,12 @@ func Init(opts *common.Opts) {
 		go dividerConsumer(opts)
 		go raceConditionConsumer(opts)
 		go corsConsumer(opts)
-		go pathConfuse(opts)
 	}
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
 		go crawlerConsumer(opts)
 		go quirksConsumer(opts)
+		go pathConfuse(opts)
 	}
 }
 
