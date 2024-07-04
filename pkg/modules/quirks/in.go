@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -40,12 +41,30 @@ func CheckQuirks(res *common.ServerResult) {
 	}
 
 	result = res
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+
 	//too much false positive
 	//doubleHTML()
 
-	jsonwithHTML()
-	leakenv()
-	isdynamic()
+	go func() {
+		defer wg.Done()
+		jsonwithHTML()
+	}()
+
+	go func() {
+		defer wg.Done()
+		leakenv()
+	}()
+
+	go func() {
+		defer wg.Done()
+		isdynamic()
+	}()
+
+	// Wait for all goroutines to finish
+	wg.Wait()
 }
 
 func doubleHTML() {
