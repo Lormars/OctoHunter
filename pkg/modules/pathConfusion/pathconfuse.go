@@ -107,5 +107,5 @@ func CheckPathConfusion(urlStr string) {
 		}(encoding)
 	}
 
-	wg.Done()
+	wg.Wait()
 }
