@@ -27,7 +27,14 @@ func CheckPathConfusion(urlStr string) {
 
 	//must have a path to work (yeah this is path confusion, how would it work without a path to confuse)
 	//no need to check js files as they are not likely to contain private information
-	if parsedURL.Path == "" || strings.HasSuffix(parsedURL.Path, ".js") {
+	if parsedURL.Path == "" ||
+		strings.HasSuffix(parsedURL.Path, ".js") ||
+		strings.HasSuffix(parsedURL.Path, ".css") ||
+		strings.HasSuffix(parsedURL.Path, ".svg") ||
+		strings.HasSuffix(parsedURL.Path, ".png") ||
+		strings.HasSuffix(parsedURL.Path, ".jpg") ||
+		strings.HasSuffix(parsedURL.Path, ".gif") ||
+		strings.HasSuffix(parsedURL.Path, ".jpeg") {
 		return
 	}
 

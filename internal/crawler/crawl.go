@@ -45,7 +45,7 @@ func Crawl(response *common.ServerResult) {
 		go func(url string) {
 			defer wg.Done()
 
-			if strings.HasSuffix(url, ".svg") || strings.HasSuffix(url, ".png") || strings.HasSuffix(url, ".jpg") || strings.HasSuffix(url, ".gif") {
+			if strings.HasSuffix(url, ".svg") || strings.HasSuffix(url, ".png") || strings.HasSuffix(url, ".jpg") || strings.HasSuffix(url, ".gif") || strings.HasSuffix(url, ".jpeg") {
 				common.Cl0P.PublishMessage(url)
 			} else {
 				req, err := http.NewRequest("GET", url, nil)
