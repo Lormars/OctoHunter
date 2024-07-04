@@ -4,6 +4,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/pkg/modules"
+	pathconfusion "github.com/lormars/octohunter/pkg/modules/pathConfusion"
 	"github.com/lormars/octohunter/pkg/modules/quirks"
 	racecondition "github.com/lormars/octohunter/pkg/modules/raceCondition"
 	"github.com/lormars/octohunter/pkg/modules/request"
@@ -24,6 +25,7 @@ func Init(opts *common.Opts) {
 		go dividerConsumer(opts)
 		go raceConditionConsumer(opts)
 		go corsConsumer(opts)
+		go pathConfuse(opts)
 	}
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
@@ -77,4 +79,8 @@ func raceConditionConsumer(opts *common.Opts) {
 
 func corsConsumer(opts *common.Opts) {
 	common.CorsP.ConsumeMessage(modules.CheckCors, opts)
+}
+
+func pathConfuse(opts *common.Opts) {
+	common.PathConfuseP.ConsumeMessage(pathconfusion.CheckPathConfusion, opts)
 }

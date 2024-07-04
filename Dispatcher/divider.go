@@ -41,6 +41,10 @@ func Divider(result *common.ServerResult) {
 		if checker.CheckHomePage(result.Url) {
 			go common.RCP.PublishMessage(result.Url)
 		}
+
+		go common.PathConfuseP.PublishMessage(result.Url)
+
+		//check path confusion
 	}
 
 	//module-specific checks irrelevant to the current status
