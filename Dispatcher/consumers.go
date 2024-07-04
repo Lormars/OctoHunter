@@ -21,7 +21,6 @@ func Init(opts *common.Opts) {
 		go salesforceConsumer(opts)
 		go splittingConsumer(opts)
 		go cl0Consumer(opts)
-		go quirksConsumer(opts)
 		go dividerConsumer(opts)
 		go raceConditionConsumer(opts)
 		go corsConsumer(opts)
@@ -30,6 +29,7 @@ func Init(opts *common.Opts) {
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
 		go crawlerConsumer(opts)
+		go quirksConsumer(opts)
 	}
 }
 
