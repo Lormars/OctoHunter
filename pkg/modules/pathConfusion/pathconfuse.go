@@ -16,6 +16,7 @@ import (
 
 var encodings = []string{"/", "%0A", "%3B", "%23", "%3F"}
 var buster = "vq8bo0zb3.css"
+var cache = "bu90vqmpq.css"
 
 func CheckPathConfusion(urlStr string) {
 	parsedURL, err := url.Parse(urlStr)
@@ -29,29 +30,29 @@ func CheckPathConfusion(urlStr string) {
 	if parsedURL.Path == "" || strings.HasSuffix(parsedURL.Path, ".js") {
 		return
 	}
-	var payloads []string
+
 	for _, encoding := range encodings {
 		payload := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + buster
-		payloads = append(payloads, payload)
-	}
-	fmt.Println(payloads)
-
-	for _, payload := range payloads {
 		req, err := http.NewRequest("GET", payload, nil)
 		if err != nil {
 			logger.Debugf("Error creating request: %v", err)
 			continue
 		}
+
 		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 		if err != nil {
 			logger.Debugf("Error getting response from %s: %v\n", payload, err)
 			continue
 		}
 		if resp.StatusCode == 200 {
-			msg := fmt.Sprintf("[Path confusion] Found using %s", payload)
-			color.Red(msg)
-			common.OutputP.PublishMessage(msg)
-			notify.SendMessage(msg)
+			cachePayload := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + cache
+			if checker.CheckCacheable(cachePayload) {
+				msg := fmt.Sprintf("[WCD Suspect] Found using %s", cachePayload)
+				color.Red(msg)
+				common.OutputP.PublishMessage(msg)
+				notify.SendMessage(msg)
+				break
+			}
 		}
 	}
 }
