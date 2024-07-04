@@ -50,10 +50,23 @@ outer:
 // HeaderValueContainsSignature checks if the header key contains the signature
 func HeaderKeyContainsSignature(result *common.ServerResult, signature string) bool {
 	for headerKey := range result.Headers {
-		if strings.Contains(headerKey, signature) {
+		if strings.Contains(strings.ToLower(headerKey), strings.ToLower(signature)) {
 			return true
 		}
 	}
 
+	return false
+}
+
+// HeaderValueContainsSignature checks if any header value contains the signature
+func HeaderValueContainsSignature(result *common.ServerResult, signature string) bool {
+	lowerSignature := strings.ToLower(signature)
+	for _, headerValues := range result.Headers {
+		for _, headerValue := range headerValues {
+			if strings.Contains(strings.ToLower(headerValue), lowerSignature) {
+				return true
+			}
+		}
+	}
 	return false
 }

@@ -42,7 +42,7 @@ func Divider(result *common.ServerResult) {
 			go common.RCP.PublishMessage(result.Url)
 		}
 
-		go common.PathConfuseP.PublishMessage(result.Url)
+		//go common.PathConfuseP.PublishMessage(result.Url)
 
 		//check path confusion
 	}
