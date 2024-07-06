@@ -331,6 +331,7 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 						close(forever)
 						return
 					case <-p.ShutdownChan:
+						close(forever)
 						return
 					}
 				}

@@ -143,7 +143,7 @@ func RaceCondition(urlStr string) {
 	wg.Wait()
 
 	for _, resp := range treatResponses {
-		if resp.StatusCode != controlStatus && resp.StatusCode > 300 && resp.StatusCode != 429 && resp.StatusCode != 502 && resp.StatusCode != 503 && resp.StatusCode != 403 {
+		if resp.StatusCode != controlStatus && resp.StatusCode > 400 && resp.StatusCode != 429 && resp.StatusCode != 502 && resp.StatusCode != 503 && resp.StatusCode != 403 {
 			msg := fmt.Sprintf("[RC Suspect] Race Condition on %s with status %d", resp.Url, resp.StatusCode)
 			common.CrawlP.PublishMessage(resp)
 			common.OutputP.PublishMessage(msg)

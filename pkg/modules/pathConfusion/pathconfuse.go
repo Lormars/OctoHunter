@@ -59,8 +59,7 @@ func CheckPathConfusion(urlStr string) {
 				logger.Debugf("Error creating request: %v", err)
 				return
 			}
-
-			resp1, err := checker.CheckServerCustom(req1, clients.NoRedirectClient)
+			elapse1, resp1, err := checker.MeasureElapse(req1, clients.NoRedirectClient)
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", payload1, err)
 				return
@@ -87,15 +86,20 @@ func CheckPathConfusion(urlStr string) {
 					return
 				}
 
-				same, _ := comparer.CompareResponse(resp1, resp2)
-				if !same && matcher.HeaderKeyContainsSignature(resp1, "cache") && matcher.HeaderValueContainsSignature(resp1, "miss") {
-					resp2, err = checker.CheckServerCustom(req1, clients.NoRedirectClient)
+				same := resp1.Body == resp2.Body
+				//if the response are different and the first request is not cached
+				//Cache is checked either in the header (it has cache and miss) or if there is nothing in the header.
+				if !same && ((matcher.HeaderKeyContainsSignature(resp1, "cache") && matcher.HeaderValueContainsSignature(resp1, "miss")) || !matcher.HeaderKeyContainsSignature(resp1, "cache")) {
+
+					elapse2, resp2, err := checker.MeasureElapse(req1, clients.NoRedirectClient)
 					if err != nil {
 						logger.Debugf("Error getting response from %s: %v\n", payload2, err)
 						return
 					}
 					same, _ = comparer.CompareResponse(resp1, resp2)
-					if same && matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit") {
+					//if the response are the same and the second request is cached.
+					//Cache is measured either in the header (cache hit) or in the response time
+					if same && ((matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit")) || elapse1 > elapse2*2) {
 						msg := fmt.Sprintf("[WCD Suspect] Found using %s", payload1)
 						color.Red(msg)
 						common.OutputP.PublishMessage(msg)

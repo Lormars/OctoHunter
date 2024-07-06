@@ -10,6 +10,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 func Input(opts *common.Opts) {
@@ -62,6 +63,8 @@ func Input(opts *common.Opts) {
 		file.Close()
 		close(lineCh)
 		wg.Wait()
+		common.OutputP.PublishMessage("Finished processing all domains")
+		notify.SendMessage("Finished processing all domains")
 		time.Sleep(1 * time.Hour)
 	}
 }

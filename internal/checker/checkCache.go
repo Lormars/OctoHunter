@@ -5,13 +5,12 @@ import (
 	"net/http/httptrace"
 	"time"
 
+	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
 func CheckCacheable(payload string) bool {
-
-	var start time.Time
 	var elapses []time.Duration
 	for i := 0; i < 2; i++ {
 		req, err := http.NewRequest("GET", payload, nil)
@@ -19,20 +18,11 @@ func CheckCacheable(payload string) bool {
 			logger.Debugf("Error creating request: %v", err)
 			return false
 		}
-		trace := &httptrace.ClientTrace{
-			WroteRequest: func(info httptrace.WroteRequestInfo) {
-				start = time.Now()
-			},
-			GotFirstResponseByte: func() {
-				elapses = append(elapses, time.Since(start))
-			},
+		elapse, _, err := MeasureElapse(req, clients.NoRedirectClient)
+		if err == nil {
+			elapses = append(elapses, elapse)
 		}
-		req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
-		_, err = CheckServerCustom(req, clients.NoRedirectClient)
-		if err != nil {
-			logger.Debugf("Error getting response from %s: %v\n", payload, err)
-			return false
-		}
+
 	}
 	if len(elapses) != 2 {
 		return false
@@ -41,4 +31,24 @@ func CheckCacheable(payload string) bool {
 		return true
 	}
 	return false
+}
+
+func MeasureElapse(req *http.Request, client *http.Client) (time.Duration, *common.ServerResult, error) {
+	var start time.Time
+	var elapse time.Duration
+	trace := &httptrace.ClientTrace{
+		WroteRequest: func(info httptrace.WroteRequestInfo) {
+			start = time.Now()
+		},
+		GotFirstResponseByte: func() {
+			elapse = time.Since(start)
+		},
+	}
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
+	resp, err := CheckServerCustom(req, client)
+	if err != nil {
+		return 0, nil, err
+	}
+	return elapse, resp, nil
+
 }
