@@ -58,6 +58,12 @@ func Crawl(response *common.ServerResult) {
 					logger.Debugf("Error getting response from %s: %v\n", url, err)
 					return
 				}
+
+				if strings.HasSuffix(resp.Url, ".js") {
+					parser.ParseJS(resp)
+					return
+				}
+
 				// match := re.MatchString(resp.Body)
 				// if match && strings.Contains(resp.Body, "URLSearchParams") {
 				// 	msg := fmt.Sprintf("[OR Suspect] %s might have a DOM-OR (window.location match) on %s", response.Url, url)
