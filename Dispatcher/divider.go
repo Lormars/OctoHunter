@@ -2,10 +2,14 @@ package dispatcher
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/getter"
+	"github.com/lormars/octohunter/internal/logger"
+	"github.com/lormars/octohunter/internal/parser"
 )
 
 // The central wharehouse where you send your input in.
@@ -30,6 +34,11 @@ func Divider(result *common.ServerResult) {
 	} else if checker.CheckRequestError(result.StatusCode) {
 		go common.MethodP.PublishMessage(result.Url)
 		go common.HopP.PublishMessage(result.Url)
+		//if the homepage itself is 404, fuzz for directories
+		if result.StatusCode == 404 && checker.CheckHomePage(result.Url) {
+			saveDomainToMap(result.Url)
+
+		}
 	} else if checker.CheckAccess(result) {
 		if result.Depth < 5 { //limit depth
 			//crawler should get its input mostly from other modules
@@ -56,7 +65,24 @@ func Divider(result *common.ServerResult) {
 		go common.CorsP.PublishMessage(result)
 	}
 
+	if result.StatusCode != 404 {
+		parser.UrlToMap(result.Url)
+	}
+
 	//quirks check
 	go common.QuirksP.PublishMessage(result)
+
+}
+
+func saveDomainToMap(urlStr string) {
+	domain, err := getter.GetDomain(urlStr)
+	if err != nil {
+		logger.Debugf("Error getting domain: %v", err)
+		return
+	}
+	existingSubdomains, _ := common.Domains.LoadOrStore(domain, new(sync.Map))
+	existingSubdomainsMap := existingSubdomains.(*sync.Map)
+	existingSubdomainsMap.Store(urlStr, true)
+	go common.Fuzz404P.PublishMessage(urlStr)
 
 }

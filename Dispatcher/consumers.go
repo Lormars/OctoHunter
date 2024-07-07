@@ -3,6 +3,7 @@ package dispatcher
 import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
+	"github.com/lormars/octohunter/internal/fuzzer"
 	"github.com/lormars/octohunter/pkg/modules"
 	pathconfusion "github.com/lormars/octohunter/pkg/modules/pathConfusion"
 	"github.com/lormars/octohunter/pkg/modules/quirks"
@@ -24,6 +25,7 @@ func Init(opts *common.Opts) {
 		go dividerConsumer(opts)
 		go raceConditionConsumer(opts)
 		go corsConsumer(opts)
+		go fuzz404Consumer(opts)
 	}
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
@@ -31,6 +33,10 @@ func Init(opts *common.Opts) {
 		go quirksConsumer(opts)
 		go pathConfuse(opts)
 	}
+}
+
+func fuzz404Consumer(opts *common.Opts) {
+	common.Fuzz404P.ConsumeMessage(fuzzer.Fuzz404, opts)
 }
 
 func cnameConsumer(opts *common.Opts) {

@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/lormars/octohunter/internal/logger"
 )
@@ -98,6 +99,8 @@ func RunCommand(name string, args []string) error {
 }
 
 var DB *sql.DB
+var Paths sync.Map
+var Domains sync.Map
 
 type ServerResult struct {
 	Url        string      `json:"url"`

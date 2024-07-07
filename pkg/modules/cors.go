@@ -20,7 +20,7 @@ func CheckCors(response *common.ServerResult) {
 		logger.Debugf("Error creating request: %v", err)
 		return
 	}
-	baseDomain, err := getter.GetBaseDomain(response.Url)
+	baseDomain, err := getter.GetDomain(response.Url)
 	if err != nil {
 		logger.Debugf("Error getting base domain: %v", err)
 		return
