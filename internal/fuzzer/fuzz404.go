@@ -9,7 +9,6 @@ import (
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
-	"github.com/lormars/octohunter/internal/logger"
 )
 
 func Fuzz404(inputStr string) {
@@ -35,7 +34,7 @@ func fuzzAllPath(urlStr string) {
 	pathMap.Range(func(original, _ interface{}) bool {
 		originalStr := original.(string)
 		fuzzPath := strings.TrimRight(urlStr, "/") + originalStr
-		logger.Warnf("Debug AllPath: %s", fuzzPath)
+		// logger.Warnf("Debug AllPath: %s", fuzzPath)
 		req, err := http.NewRequest("GET", fuzzPath, nil)
 		if err != nil {
 			return true
@@ -46,7 +45,7 @@ func fuzzAllPath(urlStr string) {
 		}
 		if resp.StatusCode != 404 {
 			common.DividerP.PublishMessage(resp)
-			logger.Warnf("found new endpoint: %s", fuzzPath)
+			// logger.Warnf("found new endpoint: %s", fuzzPath)
 		}
 
 		return true
@@ -67,7 +66,7 @@ func fuzzNewPath(domainWithPath string) {
 	subdomainMap.Range(func(original, _ interface{}) bool {
 		originalStr := original.(string)
 		fuzzPath := strings.TrimRight(strings.ReplaceAll(originalStr, domain, domainWithPath), "/")
-		logger.Warnf("Debug NewPath %s", fuzzPath)
+		// logger.Warnf("Debug NewPath %s", fuzzPath)
 		req, err := http.NewRequest("GET", fuzzPath, nil)
 		if err != nil {
 			return true
@@ -78,7 +77,7 @@ func fuzzNewPath(domainWithPath string) {
 		}
 		if resp.StatusCode != 404 {
 			common.DividerP.PublishMessage(resp)
-			logger.Warnf("found new endpoint: %s", fuzzPath)
+			// logger.Warnf("found new endpoint: %s", fuzzPath)
 		}
 		return true
 	})

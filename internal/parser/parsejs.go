@@ -40,9 +40,13 @@ func ParseJS(result *common.ServerResult) {
 				common.OutputP.PublishMessage(msg)
 				notify.SendMessage(msg)
 			}
-		} else if url.Method == "POST" {
+		} else {
 			if strings.Contains(resolvedURL, "graphql") {
 				msg := fmt.Sprintf("[GQL Suspect] %s in %s", resolvedURL, result.Url)
+				common.OutputP.PublishMessage(msg)
+				notify.SendMessage(msg)
+			} else {
+				msg := fmt.Sprintf("[JS API] %s in %s", resolvedURL, result.Url)
 				common.OutputP.PublishMessage(msg)
 				notify.SendMessage(msg)
 			}

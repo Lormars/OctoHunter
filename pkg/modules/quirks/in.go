@@ -41,6 +41,12 @@ func CheckQuirks(res *common.ServerResult) {
 
 	result = res
 
+	//no need to wait for this, takes too long, just fire and forget
+	if strings.HasSuffix(result.Url, ".js") {
+		go CheckJSQuirks(result)
+		return
+	}
+
 	var wg sync.WaitGroup
 	wg.Add(3)
 

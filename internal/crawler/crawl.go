@@ -61,7 +61,6 @@ func Crawl(response *common.ServerResult) {
 
 				if strings.HasSuffix(resp.Url, ".js") {
 					parser.ParseJS(resp)
-					return
 				}
 
 				// match := re.MatchString(resp.Body)

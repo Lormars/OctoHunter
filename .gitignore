@@ -2,3 +2,4 @@
 list/
 cache.db
 app.log
+externals/nodejs/node_modules/

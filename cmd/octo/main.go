@@ -4,6 +4,7 @@ import (
 	"log"
 	_ "net/http/pprof"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -34,6 +35,11 @@ func main() {
 	clients.SetRateLimiter(config.RateLimit)
 	clients.SetUseProxy(config.UseProxy)
 	err := godotenv.Load()
+
+	cmd := exec.Command("node", "externals/nodejs/server.js")
+	if err := cmd.Start(); err != nil {
+		log.Fatalf("Error starting node server: %v", err)
+	}
 
 	var producers []*common.Producer
 
@@ -66,5 +72,8 @@ func main() {
 	}
 
 	common.Close()
+	if err := cmd.Process.Kill(); err != nil {
+		log.Fatalf("Error killing node server: %v", err)
+	}
 	logger.Infoln("Exiting...")
 }
