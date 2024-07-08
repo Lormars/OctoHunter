@@ -20,8 +20,9 @@ func Fuzz404(inputStr string) {
 	}
 }
 
-// a new 404 path is found, fuzz all sibling path to find possible non-404 endpoints
+// a new 404 endpoint is found, fuzz all sibling path to find possible non-404 endpoints
 func fuzzAllPath(urlStr string) {
+	// logger.Warnf("Debug AllPath input %s", urlStr)
 	rootDomain, err := getter.GetDomain(urlStr)
 	if err != nil {
 		return
@@ -55,9 +56,9 @@ func fuzzAllPath(urlStr string) {
 
 // a new sibling path is found, fuzz all sibling subdomains to find possible non-404 endpoints
 func fuzzNewPath(domainWithPath string) {
+	// logger.Warnf("Debug NewPath input %s", domainWithPath)
 	splited := strings.Split(domainWithPath, "/")
-	domain, path := splited[0], splited[1]
-	path = "/" + path
+	domain := splited[0]
 	subdomainMaps, ok := common.Domains.Load(domain)
 	if !ok {
 		return

@@ -75,6 +75,11 @@ func Divider(result *common.ServerResult) {
 }
 
 func saveDomainToMap(urlStr string) {
+
+	if !cacher.CheckCache(urlStr, "fuzz404") {
+		return
+	}
+
 	domain, err := getter.GetDomain(urlStr)
 	if err != nil {
 		logger.Debugf("Error getting domain: %v", err)

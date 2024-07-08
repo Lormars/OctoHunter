@@ -4,17 +4,20 @@ import (
 	"sync"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
 // It stores path and domain to map.
-// It returns nil if there is no error and the domain it updates, err otherwise
-func UrlToMap(urlStr string) (string, error) {
+func UrlToMap(urlStr string) {
 	domain, path, err := getter.GetDomainAndFirstPath(urlStr)
 	if err != nil {
 		logger.Debugf("Error getting domain and path: %v", err)
-		return "", err
+		return
+	} else if domain == "" || path == "" {
+		logger.Debugf("Empty domain or path")
+		return
 	}
 	existingPaths, _ := common.Paths.LoadOrStore(domain, new(sync.Map))
 	pathMap := existingPaths.(*sync.Map)
@@ -22,7 +25,10 @@ func UrlToMap(urlStr string) (string, error) {
 	pathMap.Store(path, true)
 	domainWithPath := domain + path
 
+	if !cacher.CheckCache(domainWithPath, "fuzz404") {
+		return
+	}
+
 	common.Fuzz404P.PublishMessage(domainWithPath)
 
-	return domainWithPath, nil
 }
