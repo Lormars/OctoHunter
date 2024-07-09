@@ -38,7 +38,7 @@ func SingleRedirectCheck(opts *common.Opts) {
 	finalURL, err := getFinalURL(opts.Target)
 
 	if err != nil {
-		logger.Warnf("Error getting final URL: %v\n", err)
+		logger.Debugf("Error getting final URL: %v\n", err)
 		return
 	}
 

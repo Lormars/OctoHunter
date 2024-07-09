@@ -163,6 +163,10 @@ func (p *Producer) initQueue(ch *amqp.Channel, check bool) error {
 func (p *Producer) reconnect() {
 	for {
 
+		if !p.ShouldReconnect() {
+			return
+		}
+
 		if p.pubChannel != nil {
 			p.pubChannel.Close()
 		}
@@ -193,6 +197,15 @@ func (p *Producer) reconnect() {
 		p.registerConsumers()
 		logger.Infof("Successfully reconnected to RabbitMQ for queue %s", p.name)
 		break
+	}
+}
+
+func (p *Producer) ShouldReconnect() bool {
+	select {
+	case <-p.ShutdownChan:
+		return false
+	default:
+		return true
 	}
 }
 

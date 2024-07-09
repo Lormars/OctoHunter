@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/fatih/color"
@@ -55,6 +56,9 @@ func SingleHopCheck(options *common.Opts) {
 		if treatmentResp.StatusCode < 400 && controlResp.StatusCode != 429 {
 			if checker.CheckAccess(treatmentResp) {
 				common.CrawlP.PublishMessage(treatmentResp)
+			}
+			if strings.Contains(treatmentResp.Body, "Request Rejected") {
+				return
 			}
 			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, controlResp.StatusCode, treatmentResp.StatusCode)
 			color.Red(msg)
