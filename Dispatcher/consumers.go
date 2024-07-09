@@ -26,6 +26,8 @@ func Init(opts *common.Opts) {
 		go raceConditionConsumer(opts)
 		go corsConsumer(opts)
 		go fuzz404Consumer(opts)
+		go pathTraversalConsumer(opts)
+		go fuzzAPIConsumer(opts)
 	}
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
@@ -33,6 +35,15 @@ func Init(opts *common.Opts) {
 		go quirksConsumer(opts)
 		go pathConfuse(opts)
 	}
+}
+
+func fuzzAPIConsumer(opts *common.Opts) {
+	common.FuzzAPIP.ConsumeMessage(fuzzer.FuzzAPI, opts)
+
+}
+
+func pathTraversalConsumer(opts *common.Opts) {
+	common.PathTraversalP.ConsumeMessage(modules.CheckPathTraversal, opts)
 }
 
 func fuzz404Consumer(opts *common.Opts) {

@@ -1,0 +1,67 @@
+package modules
+
+import (
+	"net/http"
+	"strings"
+
+	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/notify"
+)
+
+// CheckPathTraversal checks for path traversal vulnerabilities in REST api endpoints.
+func CheckPathTraversal(urlStr string) {
+	if !cacher.CheckCache(urlStr, "traversal") {
+		return
+	}
+
+	urlStr = strings.TrimRight(urlStr, "/")
+	splits := strings.Split(urlStr, "/")
+	fileName := splits[len(splits)-1]
+
+	fuzzURL := urlStr + "/%2e%2e%2f" + fileName
+	falsePositiveURL := urlStr + "/%2e%2e%2f" + "xubwozi"
+
+	controlReq, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return
+	}
+	fuzzReq, err := http.NewRequest("GET", fuzzURL, nil)
+	if err != nil {
+		return
+	}
+
+	falsePositiveReq, err := http.NewRequest("GET", falsePositiveURL, nil)
+	if err != nil {
+		return
+	}
+
+	controlResp, err := checker.CheckServerCustom(controlReq, clients.NoRedirectClient)
+	if err != nil {
+		return
+	}
+
+	if controlResp.StatusCode == 404 {
+		return
+	}
+
+	fuzzResp, err := checker.CheckServerCustom(fuzzReq, clients.NoRedirectClient)
+	if err != nil {
+		return
+	}
+
+	if controlResp.StatusCode == fuzzResp.StatusCode && controlResp.Body == fuzzResp.Body {
+		falsePositiveResp, err := checker.CheckServerCustom(falsePositiveReq, clients.NoRedirectClient)
+		if err != nil {
+			return
+		}
+		if controlResp.StatusCode == falsePositiveResp.StatusCode && controlResp.Body == falsePositiveResp.Body {
+			return
+		}
+		msg := "[Path Traversal] " + urlStr
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+	}
+}

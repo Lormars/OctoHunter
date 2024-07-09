@@ -37,7 +37,7 @@ func CheckJSQuirks(result *common.ServerResult) {
 		return
 	}
 
-	logger.Warnf("Checking JS quirks for %s", result.Url)
+	//logger.Warnf("Checking JS quirks for %s", result.Url)
 	jsCode := result.Body
 	parseServerURL := "http://localhost:9999/parse"
 	parseReq, err := http.NewRequest("POST", parseServerURL, bytes.NewBufferString(jsCode))

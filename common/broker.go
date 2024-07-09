@@ -39,6 +39,8 @@ var RCP = NewProducer("rc_broker")
 var CorsP = NewProducer("cors_broker")
 var PathConfuseP = NewProducer("pathconfuse_broker")
 var Fuzz404P = NewProducer("fuzz404_broker")
+var PathTraversalP = NewProducer("pathtraversal_broker")
+var FuzzAPIP = NewProducer("fuzzapi_broker")
 
 var mu sync.Mutex
 
@@ -64,6 +66,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
 		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz404P,
+		PathTraversalP, FuzzAPIP,
 	}
 	for _, p := range queueProducers {
 		p.initConnection()

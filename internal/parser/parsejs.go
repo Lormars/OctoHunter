@@ -46,9 +46,11 @@ func ParseJS(result *common.ServerResult) {
 				common.OutputP.PublishMessage(msg)
 				notify.SendMessage(msg)
 			} else {
-				msg := fmt.Sprintf("[JS API] %s in %s", resolvedURL, result.Url)
-				common.OutputP.PublishMessage(msg)
-				notify.SendMessage(msg)
+				//this is used to fuzz and test for API
+				if !strings.HasSuffix(resolvedURL, ".js") {
+					common.PathTraversalP.PublishMessage(resolvedURL)
+					common.FuzzAPIP.PublishMessage(resolvedURL)
+				}
 			}
 		}
 	}

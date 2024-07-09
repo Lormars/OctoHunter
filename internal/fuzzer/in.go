@@ -6,9 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/cacher"
-	"github.com/lormars/octohunter/internal/checker"
-	"github.com/lormars/octohunter/internal/logger"
 )
 
 var prefixes chan string
@@ -81,14 +80,15 @@ func apifuzzerinit() {
 
 func apiWorker(tasks chan Fuzz3Part) {
 	for task := range tasks {
-		//i just find it hard to believe that any api endpoint would be in http...
+		//I just find it hard to believe that any api endpoint would be in http...
 		reconstructed := "https://" + task.Part1 + "/" + task.Part2 + "/" + task.Part3
 		//check cache to avoid fuzz the original input api endpoint
 		if !cacher.CheckCache(reconstructed, "fuzzapi") {
 			return
 		}
-		logger.Warnf("[Fuzz API Debug] reconstructed is: %s", reconstructed)
-
+		// logger.Warnf("[Fuzz API Debug] reconstructed is: %s", reconstructed)
+		//if work, add to path traversal first
+		common.FuzzAPIP.PublishMessage(reconstructed)
 	}
 }
 
@@ -107,12 +107,12 @@ func FuzzAPI(urlStr string) {
 	subdomains <- hostname
 
 	//trim all leading or trailing / for clarity
-	if fileName != "." || fileName != "/" || fileName != "" {
+	if fileName != "." && fileName != "/" && fileName != "" {
 		fileName = strings.Trim(fileName, "/")
 		suffixes <- fileName
 	}
 
-	if dirPath != "." || dirPath != "/" || dirPath != "" {
+	if dirPath != "." && dirPath != "/" && dirPath != "" {
 		dirPath = strings.Trim(dirPath, "/")
 		prefixes <- dirPath
 	}
