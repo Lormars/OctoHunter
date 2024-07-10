@@ -4,9 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 
+	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
@@ -48,10 +50,15 @@ func CheckQuirks(res *common.ServerResult) {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(3)
+	wg.Add(4)
 
 	//too much false positive
 	//doubleHTML()
+
+	go func() {
+		defer wg.Done()
+		checkJSONP()
+	}()
 
 	go func() {
 		defer wg.Done()
@@ -70,6 +77,37 @@ func CheckQuirks(res *common.ServerResult) {
 
 	// Wait for all goroutines to finish
 	wg.Wait()
+}
+
+func checkJSONP() {
+	parsedURL, err := url.Parse(result.Url)
+	if err != nil {
+		return
+	}
+	params, err := url.ParseQuery(parsedURL.RawQuery)
+	if err != nil || len(params) == 0 {
+		return
+	}
+
+	paramsRegex := regexp.MustCompile(`^[a-zA-Z][.\w]{4,}$`)
+	start := `(?:^|[^\w'".])`
+	end := `\s*[(]`
+
+	for _, values := range params {
+		for _, value := range values {
+			if paramsRegex.MatchString(value) {
+				callbackRegex := regexp.MustCompile(fmt.Sprintf("%s%s%s", start, regexp.QuoteMeta(value), end))
+				match := callbackRegex.FindString(result.Body)
+				if match != "" {
+					msg := "[JSONP Suspect] " + match + " in " + result.Url
+					common.OutputP.PublishMessage(msg)
+					notify.SendMessage(msg)
+					color.Red(msg)
+				}
+			}
+		}
+	}
+
 }
 
 func doubleHTML() {
