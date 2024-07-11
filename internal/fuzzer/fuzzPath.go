@@ -34,6 +34,8 @@ func init() {
 func FuzzPath(urlStr string) {
 	logger.Debugf("FuzzPath: %s", urlStr)
 	var wg sync.WaitGroup
+	var mu sync.Mutex
+	resultMap := make(map[string]*common.ServerResult)
 	semaphore := make(chan struct{}, 10)
 	for _, path := range PathList {
 		wg.Add(1)
@@ -53,14 +55,22 @@ func FuzzPath(urlStr string) {
 				return
 			}
 			if resp.StatusCode != 404 && resp.StatusCode != 403 {
-				msg := fmt.Sprintf("[Fuzz Path] Found new endpoint: %s", fuzzedURL)
-				common.DividerP.PublishMessage(resp)
-				common.OutputP.PublishMessage(msg)
-				notify.SendMessage(msg)
+				mu.Lock()
+				resultMap[resp.Body] = resp
+				mu.Unlock()
 			}
 
 		}(path)
 	}
 	wg.Wait()
+
+	//this is necessary to filter out duplicate false positives
+	for _, resp := range resultMap {
+		common.DividerP.PublishMessage(resp)
+		// logger.Warnf("found new endpoint: %s", fuzzPath)
+		msg := fmt.Sprintf("[Fuzz Path(S)] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+	}
 
 }

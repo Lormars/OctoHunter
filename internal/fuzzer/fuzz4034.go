@@ -32,8 +32,11 @@ func fuzzAllPath(urlStr string) {
 	if !ok {
 		return
 	}
-	found := false
 	pathMap := pathMaps.(*sync.Map)
+
+	resultMap := make(map[string]*common.ServerResult)
+	var mu sync.Mutex
+
 	pathMap.Range(func(original, _ interface{}) bool {
 		originalStr := original.(string)
 		fuzzPath := strings.TrimRight(urlStr, "/") + originalStr
@@ -47,20 +50,25 @@ func fuzzAllPath(urlStr string) {
 			return true
 		}
 		if resp.StatusCode != 404 && resp.StatusCode != 403 {
-			found = true
-			common.DividerP.PublishMessage(resp)
-			// logger.Warnf("found new endpoint: %s", fuzzPath)
-			msg := fmt.Sprintf("[Fuzz Path(S)] Found new endpoint: %s", fuzzPath)
-			common.OutputP.PublishMessage(msg)
-			notify.SendMessage(msg)
+			mu.Lock()
+			resultMap[resp.Body] = resp
+			mu.Unlock()
+
 		}
 
 		return true
 	})
 
-	if !found {
-		go FuzzPath(urlStr)
+	//this is necessary to filter out duplicate false positives
+	for _, resp := range resultMap {
+		common.DividerP.PublishMessage(resp)
+		// logger.Warnf("found new endpoint: %s", fuzzPath)
+		msg := fmt.Sprintf("[Fuzz Path(S)] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
 	}
+
+	go FuzzPath(urlStr)
 
 }
 
