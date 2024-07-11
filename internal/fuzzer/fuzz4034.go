@@ -49,7 +49,7 @@ func fuzzAllPath(urlStr string) {
 		if err != nil {
 			return true
 		}
-		if resp.StatusCode != 404 && resp.StatusCode != 403 {
+		if resp.StatusCode != 404 && resp.StatusCode != 403 && resp.StatusCode != 429 {
 			mu.Lock()
 			resultMap[resp.Body] = resp
 			mu.Unlock()

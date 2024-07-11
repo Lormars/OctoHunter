@@ -100,7 +100,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 		if err != nil {
 			continue
 		}
-		if resp.StatusCode == 404 {
+		if resp.StatusCode == 404 || resp.StatusCode == 401 {
 			continue
 		}
 		msg := fmt.Sprintf("[Fuzz API] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
