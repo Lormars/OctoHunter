@@ -161,7 +161,7 @@ func getFinalURL(initialURL string) (*url.URL, error) {
 	}
 	resp, err := checker.CheckServerCustom(req, clients.NormalClient)
 	if err != nil {
-		logger.Warnf("Error getting response from %s: %v\n", initialURL, err)
+		logger.Debugf("Error getting response from %s: %v\n", initialURL, err)
 		return nil, err
 	}
 

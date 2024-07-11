@@ -47,7 +47,7 @@ func pathTraversalConsumer(opts *common.Opts) {
 }
 
 func fuzz404Consumer(opts *common.Opts) {
-	common.Fuzz404P.ConsumeMessage(fuzzer.Fuzz404, opts)
+	common.Fuzz4034P.ConsumeMessage(fuzzer.Fuzz4034, opts)
 }
 
 func cnameConsumer(opts *common.Opts) {

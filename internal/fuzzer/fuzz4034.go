@@ -1,6 +1,7 @@
 package fuzzer
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"sync"
@@ -9,9 +10,10 @@ import (
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
-func Fuzz404(inputStr string) {
+func Fuzz4034(inputStr string) {
 	if strings.HasPrefix(inputStr, "http") {
 		fuzzAllPath(inputStr)
 	} else {
@@ -19,7 +21,7 @@ func Fuzz404(inputStr string) {
 	}
 }
 
-// a new 404 endpoint is found, fuzz all sibling path to find possible non-404 endpoints
+// a new 403/404 endpoint is found, fuzz all sibling path to find possible non-404 endpoints
 func fuzzAllPath(urlStr string) {
 	// logger.Warnf("Debug AllPath input %s", urlStr)
 	rootDomain, err := getter.GetDomain(urlStr)
@@ -30,6 +32,7 @@ func fuzzAllPath(urlStr string) {
 	if !ok {
 		return
 	}
+	found := false
 	pathMap := pathMaps.(*sync.Map)
 	pathMap.Range(func(original, _ interface{}) bool {
 		originalStr := original.(string)
@@ -43,13 +46,21 @@ func fuzzAllPath(urlStr string) {
 		if err != nil {
 			return true
 		}
-		if resp.StatusCode != 404 {
+		if resp.StatusCode != 404 && resp.StatusCode != 403 {
+			found = true
 			common.DividerP.PublishMessage(resp)
 			// logger.Warnf("found new endpoint: %s", fuzzPath)
+			msg := fmt.Sprintf("[Fuzz Path(S)] Found new endpoint: %s", fuzzPath)
+			common.OutputP.PublishMessage(msg)
+			notify.SendMessage(msg)
 		}
 
 		return true
 	})
+
+	if !found {
+		go FuzzPath(urlStr)
+	}
 
 }
 
@@ -75,7 +86,7 @@ func fuzzNewPath(domainWithPath string) {
 		if err != nil {
 			return true
 		}
-		if resp.StatusCode != 404 {
+		if resp.StatusCode != 404 && resp.StatusCode != 403 {
 			common.DividerP.PublishMessage(resp)
 			// logger.Warnf("found new endpoint: %s", fuzzPath)
 		}

@@ -5,3 +5,5 @@ type Fuzz3Part struct {
 	Part2 string
 	Part3 string
 }
+
+var PathList []string

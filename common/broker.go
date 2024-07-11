@@ -38,7 +38,7 @@ var QuirksP = NewProducer("quirks_broker")
 var RCP = NewProducer("rc_broker")
 var CorsP = NewProducer("cors_broker")
 var PathConfuseP = NewProducer("pathconfuse_broker")
-var Fuzz404P = NewProducer("fuzz404_broker")
+var Fuzz4034P = NewProducer("fuzz4034_broker")
 var PathTraversalP = NewProducer("pathtraversal_broker")
 var FuzzAPIP = NewProducer("fuzzapi_broker")
 
@@ -65,7 +65,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	purge = purgebroker
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
-		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz404P,
+		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz4034P,
 		PathTraversalP, FuzzAPIP,
 	}
 	for _, p := range queueProducers {

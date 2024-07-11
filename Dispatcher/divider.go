@@ -34,8 +34,8 @@ func Divider(result *common.ServerResult) {
 	} else if checker.CheckRequestError(result.StatusCode) {
 		go common.MethodP.PublishMessage(result.Url)
 		go common.HopP.PublishMessage(result.Url)
-		//if the homepage itself is 404, fuzz for directories
-		if result.StatusCode == 404 && checker.CheckHomePage(result.Url) {
+		//if the homepage itself is 403 or 404, fuzz for directories
+		if (result.StatusCode == 403 || result.StatusCode == 404) && checker.CheckHomePage(result.Url) {
 			saveDomainToMap(result.Url)
 
 		}
@@ -65,6 +65,7 @@ func Divider(result *common.ServerResult) {
 		go common.CorsP.PublishMessage(result)
 	}
 
+	//no need to care for 403, as long as there is a path, we save it in map
 	if result.StatusCode != 404 {
 		parser.UrlToMap(result.Url)
 	}
@@ -88,6 +89,6 @@ func saveDomainToMap(urlStr string) {
 	existingSubdomains, _ := common.Domains.LoadOrStore(domain, new(sync.Map))
 	existingSubdomainsMap := existingSubdomains.(*sync.Map)
 	existingSubdomainsMap.Store(urlStr, true)
-	go common.Fuzz404P.PublishMessage(urlStr)
+	go common.Fuzz4034P.PublishMessage(urlStr)
 
 }

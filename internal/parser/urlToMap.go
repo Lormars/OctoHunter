@@ -29,6 +29,6 @@ func UrlToMap(urlStr string) {
 		return
 	}
 
-	common.Fuzz404P.PublishMessage(domainWithPath)
+	common.Fuzz4034P.PublishMessage(domainWithPath)
 
 }
