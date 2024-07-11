@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -15,6 +16,7 @@ import (
 type CacheTime int
 
 var cacheTime CacheTime
+var mu sync.Mutex
 
 func init() {
 	var err error
@@ -53,6 +55,8 @@ func cleanURL(endpoint string) string {
 
 func CheckCache(endpoint, module string) bool {
 	cleaned := cleanURL(endpoint)
+	mu.Lock()
+	defer mu.Unlock()
 	if CanScan(cleaned, module) {
 		UpdateScanTime(cleaned, module)
 		return true
