@@ -96,7 +96,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 		if err != nil {
 			continue
 		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		resp, err := checker.CheckServerCustom(req, clients.NormalClient)
 		if err != nil {
 			continue
 		}
