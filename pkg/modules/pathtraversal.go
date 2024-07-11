@@ -47,6 +47,12 @@ func CheckPathTraversal(urlStr string) {
 		return
 	}
 
+	//only care about api endpoitns for now
+	contentType := controlResp.Headers.Get("Content-Type")
+	if !strings.Contains(contentType, "application/json") {
+		return
+	}
+
 	fuzzResp, err := checker.CheckServerCustom(fuzzReq, clients.NoRedirectClient)
 	if err != nil {
 		return

@@ -103,6 +103,12 @@ func apiWorker(tasks chan Fuzz3Part) {
 		if resp.StatusCode == 404 || resp.StatusCode == 401 {
 			continue
 		}
+		//check content type to make sure we find new API endpoints
+		contentType := resp.Headers.Get("Content-Type")
+		if !strings.Contains(contentType, "application/json") {
+			continue
+		}
+
 		msg := fmt.Sprintf("[Fuzz API] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
 		common.OutputP.PublishMessage(msg)
 		notify.SendMessage(msg)
