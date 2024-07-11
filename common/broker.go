@@ -248,37 +248,42 @@ func (p *Producer) PublishMessage(body interface{}) {
 		messageBody = []byte(body.(string))
 		contentType = "text/plain"
 	}
+outer:
 	for {
-		ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-		p.mutex.Lock()
-		if p.pubChannel == nil || p.pubChannel.IsClosed() {
-			logger.Warnf("Failed to publish a message, attempting to reconnect: %s", p.name)
-			p.reconnect()
+		select {
+		case <-p.ShutdownChan:
+			return
+		default:
+			ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+			p.mutex.Lock()
+			if p.pubChannel == nil || p.pubChannel.IsClosed() {
+				logger.Warnf("Failed to publish a message, attempting to reconnect: %s", p.name)
+				p.reconnect()
+				p.mutex.Unlock()
+				cancel()
+				continue
+			}
+			err = p.pubChannel.PublishWithContext(
+				ctx,
+				"",
+				p.name,
+				false,
+				false,
+				amqp.Publishing{
+					ContentType: contentType,
+					Body:        messageBody,
+				})
 			p.mutex.Unlock()
-			cancel()
-			continue
-		}
-		err = p.pubChannel.PublishWithContext(
-			ctx,
-			"",
-			p.name,
-			false,
-			false,
-			amqp.Publishing{
-				ContentType: contentType,
-				Body:        messageBody,
-			})
-		p.mutex.Unlock()
-		if err != nil {
-			logger.Warnf("Failed to publish a message, attempting to reconnect: %s", err)
-			cancel()
-			p.reconnect()
-		} else {
-			cancel()
-			break
+			if err != nil {
+				logger.Warnf("Failed to publish a message, attempting to reconnect: %s", err)
+				cancel()
+				p.reconnect()
+			} else {
+				cancel()
+				break outer
+			}
 		}
 	}
-	failOnError(err, "Failed to publish a message")
 	logger.Debugf(" [x] Sent to %s", p.name)
 }
 
