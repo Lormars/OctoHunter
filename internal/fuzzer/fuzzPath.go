@@ -68,7 +68,7 @@ func FuzzPath(urlStr string) {
 	for _, resp := range resultMap {
 		common.DividerP.PublishMessage(resp)
 		// logger.Warnf("found new endpoint: %s", fuzzPath)
-		msg := fmt.Sprintf("[Fuzz Path(S)] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
+		msg := fmt.Sprintf("[Fuzz Path] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
 		common.OutputP.PublishMessage(msg)
 		notify.SendMessage(msg)
 	}

@@ -1,13 +1,18 @@
 package fuzzer
 
 import (
+	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
 	"sync"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 var prefixes chan string
@@ -87,8 +92,22 @@ func apiWorker(tasks chan Fuzz3Part) {
 			return
 		}
 		// logger.Warnf("[Fuzz API Debug] reconstructed is: %s", reconstructed)
-		//if work, add to path traversal first
-		common.FuzzAPIP.PublishMessage(reconstructed)
+		req, err := http.NewRequest("GET", reconstructed, nil)
+		if err != nil {
+			continue
+		}
+		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		if err != nil {
+			continue
+		}
+		if resp.StatusCode == 404 {
+			continue
+		}
+		msg := fmt.Sprintf("[Fuzz API] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+		//if work, check path traversal first
+		common.PathTraversalP.PublishMessage(reconstructed)
 	}
 }
 

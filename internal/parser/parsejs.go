@@ -40,6 +40,11 @@ func ParseJS(result *common.ServerResult) {
 				common.OutputP.PublishMessage(msg)
 				notify.SendMessage(msg)
 			}
+
+			if strings.Contains(resolvedURL, "api") && !strings.HasSuffix(resolvedURL, ".js") {
+				common.PathTraversalP.PublishMessage(resolvedURL)
+				common.FuzzAPIP.PublishMessage(resolvedURL)
+			}
 		} else {
 			if strings.Contains(resolvedURL, "graphql") {
 				msg := fmt.Sprintf("[GQL Suspect] %s in %s", resolvedURL, result.Url)
