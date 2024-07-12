@@ -1,5 +1,6 @@
 .env
 list/
 cache.db
+cache.db-journal
 app.log
 externals/nodejs/node_modules/

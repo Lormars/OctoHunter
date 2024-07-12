@@ -106,6 +106,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 		//check content type to make sure we find new API endpoints
 		contentType := resp.Headers.Get("Content-Type")
 		if !strings.Contains(contentType, "application/json") {
+			common.DividerP.PublishMessage(resp)
 			continue
 		}
 
