@@ -25,10 +25,10 @@ func init() {
 }
 
 func apifuzzerinit() {
-	prefixes = make(chan string, 100)
-	suffixes = make(chan string, 100)
-	subdomains = make(chan string, 100)
-	tasks = make(chan Fuzz3Part, 100)
+	prefixes = make(chan string, 1000)
+	suffixes = make(chan string, 1000)
+	subdomains = make(chan string, 1000)
+	tasks = make(chan Fuzz3Part, 1000)
 
 	collectedPrexies := make(map[string]bool)
 	collectedSuffixes := make(map[string]bool)
@@ -39,7 +39,7 @@ func apifuzzerinit() {
 	for i := 0; i < 1000; i++ {
 		go apiWorker(tasks)
 	}
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 1000; i++ {
 		go func() {
 			for {
 				select {

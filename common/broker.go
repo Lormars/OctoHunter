@@ -318,43 +318,46 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 
 				for {
 					select {
-					case d := <-msgs:
-						d.Ack(false)
-						switch handler := handlerFunc.(type) {
-						case func(string):
-							logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
-							handler(string(d.Body))
-						case func(*ServerResult):
-							var serverResult ServerResult
-							err := json.Unmarshal(d.Body, &serverResult)
-							if err != nil {
-								logger.Warnf("Error Unmarshalling JSON %s", err)
-								continue
-							}
-							logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
-							handler(&serverResult)
-						case func(*Opts):
-							localOpts := &Opts{
-								Module:         opts.Module,
-								Concurrency:    opts.Concurrency,
-								Target:         string(d.Body),
-								DorkFile:       opts.DorkFile,
-								HopperFile:     opts.HopperFile,
-								MethodFile:     opts.MethodFile,
-								RedirectFile:   opts.RedirectFile,
-								CnameFile:      opts.CnameFile,
-								DispatcherFile: opts.DispatcherFile,
-							}
-							logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
-							handler(localOpts)
-						}
-					case <-closeChan:
-						logger.Warnf("Consumer %s Connection closed, attempting to reconnect", p.name)
-						close(forever)
-						return
 					case <-p.ShutdownChan:
 						close(forever)
 						return
+					default:
+						select {
+						case d := <-msgs:
+							d.Ack(false)
+							switch handler := handlerFunc.(type) {
+							case func(string):
+								logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
+								handler(string(d.Body))
+							case func(*ServerResult):
+								var serverResult ServerResult
+								err := json.Unmarshal(d.Body, &serverResult)
+								if err != nil {
+									logger.Warnf("Error Unmarshalling JSON %s", err)
+									continue
+								}
+								logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
+								handler(&serverResult)
+							case func(*Opts):
+								localOpts := &Opts{
+									Module:         opts.Module,
+									Concurrency:    opts.Concurrency,
+									Target:         string(d.Body),
+									DorkFile:       opts.DorkFile,
+									HopperFile:     opts.HopperFile,
+									MethodFile:     opts.MethodFile,
+									RedirectFile:   opts.RedirectFile,
+									CnameFile:      opts.CnameFile,
+									DispatcherFile: opts.DispatcherFile,
+								}
+								logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
+								handler(localOpts)
+							}
+						case <-closeChan:
+							logger.Warnf("Consumer %s Connection closed, attempting to reconnect", p.name)
+							close(forever)
+							return
+						}
 					}
 				}
 			}()
