@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"io"
+	"strings"
 
 	"github.com/lormars/octohunter/internal/logger"
 )
@@ -15,5 +16,5 @@ func GenerateSignature() (string, error) {
 		logger.Debugf("Error generating signature: %v\n", err)
 		return "", err
 	}
-	return base64.URLEncoding.EncodeToString(b), nil
+	return strings.TrimSuffix(base64.URLEncoding.EncodeToString(b), "="), nil
 }

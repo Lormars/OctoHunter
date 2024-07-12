@@ -137,7 +137,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		randomIndex := rand.Intn(len(asset.Useragent))
 		randomAgent := asset.Useragent[randomIndex]
 		req.Header.Add("User-Agent", randomAgent) //use ADD as RC would set the user agent
-		req.Header.Set("Accept-Charset", "utf-8")
+		req.Header.Add("Accept-Charset", "utf-8")
 
 		// Measure request size
 		requestSize := int64(0)

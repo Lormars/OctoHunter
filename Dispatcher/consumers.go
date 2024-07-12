@@ -35,7 +35,12 @@ func Init(opts *common.Opts) {
 		go fuzz404Consumer(opts)
 		go pathTraversalConsumer(opts)
 		go fuzzAPIConsumer(opts)
+		go fuzzUnkeyedConsumer(opts)
 	}
+}
+
+func fuzzUnkeyedConsumer(opts *common.Opts) {
+	common.FuzzUnkeyedP.ConsumeMessage(fuzzer.FuzzUnkeyed, opts)
 }
 
 func fuzzAPIConsumer(opts *common.Opts) {

@@ -50,7 +50,6 @@ func init() {
 }
 
 func FuzzUnkeyed(urlStr string) {
-
 	if !cacher.CheckCache(urlStr, "unkeyed") {
 		return
 	}
@@ -78,8 +77,7 @@ func FuzzUnkeyed(urlStr string) {
 				var header string
 				var sigMap = make(map[string]string)
 				//get next five params
-				mu.Lock()
-				for i := 0; i < 5; i++ {
+				for j := 0; j < 5; j++ {
 					if paramIndex < paramLength {
 						signature, err := generator.GenerateSignature()
 						if err != nil {

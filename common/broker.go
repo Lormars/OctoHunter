@@ -39,6 +39,7 @@ var PathConfuseP = NewProducer("pathconfuse_broker")
 var Fuzz4034P = NewProducer("fuzz4034_broker")
 var PathTraversalP = NewProducer("pathtraversal_broker")
 var FuzzAPIP = NewProducer("fuzzapi_broker")
+var FuzzUnkeyedP = NewProducer("fuzzunkeyed_broker")
 
 var mu sync.Mutex
 
@@ -62,7 +63,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
 		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz4034P,
-		PathTraversalP, FuzzAPIP,
+		PathTraversalP, FuzzAPIP, FuzzUnkeyedP,
 	}
 
 	rabbitMQSetup()
