@@ -1,7 +1,6 @@
 package common
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -15,13 +14,12 @@ import (
 
 type Producer struct {
 	name         string
-	conn         *amqp.Connection
-	pubChannel   *amqp.Channel
-	consChannel  *amqp.Channel
-	mutex        sync.Mutex
-	semaphore    chan struct{}
-	consumers    []func()
+	messageChan  chan interface{}
 	ShutdownChan chan struct{}
+	pubCh        *amqp.Channel
+	closed       bool
+	closeOnce    sync.Once
+	mu           sync.Mutex
 }
 
 var OutputP = NewProducer("dork_broker")
@@ -46,8 +44,7 @@ var mu sync.Mutex
 
 var (
 	queueProducers []*Producer
-	concurrency    int
-	purge          bool
+	// concurrency    int
 )
 
 func failOnError(err error, msg string) {
@@ -57,41 +54,24 @@ func failOnError(err error, msg string) {
 }
 
 func NewProducer(name string) *Producer {
-	return &Producer{name: name, ShutdownChan: make(chan struct{})}
+	return &Producer{name: name, messageChan: make(chan interface{}, 1000), ShutdownChan: make(chan struct{})}
 }
 
 func Init(options *Opts, purgebroker bool) []*Producer {
-	concurrency = options.Concurrency
-	purge = purgebroker
+	// concurrency = options.Concurrency
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
 		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz4034P,
 		PathTraversalP, FuzzAPIP,
 	}
-	for _, p := range queueProducers {
-		p.initConnection()
-		p.semaphore = make(chan struct{}, concurrency*100)
-	}
+
+	rabbitMQSetup()
+	go monitorChannels(queueProducers)
 
 	return queueProducers
 }
 
-func (p *Producer) initConnection() {
-	conn, pubCh, consCh, err := connectRabbitMQ()
-	failOnError(err, "Failed to connect to RabbitMQ")
-
-	p.conn = conn
-	p.pubChannel = pubCh
-	p.consChannel = consCh
-
-	err = p.initQueue(pubCh, true)
-	failOnError(err, "Failed to initialize queue")
-
-	//go p.checkQueue()
-	go p.registerConsumers()
-}
-
-func connectRabbitMQ() (*amqp.Connection, *amqp.Channel, *amqp.Channel, error) {
+func rabbitMQSetup() {
 	user := os.Getenv("RABBITMQ_USER")
 	password := os.Getenv("RABBITMQ_PASSWORD")
 	connStr := fmt.Sprintf("amqp://%s:%s@localhost:5672/", user, password)
@@ -99,126 +79,35 @@ func connectRabbitMQ() (*amqp.Connection, *amqp.Channel, *amqp.Channel, error) {
 		amqp.Config{
 			Heartbeat: 10 * time.Second,
 		})
-	if err != nil {
-		return nil, nil, nil, err
-	}
+	failOnError(err, "Failed to connect to RabbitMQ")
 
 	pubCh, err := conn.Channel()
-	if err != nil {
-		conn.Close()
-		return nil, nil, nil, err
-	}
+	failOnError(err, "Failed to open a channel")
 
 	err = pubCh.Qos(
 		100,   // prefetch count
 		0,     // prefetch size
 		false, // global
 	)
-	if err != nil {
-		pubCh.Close()
-		conn.Close()
-		return nil, nil, nil, err
-	}
-
-	consCh, err := conn.Channel()
-	if err != nil {
-		pubCh.Close()
-		conn.Close()
-		return nil, nil, nil, err
-	}
-
-	err = consCh.Qos(
-		100,   // prefetch count
-		0,     // prefetch size
-		false, // global
-	)
-	if err != nil {
-		consCh.Close()
-		pubCh.Close()
-		conn.Close()
-		return nil, nil, nil, err
-	}
-
-	return conn, pubCh, consCh, nil
-}
-
-func (p *Producer) initQueue(ch *amqp.Channel, check bool) error {
-	var err error
-	if purge && check {
-		_, err = ch.QueuePurge(p.name, false)
-	}
-	logger.Debugf("Purging queue error: %v", err)
-	_, err = ch.QueueDeclare(
-		p.name,
+	failOnError(err, "Failed to set QoS")
+	_, err = pubCh.QueueDeclare(
+		"dork_broker", // name
 		false,
 		false,
 		false,
 		false,
 		nil,
 	)
+	failOnError(err, "Failed to declare a queue")
+	OutputP.pubCh = pubCh
 
-	return err
-}
-
-func (p *Producer) reconnect() {
-	for {
-
-		if !p.ShouldReconnect() {
-			return
-		}
-
-		if p.pubChannel != nil {
-			p.pubChannel.Close()
-		}
-		if p.consChannel != nil {
-			p.consChannel.Close()
-		}
-		if p.conn != nil {
-			p.conn.Close()
-		}
-
-		var err error
-		p.conn, p.pubChannel, p.consChannel, err = connectRabbitMQ()
-		if err != nil {
-			logger.Warnf("Failed to reconnect to RabbitMQ, retrying in 5 seconds: %s", err)
-			time.Sleep(5 * time.Second)
-			continue
-		}
-
-		err = p.initQueue(p.pubChannel, false)
-		if err != nil {
-			logger.Warnf("Failed to declare queue, retrying in 5 seconds: %s", err)
-			p.pubChannel.Close()
-			p.conn.Close()
-			time.Sleep(5 * time.Second)
-			continue
-		}
-		//p.checkQueue()
-		p.registerConsumers()
-		logger.Infof("Successfully reconnected to RabbitMQ for queue %s", p.name)
-		break
-	}
-}
-
-func (p *Producer) ShouldReconnect() bool {
-	select {
-	case <-p.ShutdownChan:
-		return false
-	default:
-		return true
-	}
 }
 
 func (p *Producer) PublishMessage(body interface{}) {
 	var messageBody []byte
-	var contentType string
 	var err error
 
 	if p.name != "dork_broker" {
-		p.semaphore <- struct{}{}
-		defer func() {
-			<-p.semaphore
-		}()
 		var waitCh chan bool
 		switch v := body.(type) {
 		case string:
@@ -228,7 +117,6 @@ func (p *Producer) PublishMessage(body interface{}) {
 			BrokerSliding.AddRequest(hostname)
 			mu.Unlock()
 			waitCh = AddToBrokerQueue(hostname)
-			contentType = "text/plain"
 		case *ServerResult:
 			messageBody, err = json.Marshal(v)
 			hostname := GetHostname(v.Url)
@@ -239,162 +127,99 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if err != nil {
 				failOnError(err, "Failed to marshal struct to JSON")
 			}
-			contentType = "application/json"
 		default:
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
 		<-waitCh
+		p.messageChan <- messageBody
 	} else {
 		messageBody = []byte(body.(string))
-		contentType = "text/plain"
-	}
-outer:
-	for {
-		select {
-		case <-p.ShutdownChan:
-			return
-		default:
-			ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
-			p.mutex.Lock()
-			if p.pubChannel == nil || p.pubChannel.IsClosed() {
-				logger.Warnf("Failed to publish a message, attempting to reconnect: %s", p.name)
-				p.reconnect()
-				p.mutex.Unlock()
-				cancel()
-				continue
-			}
-			err = p.pubChannel.PublishWithContext(
-				ctx,
-				"",
-				p.name,
-				false,
-				false,
-				amqp.Publishing{
-					ContentType: contentType,
-					Body:        messageBody,
-				})
-			p.mutex.Unlock()
-			if err != nil {
-				logger.Warnf("Failed to publish a message, attempting to reconnect: %s", err)
-				cancel()
-				p.reconnect()
-			} else {
-				cancel()
-				break outer
-			}
+		err = p.pubCh.Publish(
+			"",            // exchange
+			"dork_broker", // routing key
+			false,         // mandatory
+			false,         // immediate
+			amqp.Publishing{
+				ContentType: "text/plain",
+				Body:        messageBody,
+			})
+		if err != nil {
+			logger.Warnf("Failed to publish a message: %s", err)
 		}
 	}
 	logger.Debugf(" [x] Sent to %s", p.name)
 }
 
 func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
-	for {
-		select {
-		case <-p.ShutdownChan:
-			logger.Debugf("Consumer %s Shutting down", p.name)
-			return
-		default:
-			msgs, err := p.consChannel.Consume(
-				p.name,
-				"",
-				false,
-				false,
-				false,
-				false,
-				nil,
-			)
-			if err != nil {
-				logger.Warnf("Failed to register a consumer: %s", err)
-				p.mutex.Lock()
-				p.reconnect()
-				p.mutex.Unlock()
-				continue
-			}
-
-			p.consumers = append(p.consumers, func() { p.ConsumeMessage(handlerFunc, opts) })
-			closeChan := p.consChannel.NotifyClose(make(chan *amqp.Error))
-			var forever = make(chan struct{})
-			go func() {
-
-				for {
-					select {
-					case <-p.ShutdownChan:
-						close(forever)
-						return
-					default:
-						select {
-						case d := <-msgs:
-							d.Ack(false)
-							switch handler := handlerFunc.(type) {
-							case func(string):
-								logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
-								handler(string(d.Body))
-							case func(*ServerResult):
-								var serverResult ServerResult
-								err := json.Unmarshal(d.Body, &serverResult)
-								if err != nil {
-									logger.Warnf("Error Unmarshalling JSON %s", err)
-									continue
-								}
-								logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
-								handler(&serverResult)
-							case func(*Opts):
-								localOpts := &Opts{
-									Module:         opts.Module,
-									Concurrency:    opts.Concurrency,
-									Target:         string(d.Body),
-									DorkFile:       opts.DorkFile,
-									HopperFile:     opts.HopperFile,
-									MethodFile:     opts.MethodFile,
-									RedirectFile:   opts.RedirectFile,
-									CnameFile:      opts.CnameFile,
-									DispatcherFile: opts.DispatcherFile,
-								}
-								logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.Body)
-								handler(localOpts)
-							}
-						case <-closeChan:
-							logger.Warnf("Consumer %s Connection closed, attempting to reconnect", p.name)
-							close(forever)
-							return
-						}
-					}
+	go func() {
+		for {
+			select {
+			case <-p.ShutdownChan:
+				return
+			default:
+				d, ok := <-p.messageChan
+				if !ok {
+					return
 				}
-			}()
-			logger.Debugf(" [*] %s Waiting for messages. To exit press CTRL+C\n", p.name)
-			<-forever
+				switch handler := handlerFunc.(type) {
+				case func(string):
+					logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.([]byte))
+					handler(string(d.([]byte)))
+				case func(*ServerResult):
+					var serverResult ServerResult
+					err := json.Unmarshal(d.([]byte), &serverResult)
+					if err != nil {
+						logger.Warnf("Error Unmarshalling JSON %s", err)
+						continue
+					}
+					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
+					handler(&serverResult)
+				case func(*Opts):
+					localOpts := &Opts{
+						Module:         opts.Module,
+						Concurrency:    opts.Concurrency,
+						Target:         string(d.([]byte)),
+						DorkFile:       opts.DorkFile,
+						HopperFile:     opts.HopperFile,
+						MethodFile:     opts.MethodFile,
+						RedirectFile:   opts.RedirectFile,
+						CnameFile:      opts.CnameFile,
+						DispatcherFile: opts.DispatcherFile,
+					}
+					logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.([]byte))
+					handler(localOpts)
+				default:
+					failOnError(fmt.Errorf("unknown type %T", handler), "Failed to consume a message")
+				}
+			}
+		}
+	}()
+}
+
+func monitorChannels(producers []*Producer) {
+	for {
+		time.Sleep(10 * time.Second)
+		for _, p := range producers {
+			if p.name != "dork_broker" {
+				if len(p.messageChan) > 100 {
+					log.Printf("Queue %s has %d messages waiting", p.name, len(p.messageChan))
+				}
+			}
 		}
 	}
 }
 
-func (p *Producer) registerConsumers() {
-	for _, consumer := range p.consumers {
-		consumer()
-	}
-}
-
-func NoMessagesWaiting() bool {
-	for _, p := range queueProducers {
-		queueInfo, err := p.pubChannel.QueueDeclarePassive(p.name, false, false, false, false, nil)
-		failOnError(err, "Failed to inspect a queue")
-		if queueInfo.Messages > 0 {
-			logger.Debugf("Queue %s still has %d messages waiting", p.name, queueInfo.Messages)
-			return false
-		}
-	}
-	return true
+func (p *Producer) Close() {
+	p.closeOnce.Do(func() {
+		p.mu.Lock()
+		defer p.mu.Unlock()
+		p.closed = true
+		close(p.messageChan)
+	})
 }
 
 func Close() {
 	for _, p := range queueProducers {
-		if p.pubChannel != nil {
-			p.pubChannel.Close()
-		}
-		if p.consChannel != nil {
-			p.consChannel.Close()
-		}
-		if p.conn != nil {
-			p.conn.Close()
-		}
+		p.Close()
 	}
 }
