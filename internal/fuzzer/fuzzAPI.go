@@ -114,6 +114,10 @@ func apiWorker(tasks chan Fuzz3Part) {
 		notify.SendMessage(msg)
 		//if work, check path traversal first
 		common.PathTraversalP.PublishMessage(reconstructed)
+
+		if resp.Body != "" {
+			common.QuirksP.PublishMessage(resp)
+		}
 	}
 }
 
