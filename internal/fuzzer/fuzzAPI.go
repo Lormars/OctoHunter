@@ -36,51 +36,51 @@ func apifuzzerinit() {
 
 	var mu sync.Mutex
 
-	for i := 0; i < 2000; i++ {
+	for i := 0; i < 1000; i++ {
 		go apiWorker(tasks)
 	}
-
-	go func() {
-		for {
-			select {
-			case prefix := <-prefixes:
-				mu.Lock()
-				if !collectedPrexies[prefix] {
-					collectedPrexies[prefix] = true
-					for suffix := range collectedSuffixes {
-						for subdomain := range collectedSubdomains {
-							tasks <- Fuzz3Part{Part1: subdomain, Part2: prefix, Part3: suffix}
-						}
-					}
-				}
-				mu.Unlock()
-			case suffix := <-suffixes:
-				mu.Lock()
-				if !collectedSuffixes[suffix] {
-					collectedSuffixes[suffix] = true
-					for prefix := range collectedPrexies {
-						for subdomain := range collectedSubdomains {
-							tasks <- Fuzz3Part{Part1: subdomain, Part2: prefix, Part3: suffix}
-						}
-					}
-				}
-				mu.Unlock()
-			case subdomain := <-subdomains:
-				mu.Lock()
-				if !collectedSubdomains[subdomain] {
-					collectedSubdomains[subdomain] = true
-					for prefix := range collectedPrexies {
+	for i := 0; i < 100; i++ {
+		go func() {
+			for {
+				select {
+				case prefix := <-prefixes:
+					mu.Lock()
+					if !collectedPrexies[prefix] {
+						collectedPrexies[prefix] = true
 						for suffix := range collectedSuffixes {
-							tasks <- Fuzz3Part{Part1: subdomain, Part2: prefix, Part3: suffix}
+							for subdomain := range collectedSubdomains {
+								tasks <- Fuzz3Part{Part1: subdomain, Part2: prefix, Part3: suffix}
+							}
 						}
 					}
+					mu.Unlock()
+				case suffix := <-suffixes:
+					mu.Lock()
+					if !collectedSuffixes[suffix] {
+						collectedSuffixes[suffix] = true
+						for prefix := range collectedPrexies {
+							for subdomain := range collectedSubdomains {
+								tasks <- Fuzz3Part{Part1: subdomain, Part2: prefix, Part3: suffix}
+							}
+						}
+					}
+					mu.Unlock()
+				case subdomain := <-subdomains:
+					mu.Lock()
+					if !collectedSubdomains[subdomain] {
+						collectedSubdomains[subdomain] = true
+						for prefix := range collectedPrexies {
+							for suffix := range collectedSuffixes {
+								tasks <- Fuzz3Part{Part1: subdomain, Part2: prefix, Part3: suffix}
+							}
+						}
+					}
+					mu.Unlock()
+
 				}
-				mu.Unlock()
-
 			}
-		}
-	}()
-
+		}()
+	}
 }
 
 func apiWorker(tasks chan Fuzz3Part) {
