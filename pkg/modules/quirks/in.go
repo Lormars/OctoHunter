@@ -43,6 +43,16 @@ func CheckQuirks(res *common.ServerResult) {
 
 	result = res
 
+	//dependency confusion try
+	if strings.Contains(result.Body, "package.json") ||
+		strings.Contains(result.Body, "requirements.txt") ||
+		strings.Contains(result.Body, "Gemfile") ||
+		strings.Contains(result.Body, "composer.json") {
+		msg := fmt.Sprintf("[Quirks] Dependency Confusion in %s", result.Url)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+	}
+
 	//no need to wait for this, takes too long, just fire and forget
 	if strings.HasSuffix(result.Url, ".js") {
 		go CheckJSQuirks(result)

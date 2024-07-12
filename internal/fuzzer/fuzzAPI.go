@@ -36,7 +36,7 @@ func apifuzzerinit() {
 
 	var mu sync.Mutex
 
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < 2000; i++ {
 		go apiWorker(tasks)
 	}
 
