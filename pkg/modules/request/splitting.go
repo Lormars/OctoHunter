@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bufio"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -99,8 +100,9 @@ func paramSplitTest(result *common.ServerResult) {
 				}
 			}
 			parsedURL.RawQuery = rawQuery
-
-			req, err := http.NewRequest("GET", parsedURL.String(), nil)
+			rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", parsedURL.RequestURI(), parsedURL.Host)
+			reader := bufio.NewReader(strings.NewReader(rawRequest))
+			req, err := http.ReadRequest(reader)
 			if err != nil {
 				logger.Debugf("Error creating request: %v", err)
 				continue
@@ -148,8 +150,10 @@ func pathSplitTest(result *common.ServerResult) {
 
 	for _, payload := range payloads {
 		path := fmt.Sprintf("%sX-Injected:%%20whatANiceDay%s", payload, payload)
-		payloadUrl := fmt.Sprintf("http://%s/%s", parsedUrl.Host, path)
-		req, err := http.NewRequest("GET", payloadUrl, nil)
+		payloadUrl := fmt.Sprintf("/%s", path)
+		rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", payloadUrl, parsedUrl.Host)
+		reader := bufio.NewReader(strings.NewReader(rawRequest))
+		req, err := http.ReadRequest(reader)
 		if err != nil {
 			logger.Errorf("Error creating request: %v", err)
 			return
