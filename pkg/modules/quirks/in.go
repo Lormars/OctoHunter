@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -63,34 +62,19 @@ func CheckQuirks(res *common.ServerResult) {
 		return
 	}
 
-	var wg sync.WaitGroup
-	wg.Add(4)
-
 	//too much false positive
 	//doubleHTML()
 
-	go func() {
-		defer wg.Done()
-		checkJSONP()
-	}()
+	go checkJSONP()
 
-	go func() {
-		defer wg.Done()
-		jsonwithHTML()
-	}()
+	go jsonwithHTML()
 
-	go func() {
-		defer wg.Done()
-		leakenv()
-	}()
+	// go func() {
+	// 	leakenv()
+	// }()
 
-	go func() {
-		defer wg.Done()
-		isdynamic()
-	}()
+	go isdynamic()
 
-	// Wait for all goroutines to finish
-	wg.Wait()
 }
 
 func checkJSONP() {
