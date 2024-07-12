@@ -42,7 +42,7 @@ func CheckQuirks(res *common.ServerResult) {
 
 	result = res
 
-	//dependency confusion try
+	//dependency confusion check
 	if strings.Contains(result.Body, "package.json") ||
 		strings.Contains(result.Body, "requirements.txt") ||
 		strings.Contains(result.Body, "Gemfile") ||
@@ -52,6 +52,16 @@ func CheckQuirks(res *common.ServerResult) {
 		strings.Contains(result.Url, "Gemfile") ||
 		strings.Contains(result.Url, "composer.json") {
 		msg := fmt.Sprintf("[Quirks] Dependency Confusion in %s", result.Url)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+	}
+
+	//oauth check
+	if strings.Contains(result.Url, "client_id") &&
+		strings.Contains(result.Url, "redirect_uri") &&
+		strings.Contains(result.Url, "response_type") &&
+		!strings.Contains(result.Url, "state") {
+		msg := fmt.Sprintf("[Quirks] OAuth in URL %s without state parameter", result.Url)
 		common.OutputP.PublishMessage(msg)
 		notify.SendMessage(msg)
 	}
