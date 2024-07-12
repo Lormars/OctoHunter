@@ -7,3 +7,5 @@ type Fuzz3Part struct {
 }
 
 var PathList []string
+var UnkeyedParam []string
+var UnkeyedHeader []string

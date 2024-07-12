@@ -2,6 +2,7 @@ package quirks
 
 import (
 	"fmt"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -12,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/fuzzer"
 	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/matcher"
 	"github.com/lormars/octohunter/internal/notify"
@@ -84,6 +86,15 @@ func CheckQuirks(res *common.ServerResult) {
 	// }()
 
 	go isdynamic()
+
+	if checker.CheckAccess(result) {
+		if result.Body != "" {
+			if rand.Float32() > 0.5 { //randomly fuzz because I dont want to fuzz everything
+				//and since we run it all the time, it is fine to fuzz randomly
+				fuzzer.FuzzUnkeyed(result.Url)
+			}
+		}
+	}
 
 }
 
