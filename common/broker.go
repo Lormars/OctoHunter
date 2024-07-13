@@ -203,7 +203,7 @@ func monitorChannels(producers []*Producer) {
 		for _, p := range producers {
 			if p.name != "dork_broker" {
 				if len(p.messageChan) > 100 {
-					log.Printf("Queue %s has %d messages waiting", p.name, len(p.messageChan))
+					logger.Infof("Queue %s has %d messages waiting", p.name, len(p.messageChan))
 				}
 			}
 		}

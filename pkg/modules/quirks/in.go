@@ -2,7 +2,6 @@ package quirks
 
 import (
 	"fmt"
-	"math/rand"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -87,12 +86,15 @@ func CheckQuirks(res *common.ServerResult) {
 	go isdynamic()
 
 	if checker.CheckAccess(result) &&
-		!strings.HasSuffix(result.Url, ".js") {
+		!strings.HasSuffix(result.Url, ".css") &&
+		!strings.HasSuffix(result.Url, ".png") &&
+		!strings.HasSuffix(result.Url, ".jpg") &&
+		!strings.HasSuffix(result.Url, ".jpeg") &&
+		!strings.HasSuffix(result.Url, ".gif") &&
+		!strings.HasSuffix(result.Url, ".svg") &&
+		!strings.HasSuffix(result.Url, ".ico") {
 		if result.Body != "" {
-			if rand.Float32() > 0.5 { //randomly fuzz because I dont want to fuzz everything
-				//and since we run it all the time, it is fine to fuzz randomly
-				common.FuzzUnkeyedP.PublishMessage(result.Url)
-			}
+			common.FuzzUnkeyedP.PublishMessage(result.Url)
 		}
 	}
 

@@ -2,18 +2,21 @@ package fuzzer
 
 import (
 	"bufio"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"sync"
 
+	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/matcher"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 var prefix = "vbwpzub"
@@ -49,8 +52,14 @@ func init() {
 	logger.Infof("UnkeyedHeader Wordlist loaded")
 }
 
+// It fuzzes for parameters and headers that are reflected in the response (either in header or body) for cacheable pages.
 func FuzzUnkeyed(urlStr string) {
 	if !cacher.CheckCache(urlStr, "unkeyed") {
+		return
+	}
+
+	//check if the page is cacheable
+	if !checker.CheckCacheable(urlStr) {
 		return
 	}
 
@@ -75,7 +84,7 @@ func FuzzUnkeyed(urlStr string) {
 
 				parsedURL := *parsed
 				var header string
-				var sigMap = make(map[string]string)
+				var sigMap = make(map[string][]string)
 				//get next five params
 				for j := 0; j < 5; j++ {
 					if paramIndex < paramLength {
@@ -88,7 +97,7 @@ func FuzzUnkeyed(urlStr string) {
 						queryParams := parsedURL.Query()
 						queryParams.Set(UnkeyedParam[paramIndex], prefix+signature)
 						parsedURL.RawQuery = queryParams.Encode()
-						sigMap[prefix+signature] = UnkeyedParam[paramIndex]
+						sigMap[prefix+signature] = []string{UnkeyedParam[paramIndex], "param"}
 						paramIndex++
 					}
 				}
@@ -109,24 +118,50 @@ func FuzzUnkeyed(urlStr string) {
 					logger.Errorf("Error generating signature: %v\n", err)
 					return
 				}
-				req.Header.Set(header, prefix+signature)
-				sigMap[prefix+signature] = header
+				if header != "" {
+					req.Header.Set(header, prefix+signature)
+					sigMap[prefix+signature] = []string{header, "header"}
+				}
 
-				logger.Warnf("[DEBUG] Checking %s", parsedURL.String())
-				logger.Warnf("[DEBUG] Headers: %v", req.Header)
+				logger.Debugf("[DEBUG] Checking %s", parsedURL.String())
+				logger.Debugf("[DEBUG] Headers: %v", req.Header)
 
 				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 				if err != nil {
 					continue
 				}
 				for sig, param := range sigMap {
-					if strings.Contains(resp.Body, sig) || matcher.HeaderValueContainsSignature(resp, sig) {
-						logger.Warnf("Unkeyed parameter found: %s on %s", param, urlStr)
-					} else if strings.Contains(resp.Body, prefix) || matcher.HeaderValueContainsSignature(resp, prefix) {
-						logger.Warnf("Unkeyed prefix found on %s", urlStr)
+
+					if strings.Contains(resp.Body, sig) {
+						if param[1] == "header" {
+							//check if this header is unkeyed
+							req.Header.Del(header)
+							resp, err = checker.CheckServerCustom(req, clients.NoRedirectClient)
+							if err != nil {
+								continue
+							}
+							//if the signature is still there, then it is unkeyed and cached
+							if strings.Contains(resp.Body, sig) {
+								msg := fmt.Sprintf("[Unkeyed] Unkeyed header found: %s on %s", param[0], urlStr)
+								common.OutputP.PublishMessage(msg)
+								notify.SendMessage(msg)
+							}
+						}
+					} else if matcher.HeaderValueContainsSignature(resp, sig) {
+						if param[1] == "param" {
+							//if param is in header value, then can check if CRLF injection is possible
+							common.SplittingP.PublishMessage(resp)
+						}
 					}
 
+					// if strings.Contains(resp.Body, sig) || matcher.HeaderValueContainsSignature(resp, sig) {
+					// 	logger.Warnf("Unkeyed parameter found: %s on %s", param[0], urlStr)
+					// }
+
 				}
+				// if strings.Contains(resp.Body, prefix) || matcher.HeaderValueContainsSignature(resp, prefix) {
+				// 	msg := fmt.Sprintf("[Unkeyed] Unkeyed prefix found on %s", urlStr)
+				// }
 
 			}
 		}()

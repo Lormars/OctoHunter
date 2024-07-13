@@ -1,6 +1,7 @@
 package main
 
 import (
+	"io"
 	"log"
 	_ "net/http/pprof"
 	"os"
@@ -25,6 +26,9 @@ func main() {
 	// go func() {
 	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
 	// }()
+
+	//disable default logger to get rid of unwanted warning
+	log.SetOutput(io.Discard)
 
 	options, config := parser.Parse_Options()
 	if config.MemoryUsage {

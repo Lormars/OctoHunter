@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/lormars/octohunter/internal/logger"
 	"golang.org/x/net/html"
 )
@@ -61,4 +62,24 @@ func ExtractUrls(baseUrl, response string) []string {
 		}
 
 	}
+}
+
+func ExtractSignature(htmlBody, signature string) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlBody))
+	if err != nil {
+		logger.Warnf("Error parsing HTML: %v\n", err)
+		return
+	}
+
+	doc.Find("*").Each(func(i int, s *goquery.Selection) {
+		for _, attr := range s.Nodes[0].Attr {
+			if strings.Contains(attr.Val, signature) {
+				//found in attribute
+			}
+		}
+
+		if strings.Contains(s.Text(), signature) {
+			//found between tags
+		}
+	})
 }

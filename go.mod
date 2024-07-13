@@ -22,7 +22,7 @@ require (
 
 require (
 	github.com/BishopFox/jsluice v0.0.0-20240110145140-0ddfab153e06 // indirect
-	github.com/PuerkitoBio/goquery v1.8.1 // indirect
+	github.com/PuerkitoBio/goquery v1.9.2 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.22 // indirect
