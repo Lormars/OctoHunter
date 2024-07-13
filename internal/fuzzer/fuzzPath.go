@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	file, err := os.Open("list/onelistforallmicro.txt")
+	file, err := os.Open("asset/onelistforallmicro.txt")
 	if err != nil {
 		panic("Error opening file")
 	}

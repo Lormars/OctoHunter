@@ -16,5 +16,5 @@ func GenerateSignature() (string, error) {
 		logger.Debugf("Error generating signature: %v\n", err)
 		return "", err
 	}
-	return strings.TrimSuffix(base64.URLEncoding.EncodeToString(b), "="), nil
+	return strings.TrimRight(base64.URLEncoding.EncodeToString(b), "="), nil
 }

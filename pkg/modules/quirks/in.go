@@ -36,6 +36,8 @@ func CheckQuirks(res *common.ServerResult) {
 	// 	}
 	// }
 
+	// logger.Warnf("Checking quirks for %s\n", res.Url)
+
 	if !cacher.CheckCache(res.Url, "quirks") {
 		return
 	}

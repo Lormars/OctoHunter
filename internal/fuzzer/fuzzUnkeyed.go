@@ -17,12 +17,13 @@ import (
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/matcher"
 	"github.com/lormars/octohunter/internal/notify"
+	"github.com/lormars/octohunter/internal/parser"
 )
 
 var prefix = "vbwpzub"
 
 func init() {
-	file, err := os.Open("list/unkeyedParam")
+	file, err := os.Open("asset/unkeyedParam")
 	if err != nil {
 		panic("Error opening file")
 	}
@@ -37,7 +38,7 @@ func init() {
 
 	file.Close()
 
-	file2, err := os.Open("list/unkeyedHeader")
+	file2, err := os.Open("asset/unkeyedHeader")
 	if err != nil {
 		panic("Error opening file")
 	}
@@ -124,7 +125,7 @@ func FuzzUnkeyed(urlStr string) {
 				}
 
 				logger.Debugf("[DEBUG] Checking %s", parsedURL.String())
-				logger.Debugf("[DEBUG] Headers: %v", req.Header)
+				logger.Warnf("[DEBUG] Headers: %v", req.Header)
 
 				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 				if err != nil {
@@ -142,9 +143,14 @@ func FuzzUnkeyed(urlStr string) {
 							}
 							//if the signature is still there, then it is unkeyed and cached
 							if strings.Contains(resp.Body, sig) {
-								msg := fmt.Sprintf("[Unkeyed] Unkeyed header found: %s on %s", param[0], urlStr)
+								msg := fmt.Sprintf("[Fuzz Unkeyed] Unkeyed header found: %s on %s", param[0], urlStr)
 								common.OutputP.PublishMessage(msg)
 								notify.SendMessage(msg)
+							}
+						} else if param[1] == "param" {
+							inBody, location := parser.ExtractSignature(resp.Body, sig)
+							if inBody {
+								logger.Warnf("[Fuzz Unkeyed Debug] parameter found: %s on %s on %s", param[0], urlStr, location)
 							}
 						}
 					} else if matcher.HeaderValueContainsSignature(resp, sig) {

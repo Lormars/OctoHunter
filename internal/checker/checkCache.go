@@ -3,10 +3,12 @@ package checker
 import (
 	"net/http"
 	"net/http/httptrace"
+	"net/url"
 	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/matcher"
 )
@@ -14,6 +16,21 @@ import (
 func CheckCacheable(payload string) bool {
 	var elapses []time.Duration
 	var responses []*common.ServerResult
+
+	cachebuster, err := generator.GenerateSignature()
+	if err != nil {
+		logger.Errorf("Error generating signature: %v\n", err)
+		return false
+	}
+	parsedURL, err := url.Parse(payload)
+	if err != nil {
+		return false
+	}
+
+	queryParams := parsedURL.Query()
+	queryParams.Set("buster", cachebuster)
+	parsedURL.RawQuery = queryParams.Encode()
+	payload = parsedURL.String()
 	for i := 0; i < 2; i++ {
 		req, err := http.NewRequest("GET", payload, nil)
 		if err != nil {
