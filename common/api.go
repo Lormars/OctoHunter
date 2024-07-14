@@ -111,3 +111,38 @@ type ServerResult struct {
 	Body       string      `json:"body"`
 	Depth      int         `json:"depth"` // Used to limit the depth of the crawler
 }
+
+type XssInput struct {
+	Url      string `json:"url"`
+	Param    string `json:"param"`
+	Location string `json:"location"`
+}
+
+func MapsEqual(a, b map[string]bool) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if bv, ok := b[k]; !ok || bv != v {
+			return false
+		}
+	}
+	return true
+}
+
+// Merge map b into map a
+func MergeMaps(a, b map[string]bool) {
+	for k, v := range b {
+		a[k] = v
+	}
+}
+
+// Function to check if map A is a superset of map B
+func IsSuperset(a, b map[string]bool) bool {
+	for k, v := range b {
+		if av, ok := a[k]; !ok || av != v {
+			return false
+		}
+	}
+	return true
+}

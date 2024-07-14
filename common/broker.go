@@ -40,6 +40,7 @@ var Fuzz4034P = NewProducer("fuzz4034_broker")
 var PathTraversalP = NewProducer("pathtraversal_broker")
 var FuzzAPIP = NewProducer("fuzzapi_broker")
 var FuzzUnkeyedP = NewProducer("fuzzunkeyed_broker")
+var XssP = NewProducer("xss_broker")
 
 var mu sync.Mutex
 
@@ -63,7 +64,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
 		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz4034P,
-		PathTraversalP, FuzzAPIP, FuzzUnkeyedP,
+		PathTraversalP, FuzzAPIP, FuzzUnkeyedP, XssP,
 	}
 
 	rabbitMQSetup()
@@ -128,6 +129,16 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if err != nil {
 				failOnError(err, "Failed to marshal struct to JSON")
 			}
+		case *XssInput:
+			messageBody, err = json.Marshal(v)
+			hostname := GetHostname(v.Url)
+			mu.Lock()
+			BrokerSliding.AddRequest(hostname)
+			mu.Unlock()
+			waitCh = AddToBrokerQueue(hostname)
+			if err != nil {
+				failOnError(err, "Failed to marshal struct to JSON")
+			}
 		default:
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
@@ -175,6 +186,15 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 					}
 					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
 					handler(&serverResult)
+				case func(*XssInput):
+					var xssInput XssInput
+					err := json.Unmarshal(d.([]byte), &xssInput)
+					if err != nil {
+						logger.Warnf("Error Unmarshalling JSON %s", err)
+						continue
+					}
+					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, xssInput.Url)
+					handler(&xssInput)
 				case func(*Opts):
 					localOpts := &Opts{
 						Module:         opts.Module,

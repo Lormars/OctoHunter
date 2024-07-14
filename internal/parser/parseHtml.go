@@ -67,11 +67,12 @@ func ExtractUrls(baseUrl, response string) []string {
 // it will return true if the signature is found in the HTML body
 // it will also return the location of the signature
 // location can be "attribute", "tag" or "both"
-func ExtractSignature(htmlBody, signature string) (bool, string) {
+func ExtractSignature(htmlBody, signature string) (bool, string, map[string]bool) {
+	foundLocations := map[string]bool{}
 	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlBody))
 	if err != nil {
 		logger.Warnf("Error parsing HTML: %v\n", err)
-		return false, ""
+		return false, "", foundLocations
 	}
 
 	inAttr := false
@@ -82,6 +83,8 @@ func ExtractSignature(htmlBody, signature string) (bool, string) {
 			if strings.Contains(attr.Val, signature) {
 				//found in attribute
 				inAttr = true
+				location := fmt.Sprintf("%s:%s", s.Nodes[0].Data, attr.Key)
+				foundLocations[location] = true
 
 			}
 		}
@@ -89,17 +92,18 @@ func ExtractSignature(htmlBody, signature string) (bool, string) {
 		if strings.Contains(s.Text(), signature) {
 			//found between tags
 			inTags = true
-
+			location := fmt.Sprintf("%s:tag", s.Nodes[0].Data)
+			foundLocations[location] = true
 		}
 	})
 
 	if inAttr && !inTags {
-		return true, "attribute"
+		return true, "attribute", foundLocations
 	} else if inTags && !inAttr {
-		return true, "tag"
+		return true, "tag", foundLocations
 	} else if inAttr && inTags {
-		return true, "both"
+		return true, "both", foundLocations
 	} else {
-		return false, ""
+		return false, "", foundLocations
 	}
 }

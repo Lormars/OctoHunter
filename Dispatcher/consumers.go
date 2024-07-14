@@ -25,6 +25,7 @@ func Init(opts *common.Opts) {
 		go dividerConsumer(opts)
 		go raceConditionConsumer(opts)
 		go corsConsumer(opts)
+		go xssConsumer(opts)
 
 	}
 	for i := 0; i < opts.Concurrency; i++ {
@@ -37,6 +38,10 @@ func Init(opts *common.Opts) {
 		go fuzzAPIConsumer(opts)
 		go fuzzUnkeyedConsumer(opts)
 	}
+}
+
+func xssConsumer(opts *common.Opts) {
+	common.XssP.ConsumeMessage(modules.Xss, opts)
 }
 
 func fuzzUnkeyedConsumer(opts *common.Opts) {

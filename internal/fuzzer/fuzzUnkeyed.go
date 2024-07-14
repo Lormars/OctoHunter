@@ -69,6 +69,7 @@ func FuzzUnkeyed(urlStr string) {
 	var mu sync.Mutex
 	paramIndex := 0
 	headerIndex := 0
+	foundLocations := make(map[string]bool)
 
 	parsed, err := url.Parse(urlStr)
 	if err != nil {
@@ -148,10 +149,21 @@ func FuzzUnkeyed(urlStr string) {
 								notify.SendMessage(msg)
 							}
 						} else if param[1] == "param" {
-							inBody, location := parser.ExtractSignature(resp.Body, sig)
-							if inBody {
+							inBody, location, found := parser.ExtractSignature(resp.Body, sig)
+							mu.Lock()
+							if inBody && !common.IsSuperset(foundLocations, found) {
 								logger.Warnf("[Fuzz Unkeyed Debug] parameter found: %s on %s on %s", param[0], urlStr, location)
+								common.MergeMaps(foundLocations, found)
+								mu.Unlock()
+								xssInput := &common.XssInput{
+									Url:      urlStr,
+									Param:    param[0],
+									Location: location,
+								}
+								common.XssP.PublishMessage(xssInput)
+
 							}
+							mu.Unlock()
 						}
 					} else if matcher.HeaderValueContainsSignature(resp, sig) {
 						if param[1] == "param" {
