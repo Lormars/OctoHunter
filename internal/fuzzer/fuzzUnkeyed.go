@@ -126,14 +126,14 @@ func FuzzUnkeyed(urlStr string) {
 				}
 
 				logger.Debugf("[DEBUG] Checking %s", parsedURL.String())
-				logger.Warnf("[DEBUG] Headers: %v", req.Header)
+				logger.Debugf("[DEBUG] Headers: %v", req.Header)
 
 				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 				if err != nil {
 					continue
 				}
 				for sig, param := range sigMap {
-
+					//if value is reflected in response body
 					if strings.Contains(resp.Body, sig) {
 						if param[1] == "header" {
 							//check if this header is unkeyed
@@ -143,16 +143,22 @@ func FuzzUnkeyed(urlStr string) {
 								continue
 							}
 							//if the signature is still there, then it is unkeyed and cached
+							//can directly report it, as it is already interesting to have a header reflected in the body
 							if strings.Contains(resp.Body, sig) {
 								msg := fmt.Sprintf("[Fuzz Unkeyed] Unkeyed header found: %s on %s", param[0], urlStr)
 								common.OutputP.PublishMessage(msg)
 								notify.SendMessage(msg)
 							}
 						} else if param[1] == "param" {
+							//the location is either "attribute", "tag", or "both".
+							//found is map of string and bool, and string represents the tag/attribute the signature is found in
 							inBody, location, found := parser.ExtractSignature(resp.Body, sig)
 							mu.Lock()
+							//check again if the signature is reflected in body, and
+							//if the location (attr/tag) is not already found by other params
+							//this is necessary to avoid duplicate reports of params reflected in the same location
 							if inBody && !common.IsSuperset(foundLocations, found) {
-								logger.Warnf("[Fuzz Unkeyed Debug] parameter found: %s on %s on %s", param[0], urlStr, location)
+								logger.Debugf("[Fuzz Unkeyed Debug] parameter found: %s on %s on %s", param[0], urlStr, location)
 								common.MergeMaps(foundLocations, found)
 								mu.Unlock()
 								xssInput := &common.XssInput{
@@ -160,27 +166,21 @@ func FuzzUnkeyed(urlStr string) {
 									Param:    param[0],
 									Location: location,
 								}
+								//publish the xssInput to the broker
 								common.XssP.PublishMessage(xssInput)
 
+							} else {
+								mu.Unlock() //a little ugly
 							}
-							mu.Unlock()
 						}
+						//if value is reflected in response header
 					} else if matcher.HeaderValueContainsSignature(resp, sig) {
 						if param[1] == "param" {
 							//if param is in header value, then can check if CRLF injection is possible
 							common.SplittingP.PublishMessage(resp)
 						}
 					}
-
-					// if strings.Contains(resp.Body, sig) || matcher.HeaderValueContainsSignature(resp, sig) {
-					// 	logger.Warnf("Unkeyed parameter found: %s on %s", param[0], urlStr)
-					// }
-
 				}
-				// if strings.Contains(resp.Body, prefix) || matcher.HeaderValueContainsSignature(resp, prefix) {
-				// 	msg := fmt.Sprintf("[Unkeyed] Unkeyed prefix found on %s", urlStr)
-				// }
-
 			}
 		}()
 	}
