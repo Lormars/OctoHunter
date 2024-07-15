@@ -29,7 +29,7 @@ func CheckSSTI(input *common.XssInput) {
 		return
 	}
 
-	logger.Warnf("Checking SSTI for %s for param %s\n", input.Url, input.Param)
+	logger.Debugf("Checking SSTI for %s for param %s\n", input.Url, input.Param)
 
 	parsedURL, err := url.Parse(input.Url)
 	if err != nil {
