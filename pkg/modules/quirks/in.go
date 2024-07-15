@@ -39,12 +39,12 @@ func CheckQuirks(res *common.ServerResult) {
 
 	// logger.Warnf("Checking quirks for %s\n", res.Url)
 
-	if strings.HasSuffix(result.Url, ".css") &&
-		strings.HasSuffix(result.Url, ".png") &&
-		strings.HasSuffix(result.Url, ".jpg") &&
-		strings.HasSuffix(result.Url, ".jpeg") &&
-		strings.HasSuffix(result.Url, ".gif") &&
-		strings.HasSuffix(result.Url, ".svg") &&
+	if strings.HasSuffix(result.Url, ".css") ||
+		strings.HasSuffix(result.Url, ".png") ||
+		strings.HasSuffix(result.Url, ".jpg") ||
+		strings.HasSuffix(result.Url, ".jpeg") ||
+		strings.HasSuffix(result.Url, ".gif") ||
+		strings.HasSuffix(result.Url, ".svg") ||
 		strings.HasSuffix(result.Url, ".ico") {
 		return
 	}
