@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
@@ -18,10 +19,11 @@ var errbased = `<%'${{/#{@}}%>{{`
 var nonerrbased = []string{
 	`p ">[[${{1}}]]`, `<%=1%>@*#{1}`, `{##}/*{{.}}*/`,
 }
-var signatures = []string{
-	`p ">[[$1]]`, `{##}/**/`, `p ">[[$]]`, `<a>p`, `p ">[[${1}]]`, `<p>">[[${{1}}]]</p>`,
-	`1@*#{1}`, `<%=1%>@*1`, `<%=1%>`, `p ">1`, `&lt;%=1%&gt;@*#{1}`, `{##}`,
-}
+
+// var signatures = []string{
+// 	`p ">[[$1]]`, `{##}/**/`, `p ">[[$]]`, `<a>p`, `p ">[[${1}]]`, `<p>">[[${{1}}]]</p>`,
+// 	`1@*#{1}`, `<%=1%>@*1`, `<%=1%>`, `p ">1`, `&lt;%=1%&gt;@*#{1}`, `{##}`,
+// }
 
 func CheckSSTI(input *common.XssInput) {
 
@@ -55,7 +57,8 @@ func CheckSSTI(input *common.XssInput) {
 		common.OutputP.PublishMessage(msg)
 		notify.SendMessage(msg)
 	} else {
-		for _, nonerr := range nonerrbased {
+		sstiSuspect := make(map[string][]string)
+		for index, nonerr := range nonerrbased {
 			queries.Set(input.Param, nonerr)
 			parsedURL.RawQuery = queries.Encode()
 
@@ -67,14 +70,51 @@ func CheckSSTI(input *common.XssInput) {
 			if err != nil {
 				continue
 			}
-			for _, sig := range signatures {
-				if strings.Contains(resp.Body, sig) {
-					msg := fmt.Sprintf("[SSTI NonErrbased] %s in %s using %s", input.Param, input.Url, nonerr)
-					common.OutputP.PublishMessage(msg)
-					notify.SendMessage(msg)
+
+			if len(sstiSuspect) == 0 {
+				if index != 0 {
 					return
 				}
+				for key, values := range asset.SSTIPoly {
+					var toCheck string
+					if values[index] == "Unmodified" {
+						toCheck = nonerr
+					} else if values[index] != "Error" {
+						toCheck = values[index]
+					} else {
+						continue
+					}
+					if strings.Contains(resp.Body, toCheck) {
+						sstiSuspect[key] = values
+					}
+				}
+			} else {
+				for key, values := range sstiSuspect {
+					var toCheck string
+					if values[index] == "Unmodified" {
+						toCheck = nonerr
+					} else if values[index] != "Error" {
+						toCheck = values[index]
+					} else {
+						delete(sstiSuspect, key)
+						continue
+					}
+					if !strings.Contains(resp.Body, toCheck) {
+						delete(sstiSuspect, key)
+					}
+				}
 			}
+
+		}
+		if len(sstiSuspect) > 0 {
+			var allSuspects string
+			for key := range sstiSuspect {
+				allSuspects += key + " or "
+			}
+			msg := fmt.Sprintf("[SSTI NonErrbased] %s in %s possibly using %s", input.Param, input.Url, allSuspects)
+			common.OutputP.PublishMessage(msg)
+			notify.SendMessage(msg)
+			return
 		}
 	}
 
