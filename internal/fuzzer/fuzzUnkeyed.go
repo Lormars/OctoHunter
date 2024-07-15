@@ -60,6 +60,7 @@ func FuzzUnkeyed(urlStr string) {
 	}
 
 	//check if the page is cacheable
+	//cannot do it here anymore since we are also checking for ssti
 	// cacheable := checker.CheckCacheable(urlStr)
 
 	paramLength := len(UnkeyedParam)
@@ -130,9 +131,12 @@ func FuzzUnkeyed(urlStr string) {
 				if err != nil {
 					continue
 				}
+
+				found := false
 				for sig, param := range sigMap {
 					//if value is reflected in response body
 					if strings.Contains(resp.Body, sig) {
+						found = true
 						if param[1] == "header" {
 							//check if this header is unkeyed
 							req.Header.Del(header)
@@ -167,8 +171,9 @@ func FuzzUnkeyed(urlStr string) {
 								}
 								// if cacheable {
 								//publish the xssInput to the broker
-								common.XssP.PublishMessage(xssInput)
+								common.XssP.PublishMessage(xssInput) //this only checks for possible xss. It has nothing to do checking if the param itself is unkeyed though.
 								// }
+
 								//ssti check
 								sstiInput := &common.XssInput{
 									Url:   urlStr,
@@ -184,10 +189,21 @@ func FuzzUnkeyed(urlStr string) {
 
 						//if value is reflected in response header
 					} else if matcher.HeaderValueContainsSignature(resp, sig) {
+						found = true
 						if param[1] == "param" {
 							//if param is in header value, then can check if CRLF injection is possible
 							common.SplittingP.PublishMessage(resp)
 						}
+					}
+				}
+
+				if !found {
+					//this is interesting, as it means that the exact signature is not found, but the prefix is found,
+					//which means that the a signature from previous requests is cached
+					if strings.Contains(resp.Body, prefix) {
+						msg := fmt.Sprintf("[Fuzz Unkeyed] Prefix %s found on %s", prefix, urlStr)
+						common.OutputP.PublishMessage(msg)
+						notify.SendMessage(msg)
 					}
 				}
 			}

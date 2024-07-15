@@ -132,7 +132,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		}
 		start := time.Now()
 
-		logger.Debugf("Making request: at %s\n", req.URL.String(), start)
+		logger.Debugf("Making request: at %s\n", req.URL.String())
 
 		randomIndex := rand.Intn(len(asset.Useragent))
 		randomAgent := asset.Useragent[randomIndex]

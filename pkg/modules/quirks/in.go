@@ -39,6 +39,16 @@ func CheckQuirks(res *common.ServerResult) {
 
 	// logger.Warnf("Checking quirks for %s\n", res.Url)
 
+	if strings.HasSuffix(result.Url, ".css") &&
+		strings.HasSuffix(result.Url, ".png") &&
+		strings.HasSuffix(result.Url, ".jpg") &&
+		strings.HasSuffix(result.Url, ".jpeg") &&
+		strings.HasSuffix(result.Url, ".gif") &&
+		strings.HasSuffix(result.Url, ".svg") &&
+		strings.HasSuffix(result.Url, ".ico") {
+		return
+	}
+
 	if !cacher.CheckCache(res.Url, "quirks") {
 		return
 	}
@@ -88,18 +98,10 @@ func CheckQuirks(res *common.ServerResult) {
 
 	go isdynamic()
 
-	go bodyreflected()
-
-	if checker.CheckAccess(result) &&
-		!strings.HasSuffix(result.Url, ".css") &&
-		!strings.HasSuffix(result.Url, ".png") &&
-		!strings.HasSuffix(result.Url, ".jpg") &&
-		!strings.HasSuffix(result.Url, ".jpeg") &&
-		!strings.HasSuffix(result.Url, ".gif") &&
-		!strings.HasSuffix(result.Url, ".svg") &&
-		!strings.HasSuffix(result.Url, ".ico") {
+	if checker.CheckAccess(result) {
 		if result.Body != "" {
-			common.FuzzUnkeyedP.PublishMessage(result.Url)
+			go bodyreflected()
+			go common.FuzzUnkeyedP.PublishMessage(result.Url)
 		}
 	}
 
