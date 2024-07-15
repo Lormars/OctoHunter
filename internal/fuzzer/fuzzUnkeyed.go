@@ -74,8 +74,11 @@ func FuzzUnkeyed(urlStr string) {
 	if err != nil {
 		return
 	}
+
+	found := 0
 	for i := 0; i < 50; i++ {
 		go func() {
+
 			for {
 				mu.Lock()
 				if paramIndex >= paramLength && headerIndex >= headerLength {
@@ -108,6 +111,12 @@ func FuzzUnkeyed(urlStr string) {
 					header = UnkeyedHeader[headerIndex]
 					headerIndex++
 				}
+
+				//reset found to 0 if it is not disabled. (meaning if it is not already reported that there is a persistent parameter issue)
+				if found != -1 {
+					found = 0
+				}
+
 				mu.Unlock()
 				req, err := http.NewRequest("GET", parsedURL.String(), nil)
 				if err != nil {
@@ -132,11 +141,12 @@ func FuzzUnkeyed(urlStr string) {
 					continue
 				}
 
-				found := false
 				for sig, param := range sigMap {
 					//if value is reflected in response body
 					if strings.Contains(resp.Body, sig) {
-						found = true
+						mu.Lock()
+						found = 1
+						mu.Unlock()
 						if param[1] == "header" {
 							//check if this header is unkeyed
 							req.Header.Del(header)
@@ -189,21 +199,28 @@ func FuzzUnkeyed(urlStr string) {
 
 						//if value is reflected in response header
 					} else if matcher.HeaderValueContainsSignature(resp, sig) {
-						found = true
+						mu.Lock()
+						found = 1
+						mu.Unlock()
 						if param[1] == "param" {
 							//if param is in header value, then can check if CRLF injection is possible
 							common.SplittingP.PublishMessage(resp)
 						}
 					}
 				}
-
-				if !found {
+				mu.Lock()
+				notfound := found == 0
+				mu.Unlock()
+				if notfound {
 					//this is interesting, as it means that the exact signature is not found, but the prefix is found,
 					//which means that the a signature from previous requests is cached
 					if strings.Contains(resp.Body, prefix) {
 						msg := fmt.Sprintf("[Fuzz Unkeyed] Prefix %s found on %s", prefix, urlStr)
 						common.OutputP.PublishMessage(msg)
 						notify.SendMessage(msg)
+						mu.Lock()
+						found = -1 //just disable it in current url to prevent information flood
+						mu.Unlock()
 					}
 				}
 			}
