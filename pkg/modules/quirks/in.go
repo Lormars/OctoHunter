@@ -39,6 +39,8 @@ func CheckQuirks(res *common.ServerResult) {
 
 	// logger.Warnf("Checking quirks for %s\n", res.Url)
 
+	result = res
+
 	if strings.HasSuffix(result.Url, ".css") ||
 		strings.HasSuffix(result.Url, ".png") ||
 		strings.HasSuffix(result.Url, ".jpg") ||
@@ -52,8 +54,6 @@ func CheckQuirks(res *common.ServerResult) {
 	if !cacher.CheckCache(res.Url, "quirks") {
 		return
 	}
-
-	result = res
 
 	//dependency confusion check
 	if strings.Contains(result.Body, "package.json") ||
