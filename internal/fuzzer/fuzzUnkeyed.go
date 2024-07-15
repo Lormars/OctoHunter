@@ -113,9 +113,7 @@ func FuzzUnkeyed(urlStr string) {
 				}
 
 				//reset found to 0 if it is not disabled. (meaning if it is not already reported that there is a persistent parameter issue)
-				if found != -1 {
-					found = 0
-				}
+				found = updateFound(found, 0)
 
 				mu.Unlock()
 				req, err := http.NewRequest("GET", parsedURL.String(), nil)
@@ -145,7 +143,7 @@ func FuzzUnkeyed(urlStr string) {
 					//if value is reflected in response body
 					if strings.Contains(resp.Body, sig) {
 						mu.Lock()
-						found = 1
+						found = updateFound(found, 1)
 						mu.Unlock()
 						if param[1] == "header" {
 							//check if this header is unkeyed
@@ -200,7 +198,7 @@ func FuzzUnkeyed(urlStr string) {
 						//if value is reflected in response header
 					} else if matcher.HeaderValueContainsSignature(resp, sig) {
 						mu.Lock()
-						found = 1
+						found = updateFound(found, 1)
 						mu.Unlock()
 						if param[1] == "param" {
 							//if param is in header value, then can check if CRLF injection is possible
@@ -226,4 +224,11 @@ func FuzzUnkeyed(urlStr string) {
 			}
 		}()
 	}
+}
+
+func updateFound(source, target int) int {
+	if source != -1 {
+		source = target
+	}
+	return source
 }
