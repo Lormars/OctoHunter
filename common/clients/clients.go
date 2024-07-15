@@ -28,7 +28,7 @@ var (
 	cleanupInterval        = 60 * time.Second
 	maxIdleTime            = 120 * time.Second
 	totalData        int64 = 0
-	concurrentReq          = 0
+	concurrentReq          = make(chan struct{}, 300)
 	mu               sync.Mutex
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
@@ -132,7 +132,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		}
 		start := time.Now()
 
-		logger.Debugf("Making request: %s %s%s at %s\n", req.Method, currentHost, req.URL.Path, start)
+		logger.Debugf("Making request: at %s\n", req.URL.String(), start)
 
 		randomIndex := rand.Intn(len(asset.Useragent))
 		randomAgent := asset.Useragent[randomIndex]
@@ -156,7 +156,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 
 		// Measure concurrent requests
 		mu.Lock()
-		concurrentReq++
+		concurrentReq <- struct{}{}
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
@@ -169,7 +169,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			// If this was not the last attempt, wait before retrying
 			if attempt < maxRetries-1 {
 				mu.Lock()
-				concurrentReq--
+				<-concurrentReq
 				allRequestsCount--
 				mu.Unlock()
 				time.Sleep(retryDelay)
@@ -177,7 +177,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				continue
 			}
 			mu.Lock()
-			concurrentReq--
+			<-concurrentReq
 			health.ProxyHealthInstance.AddBad(proxy)
 			errRequestsCount++
 			mu.Unlock()
@@ -226,7 +226,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
 
 		mu.Lock()
-		concurrentReq--
+		<-concurrentReq
 		mu.Unlock()
 
 		return resp, nil
@@ -276,7 +276,7 @@ func GetTotalDataTransferred() float64 {
 func GetConcurrentRequests() int {
 	mu.Lock()
 	defer mu.Unlock()
-	return concurrentReq
+	return len(concurrentReq)
 }
 
 // This calculates the bad rate and error rate for all hosts for all requests.

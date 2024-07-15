@@ -37,7 +37,12 @@ func Init(opts *common.Opts) {
 		go pathTraversalConsumer(opts)
 		go fuzzAPIConsumer(opts)
 		go fuzzUnkeyedConsumer(opts)
+		go sstiConsumer(opts)
 	}
+}
+
+func sstiConsumer(opts *common.Opts) {
+	common.SstiP.ConsumeMessage(modules.CheckSSTI, opts)
 }
 
 func xssConsumer(opts *common.Opts) {

@@ -60,9 +60,7 @@ func FuzzUnkeyed(urlStr string) {
 	}
 
 	//check if the page is cacheable
-	if !checker.CheckCacheable(urlStr) {
-		return
-	}
+	// cacheable := checker.CheckCacheable(urlStr)
 
 	paramLength := len(UnkeyedParam)
 	headerLength := len(UnkeyedHeader)
@@ -150,6 +148,7 @@ func FuzzUnkeyed(urlStr string) {
 								notify.SendMessage(msg)
 							}
 						} else if param[1] == "param" {
+
 							//the location is either "attribute", "tag", or "both".
 							//found is map of string and bool, and string represents the tag/attribute the signature is found in
 							inBody, location, found := parser.ExtractSignature(resp.Body, sig)
@@ -166,13 +165,23 @@ func FuzzUnkeyed(urlStr string) {
 									Param:    param[0],
 									Location: location,
 								}
+								// if cacheable {
 								//publish the xssInput to the broker
 								common.XssP.PublishMessage(xssInput)
+								// }
+								//ssti check
+								sstiInput := &common.XssInput{
+									Url:   urlStr,
+									Param: param[0],
+								}
+								common.SstiP.PublishMessage(sstiInput)
 
 							} else {
 								mu.Unlock() //a little ugly
 							}
+
 						}
+
 						//if value is reflected in response header
 					} else if matcher.HeaderValueContainsSignature(resp, sig) {
 						if param[1] == "param" {

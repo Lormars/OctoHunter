@@ -15,6 +15,7 @@ import (
 	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/matcher"
 	"github.com/lormars/octohunter/internal/notify"
+	"github.com/lormars/octohunter/internal/parser"
 )
 
 //Quirks is a general scanner that scan for intersting http responses.
@@ -87,6 +88,8 @@ func CheckQuirks(res *common.ServerResult) {
 
 	go isdynamic()
 
+	go bodyreflected()
+
 	if checker.CheckAccess(result) &&
 		!strings.HasSuffix(result.Url, ".css") &&
 		!strings.HasSuffix(result.Url, ".png") &&
@@ -100,6 +103,40 @@ func CheckQuirks(res *common.ServerResult) {
 		}
 	}
 
+}
+
+func bodyreflected() {
+	//check whether any param value is reflected in body
+	parsedURL, err := url.Parse(result.Url)
+	if err != nil {
+		return
+	}
+
+	params := parsedURL.Query()
+
+	for param, values := range params {
+		for _, value := range values {
+			if len(value) >= 4 && strings.Contains(result.Body, value) {
+				//ssti
+				sstiInput := &common.XssInput{
+					Url:   result.Url,
+					Param: param,
+				}
+				common.SstiP.PublishMessage(sstiInput)
+				//xss
+				inBody, location, _ := parser.ExtractSignature(result.Body, value)
+				if inBody {
+					xssInput := &common.XssInput{
+						Url:      result.Url,
+						Param:    param,
+						Location: location,
+					}
+					common.XssP.PublishMessage(xssInput)
+				}
+
+			}
+		}
+	}
 }
 
 func checkJSONP() {
