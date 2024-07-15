@@ -69,7 +69,7 @@ func CheckSSTI(input *common.XssInput) {
 			}
 			for _, sig := range signatures {
 				if strings.Contains(resp.Body, sig) {
-					msg := fmt.Sprintf("[SSTI NonErrbased] %s in %s", input.Param, input.Url)
+					msg := fmt.Sprintf("[SSTI NonErrbased] %s in %s using %s", input.Param, input.Url, nonerr)
 					common.OutputP.PublishMessage(msg)
 					notify.SendMessage(msg)
 					return
