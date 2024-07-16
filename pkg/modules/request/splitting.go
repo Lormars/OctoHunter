@@ -1,7 +1,6 @@
 package request
 
 import (
-	"bufio"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -46,7 +45,7 @@ func paramSplitTest(result *common.ServerResult) {
 
 	parsedURL, err := url.Parse(result.Url)
 	if err != nil {
-		logger.Debugf("Error parsing URL: %v\n", err)
+		logger.Warnf("Error parsing URL: %v\n", err)
 	}
 
 	//to filter out the parameters that are not controllable
@@ -67,7 +66,7 @@ func paramSplitTest(result *common.ServerResult) {
 			parsedURL.RawQuery = queryParams.Encode()
 			req, err := http.NewRequest("GET", parsedURL.String(), nil)
 			if err != nil {
-				logger.Debugf("Error creating request: %v", err)
+				logger.Warnf("Error creating request: %v", err)
 				return
 			}
 			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
@@ -119,11 +118,9 @@ func paramSplitTest(result *common.ServerResult) {
 					}
 				}
 				parsedURL.RawQuery = rawQuery
-				rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", parsedURL.RequestURI(), parsedURL.Host)
-				reader := bufio.NewReader(strings.NewReader(rawRequest))
-				req, err := http.ReadRequest(reader)
+				req, err := http.NewRequest("GET", parsedURL.String(), nil)
 				if err != nil {
-					logger.Debugf("Error creating request: %v", err)
+					logger.Warnf("Error creating request: %v", err)
 					return
 				}
 				resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
@@ -131,6 +128,7 @@ func paramSplitTest(result *common.ServerResult) {
 					logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
 					return
 				}
+				logger.Debugf("[Path Split] Param Testing for HTTP Request Splitting: %s\n", resp.Url)
 				logger.Debugf("[Param Split] Testing for HTTP Request Splitting: %s on param %s\n", result.Url, param)
 				if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
 					msg := fmt.Sprintf("[Param Split] Vulnerable to HTTP Request Splitting: %s\n", parsedURL.String())
@@ -177,18 +175,19 @@ func pathSplitTest(result *common.ServerResult) {
 			defer wg.Done()
 			path := fmt.Sprintf("%sX-Injected:%%20whatANiceDay%s", payload, payload)
 			payloadUrl := fmt.Sprintf("/%s", path)
-			rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", payloadUrl, parsedUrl.Host)
-			reader := bufio.NewReader(strings.NewReader(rawRequest))
-			req, err := http.ReadRequest(reader)
+			schemeWithHostname := fmt.Sprintf("%s://%s", parsedUrl.Scheme, parsedUrl.Host)
+			req, err := http.NewRequest("GET", schemeWithHostname, nil)
 			if err != nil {
 				logger.Errorf("Error creating request: %v", err)
 				return
 			}
+			req.URL.Opaque = "//" + parsedUrl.Host + payloadUrl
 			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", payloadUrl, err)
 				return
 			}
+			logger.Debugf("[Path Split] Testing for HTTP Request Splitting: %s\n", resp.Url)
 			logger.Debugf("[Path Split] Testing for HTTP Request Splitting: %s\n", result.Url)
 			if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
 				msg := fmt.Sprintf("[Path Split] Vulnerable to HTTP Request Splitting: %s\n", payloadUrl)
