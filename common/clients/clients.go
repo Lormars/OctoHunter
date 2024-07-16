@@ -155,8 +155,9 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		}
 
 		// Measure concurrent requests
-		mu.Lock()
+
 		concurrentReq <- struct{}{}
+		mu.Lock()
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
@@ -168,16 +169,18 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			logger.Debugf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
 			// If this was not the last attempt, wait before retrying
 			if attempt < maxRetries-1 {
-				mu.Lock()
+
 				<-concurrentReq
+				mu.Lock()
 				allRequestsCount--
 				mu.Unlock()
 				time.Sleep(retryDelay)
 				retryDelay *= 2 // Exponential backoff
 				continue
 			}
-			mu.Lock()
+
 			<-concurrentReq
+			mu.Lock()
 			health.ProxyHealthInstance.AddBad(proxy)
 			errRequestsCount++
 			mu.Unlock()
@@ -225,9 +228,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
 
-		mu.Lock()
 		<-concurrentReq
-		mu.Unlock()
 
 		return resp, nil
 	}
