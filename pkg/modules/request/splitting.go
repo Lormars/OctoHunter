@@ -17,7 +17,12 @@ import (
 )
 
 func RequestSplitting(result *common.ServerResult) {
-	if !cacher.CheckCache(result.Url, "split") {
+	parsedURL, err := url.Parse(result.Url)
+	if err != nil {
+		return
+	}
+	parsedURL.RawQuery = "" //only used for caching
+	if !cacher.CheckCache(parsedURL.String(), "split") {
 		return
 	}
 	paramSplitTest(result)
