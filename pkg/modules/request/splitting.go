@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -50,30 +51,40 @@ func paramSplitTest(result *common.ServerResult) {
 
 	//to filter out the parameters that are not controllable
 	var controllable []string
+	var wg sync.WaitGroup
+	var mu sync.Mutex
 	for _, param := range params {
-		queryParams := parsedURL.Query()
-		signature, err := generator.GenerateSignature()
-		if err != nil {
-			logger.Debugf("Error generating signature: %v\n", err)
-			return
-		}
-		queryParams.Set(param, signature)
-		parsedURL.RawQuery = queryParams.Encode()
-		req, err := http.NewRequest("GET", parsedURL.String(), nil)
-		if err != nil {
-			logger.Debugf("Error creating request: %v", err)
-			continue
-		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
-		if err != nil {
-			logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
-			continue
-		}
-		if ok, _ := matcher.HeadercontainsQueryParamValue(resp, signature); ok {
-			controllable = append(controllable, param)
-		}
+		wg.Add(1)
+		go func(param string) {
+			defer wg.Done()
+			queryParams := parsedURL.Query()
+			signature, err := generator.GenerateSignature()
+			if err != nil {
+				logger.Debugf("Error generating signature: %v\n", err)
+				return
+			}
+			queryParams.Set(param, signature)
+			parsedURL.RawQuery = queryParams.Encode()
+			req, err := http.NewRequest("GET", parsedURL.String(), nil)
+			if err != nil {
+				logger.Debugf("Error creating request: %v", err)
+				return
+			}
+			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+			if err != nil {
+				logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
+				return
+			}
+			if ok, _ := matcher.HeadercontainsQueryParamValue(resp, signature); ok {
+				mu.Lock()
+				controllable = append(controllable, param)
+				mu.Unlock()
+			}
 
+		}(param)
 	}
+
+	wg.Wait()
 
 	if len(controllable) == 0 {
 		return
@@ -81,51 +92,56 @@ func paramSplitTest(result *common.ServerResult) {
 
 	for _, param := range controllable {
 		for _, pay := range payloads {
-			queryParams := parsedURL.Query()
-			if err != nil {
-				logger.Debugf("Error generating signature: %v\n", err)
-				return
-			}
+			wg.Add(1)
+			go func(param, pay string) {
+				defer wg.Done()
+				queryParams := parsedURL.Query()
+				if err != nil {
+					logger.Debugf("Error generating signature: %v\n", err)
+					return
+				}
 
-			payload := fmt.Sprintf("whatATest%sX-Injected:%%20whatANiceDay%s", pay, pay)
-			queryParams.Set(param, payload)
+				payload := fmt.Sprintf("whatATest%sX-Injected:%%20whatANiceDay%s", pay, pay)
+				queryParams.Set(param, payload)
 
-			//had to make sure all other parameters are included and properly encoded in the URL
-			rawQuery := ""
-			for key, values := range queryParams {
-				for _, value := range values {
-					if rawQuery != "" {
-						rawQuery += "&"
-					}
-					if key != param {
-						rawQuery += key + "=" + url.QueryEscape(value)
-					} else {
-						rawQuery += key + "=" + value
+				//had to make sure all other parameters are included and properly encoded in the URL
+				rawQuery := ""
+				for key, values := range queryParams {
+					for _, value := range values {
+						if rawQuery != "" {
+							rawQuery += "&"
+						}
+						if key != param {
+							rawQuery += key + "=" + url.QueryEscape(value)
+						} else {
+							rawQuery += key + "=" + value
+						}
 					}
 				}
-			}
-			parsedURL.RawQuery = rawQuery
-			rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", parsedURL.RequestURI(), parsedURL.Host)
-			reader := bufio.NewReader(strings.NewReader(rawRequest))
-			req, err := http.ReadRequest(reader)
-			if err != nil {
-				logger.Debugf("Error creating request: %v", err)
-				continue
-			}
-			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
-			if err != nil {
-				logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
-				continue
-			}
-			logger.Debugf("[Param Split] Testing for HTTP Request Splitting: %s on param %s\n", result.Url, param)
-			if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
-				msg := fmt.Sprintf("[Param Split] Vulnerable to HTTP Request Splitting: %s\n", parsedURL.String())
-				logger.Infof(msg)
-				common.OutputP.PublishMessage(msg)
-			}
+				parsedURL.RawQuery = rawQuery
+				rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", parsedURL.RequestURI(), parsedURL.Host)
+				reader := bufio.NewReader(strings.NewReader(rawRequest))
+				req, err := http.ReadRequest(reader)
+				if err != nil {
+					logger.Debugf("Error creating request: %v", err)
+					return
+				}
+				resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+				if err != nil {
+					logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
+					return
+				}
+				logger.Debugf("[Param Split] Testing for HTTP Request Splitting: %s on param %s\n", result.Url, param)
+				if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
+					msg := fmt.Sprintf("[Param Split] Vulnerable to HTTP Request Splitting: %s\n", parsedURL.String())
+					logger.Infof(msg)
+					common.OutputP.PublishMessage(msg)
+				}
+			}(param, pay)
 		}
-
 	}
+
+	wg.Wait()
 }
 
 // This, right now, checks only for Location based path splitting that usually happen in http to https redirect
@@ -153,26 +169,33 @@ func pathSplitTest(result *common.ServerResult) {
 		return
 	}
 
+	var wg sync.WaitGroup
+
 	for _, payload := range payloads {
-		path := fmt.Sprintf("%sX-Injected:%%20whatANiceDay%s", payload, payload)
-		payloadUrl := fmt.Sprintf("/%s", path)
-		rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", payloadUrl, parsedUrl.Host)
-		reader := bufio.NewReader(strings.NewReader(rawRequest))
-		req, err := http.ReadRequest(reader)
-		if err != nil {
-			logger.Errorf("Error creating request: %v", err)
-			return
-		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
-		if err != nil {
-			logger.Debugf("Error getting response from %s: %v\n", payloadUrl, err)
-			return
-		}
-		logger.Debugf("[Path Split] Testing for HTTP Request Splitting: %s\n", result.Url)
-		if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
-			msg := fmt.Sprintf("[Path Split] Vulnerable to HTTP Request Splitting: %s\n", payloadUrl)
-			logger.Infof(msg)
-			common.OutputP.PublishMessage(msg)
-		}
+		wg.Add(1)
+		go func(payload string) {
+			defer wg.Done()
+			path := fmt.Sprintf("%sX-Injected:%%20whatANiceDay%s", payload, payload)
+			payloadUrl := fmt.Sprintf("/%s", path)
+			rawRequest := fmt.Sprintf("GET %s HTTP/1.1\r\nHost: %s\r\n\r\n", payloadUrl, parsedUrl.Host)
+			reader := bufio.NewReader(strings.NewReader(rawRequest))
+			req, err := http.ReadRequest(reader)
+			if err != nil {
+				logger.Errorf("Error creating request: %v", err)
+				return
+			}
+			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+			if err != nil {
+				logger.Debugf("Error getting response from %s: %v\n", payloadUrl, err)
+				return
+			}
+			logger.Debugf("[Path Split] Testing for HTTP Request Splitting: %s\n", result.Url)
+			if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
+				msg := fmt.Sprintf("[Path Split] Vulnerable to HTTP Request Splitting: %s\n", payloadUrl)
+				logger.Infof(msg)
+				common.OutputP.PublishMessage(msg)
+			}
+		}(payload)
 	}
+	wg.Wait()
 }
