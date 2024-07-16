@@ -6,9 +6,15 @@ import (
 	"net/http"
 
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
 )
+
+// for input scan, just use a normal client is fine
+var inClient = &http.Client{
+	CheckRedirect: func(req *http.Request, via []*http.Request) error {
+		return http.ErrUseLastResponse
+	},
+}
 
 // Usage: check if the server is online, using NoRedirectClient
 func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.ServerResult, error, error) {
@@ -21,41 +27,33 @@ func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.Serv
 	return httpResult, httpsResult, errhttp, errhttps
 }
 
-func checkServer(urlStr string) (*common.ServerResult, error) {
-
-	req, err := http.NewRequest("GET", urlStr, nil)
+func checkServer(url string) (*common.ServerResult, error) {
+	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v", err)
-		return &common.ServerResult{
-			Url:        urlStr,
-			FinalUrl:   nil,
-			Online:     false,
-			StatusCode: 0,
-			Headers:    nil,
-			Body:       "",
-		}, err
+		return nil, err
 	}
-	resp, err := CheckServerCustom(req, clients.NoRedirectClient)
+
+	resp, err := inClient.Do(req)
 	if err != nil {
-		logger.Debugf("Error getting response from %s: %v\n", urlStr, err)
-		return &common.ServerResult{
-			Url:        urlStr,
-			FinalUrl:   nil,
-			Online:     false,
-			StatusCode: 0,
-			Headers:    nil,
-			Body:       "",
-		}, err
+		logger.Debugf("Error getting response from %s: %v\n", url, err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Debugf("Error reading response body: %v", err)
+		bodyBytes = []byte{}
 	}
 
 	return &common.ServerResult{
-		Url:        urlStr,
+		Url:        url,
 		Online:     resp.StatusCode >= 100 && resp.StatusCode < 600,
 		StatusCode: resp.StatusCode,
-		Headers:    resp.Headers,
-		Body:       resp.Body,
+		Headers:    resp.Header,
+		Body:       string(bodyBytes),
 	}, nil
-
 }
 
 // The ultra-important requester for (nearly) all request...
