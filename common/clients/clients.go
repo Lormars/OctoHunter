@@ -28,7 +28,7 @@ var (
 	cleanupInterval        = 60 * time.Second
 	maxIdleTime            = 120 * time.Second
 	totalData        int64 = 0
-	concurrentReq          = make(chan struct{}, 200)
+	concurrentReq          = make(chan struct{}, 100)
 	mu               sync.Mutex
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
@@ -70,7 +70,7 @@ var ratelimiters = make(map[string]map[string]*rateLimiterEntry)
 func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	var proxy string
 	var ok bool
-	maxRetries := 3
+	maxRetries := 2
 	retryDelay := 1 * time.Second
 	acquireSemaphore := func() {
 		concurrentReq <- struct{}{}
@@ -181,7 +181,6 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				allRequestsCount--
 				mu.Unlock()
 				time.Sleep(retryDelay)
-				retryDelay *= 2 // Exponential backoff
 				continue
 			}
 
