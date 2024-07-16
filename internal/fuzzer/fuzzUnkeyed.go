@@ -76,7 +76,7 @@ func FuzzUnkeyed(urlStr string) {
 	}
 
 	found := 0
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 10; i++ {
 		go func() {
 
 			for {
