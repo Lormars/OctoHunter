@@ -213,6 +213,11 @@ func FuzzUnkeyed(urlStr string) {
 					//this is interesting, as it means that the exact signature is not found, but the prefix is found,
 					//which means that the a signature from previous requests is cached
 					if strings.Contains(resp.Body, prefix) {
+						hostname := parsed.Hostname()
+						if !cacher.CheckCache(hostname, "unkeyedPrefix") {
+							found = -1
+							continue
+						}
 						msg := fmt.Sprintf("[Fuzz Unkeyed] Prefix %s found on %s", prefix, urlStr)
 						common.OutputP.PublishMessage(msg)
 						notify.SendMessage(msg)
