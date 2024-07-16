@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -55,6 +56,7 @@ func fuzzAllPath(urlStr string) {
 			mu.Unlock()
 
 		}
+		time.Sleep(100 * time.Millisecond)
 
 		return true
 	})

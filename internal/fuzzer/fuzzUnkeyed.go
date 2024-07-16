@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -215,7 +216,9 @@ func FuzzUnkeyed(urlStr string) {
 					if strings.Contains(resp.Body, prefix) {
 						hostname := parsed.Hostname()
 						if !cacher.CheckCache(hostname, "unkeyedPrefix") {
+							mu.Lock()
 							found = -1
+							mu.Unlock()
 							continue
 						}
 						msg := fmt.Sprintf("[Fuzz Unkeyed] Prefix %s found on %s", prefix, urlStr)
@@ -226,6 +229,7 @@ func FuzzUnkeyed(urlStr string) {
 						mu.Unlock()
 					}
 				}
+				time.Sleep(100 * time.Millisecond)
 			}
 		}()
 	}

@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -85,6 +86,7 @@ func apifuzzerinit() {
 
 func apiWorker(tasks chan Fuzz3Part) {
 	for task := range tasks {
+		time.Sleep(100 * time.Millisecond)
 		//I just find it hard to believe that any api endpoint would be in http...
 		reconstructed := "https://" + task.Part1 + "/" + task.Part2 + "/" + task.Part3
 		//check cache to avoid fuzz the original input api endpoint

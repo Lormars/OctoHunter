@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -59,6 +60,7 @@ func FuzzPath(urlStr string) {
 				resultMap[resp.Body] = resp
 				mu.Unlock()
 			}
+			time.Sleep(100 * time.Millisecond)
 
 		}(path)
 	}
