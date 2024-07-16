@@ -79,8 +79,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	releaseSemaphore := func() {
 		<-concurrentReq
 	}
-	acquireSemaphore()
-	defer releaseSemaphore()
+
 	// Retry loop
 	for attempt := 0; attempt < maxRetries; attempt++ {
 		//first check if the request has a proxy set
@@ -169,7 +168,9 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
 
+		acquireSemaphore()
 		resp, err := lrt.Proxied.RoundTrip(req)
+		releaseSemaphore()
 		duration := time.Since(start)
 
 		if err != nil {
