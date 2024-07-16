@@ -166,6 +166,6 @@ func dispatchBroker() {
 			broker.ch <- true
 			close(broker.ch)
 		}
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 	}
 }
