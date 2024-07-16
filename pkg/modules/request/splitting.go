@@ -25,8 +25,17 @@ func RequestSplitting(result *common.ServerResult) {
 	if !cacher.CheckCache(parsedURL.String(), "split") {
 		return
 	}
-	paramSplitTest(result)
-	pathSplitTest(result)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		paramSplitTest(result)
+		wg.Done()
+	}()
+	go func() {
+		pathSplitTest(result)
+		wg.Done()
+	}()
+	wg.Wait()
 
 }
 
