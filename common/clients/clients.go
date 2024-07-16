@@ -162,13 +162,12 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			}
 		}
 
+		acquireSemaphore()
 		// Measure concurrent requests
 		mu.Lock()
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
-
-		acquireSemaphore()
 		resp, err := lrt.Proxied.RoundTrip(req)
 		releaseSemaphore()
 		duration := time.Since(start)
