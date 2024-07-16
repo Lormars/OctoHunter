@@ -58,9 +58,9 @@ func (drl *DynamicRateLimiter) Update(rps float64, burst int) {
 	if rps < 2 {
 		rps = 2
 		burst = 4
-	} else if rps > 10 {
-		rps = 10
-		burst = 12
+	} else if rps > 150 {
+		rps = 150
+		burst = 200
 	}
 	drl.updates <- rateParams{rps: rps, burst: burst}
 }

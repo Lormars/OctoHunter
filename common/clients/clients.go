@@ -227,7 +227,12 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			health.ProxyHealthInstance.AddBad(proxy)
 		} else {
 			health.ProxyHealthInstance.AddGood(proxy)
+			newrl := entry.ratelimiter.GetRPS() + 1
+			newbt := entry.ratelimiter.GetBurst() + 1
+			entry.ratelimiter.Update(newrl, newbt)
+			logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
 		}
+		logger.Infof("Current ratelimit for %s: %f\n", currentHost, entry.ratelimiter.GetRPS())
 		mu.Unlock()
 
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
