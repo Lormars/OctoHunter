@@ -10,6 +10,7 @@ import (
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 func PullCustomObjects(urlString string) error {
@@ -36,6 +37,7 @@ func PullCustomObjects(urlString string) error {
 	for _, match := range matches {
 		msg := "[Salesforce] Custom Object Found: " + match
 		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
 	}
 
 	return nil

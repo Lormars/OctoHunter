@@ -39,7 +39,17 @@ func CheckQuirks(res *common.ServerResult) {
 
 	// logger.Warnf("Checking quirks for %s\n", res.Url)
 
+	if !cacher.CheckCache(res.Url, "quirks") {
+		return
+	}
+
 	result = res
+
+	if strings.Contains(result.Url, "/_next/image") {
+		msg := fmt.Sprintf("[Quirks] Next.js Image URL in %s", result.Url)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+	}
 
 	if strings.HasSuffix(result.Url, ".css") ||
 		strings.HasSuffix(result.Url, ".png") ||
@@ -48,10 +58,6 @@ func CheckQuirks(res *common.ServerResult) {
 		strings.HasSuffix(result.Url, ".gif") ||
 		strings.HasSuffix(result.Url, ".svg") ||
 		strings.HasSuffix(result.Url, ".ico") {
-		return
-	}
-
-	if !cacher.CheckCache(res.Url, "quirks") {
 		return
 	}
 
