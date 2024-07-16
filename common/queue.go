@@ -8,6 +8,7 @@ import (
 )
 
 type Queue struct {
+	Host     string
 	Request  Request
 	RespChan chan []Response
 }
@@ -37,7 +38,24 @@ type PriorityQueue[T PriorityQueueItem] struct {
 	less  func(i, j int) bool
 }
 
-func (pq PriorityQueue[T]) Len() int { return len(pq.items) }
+func (pq PriorityQueue[T]) Len() int {
+	uniqueHosts := make(map[string]struct{})
+	for _, item := range pq.items {
+		var host string
+		switch v := any(item).(type) {
+		case *Queue:
+			host = v.Host
+		case *BrokerQueue:
+			host = v.Host
+		default:
+			continue
+		}
+		if _, exists := uniqueHosts[host]; !exists {
+			uniqueHosts[host] = struct{}{}
+		}
+	}
+	return len(uniqueHosts)
+}
 
 func (pq PriorityQueue[T]) Less(i, j int) bool {
 	return pq.less(i, j)
@@ -88,7 +106,7 @@ func AddToQueue(host string, reqs []*http.Request, client *http.Client) chan []R
 	queueLock.Lock()
 	defer queueLock.Unlock()
 	respChan := make(chan []Response)
-	heap.Push(pq, &Queue{Request: Request{Host: host, Client: client, Reqs: reqs}, RespChan: respChan})
+	heap.Push(pq, &Queue{Request: Request{Host: host, Client: client, Reqs: reqs}, Host: host, RespChan: respChan})
 	return respChan
 }
 
