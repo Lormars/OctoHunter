@@ -232,7 +232,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			entry.ratelimiter.Update(newrl, newbt)
 			logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
 		}
-		logger.Infof("Current ratelimit for %s: %f\n", currentHost, entry.ratelimiter.GetRPS())
+		logger.Debugf("Current ratelimit for %s: %f\n", currentHost, entry.ratelimiter.GetRPS())
 		mu.Unlock()
 
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
