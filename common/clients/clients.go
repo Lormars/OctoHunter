@@ -241,7 +241,9 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			Url:        resp.Request.URL.String(),
 			StatusCode: resp.StatusCode,
 		}
+		mu.Lock()
 		cmap.AddNode(nodeInput)
+		mu.Unlock()
 		return resp, nil
 	}
 
