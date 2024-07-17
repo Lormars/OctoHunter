@@ -29,6 +29,8 @@ func RaceCondition(urlStr string) {
 		return
 	}
 
+	common.AddToCrawlMap(urlStr, "race", 200) //TODO: can be accurate
+
 	// WaitGroup to wait for all goroutines to finish
 	var wg sync.WaitGroup
 	var mu sync.Mutex

@@ -52,6 +52,8 @@ func SingleRedirectCheck(opts *common.Opts) {
 		}
 	}
 
+	common.AddToCrawlMap(opts.Target, "redirect", 301) //TODO: can be more accurate
+
 	checkUnusualLength(finalURL, opts)
 	checkOpenRedirect(finalURL, opts)
 

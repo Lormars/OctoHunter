@@ -25,6 +25,9 @@ func RequestSplitting(result *common.ServerResult) {
 	if !cacher.CheckCache(parsedURL.String(), "split") {
 		return
 	}
+
+	common.AddToCrawlMap(result.Url, "split", result.StatusCode)
+
 	var wg sync.WaitGroup
 	wg.Add(2)
 	go func() {

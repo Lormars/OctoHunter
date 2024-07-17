@@ -31,6 +31,8 @@ func CheckSSTI(input *common.XssInput) {
 		return
 	}
 
+	common.AddToCrawlMap(input.Url, "ssti", 200) //TODO: can be accurate
+
 	logger.Debugf("Checking SSTI for %s for param %s\n", input.Url, input.Param)
 
 	parsedURL, err := url.Parse(input.Url)

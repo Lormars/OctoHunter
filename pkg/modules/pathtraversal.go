@@ -44,8 +44,10 @@ func CheckPathTraversal(urlStr string) {
 	}
 
 	if controlResp.StatusCode == 404 {
+		common.AddToCrawlMap(urlStr, "traversal", 404)
 		return
 	}
+	common.AddToCrawlMap(urlStr, "traversal", controlResp.StatusCode)
 
 	//only care about api endpoitns for now
 	contentType := controlResp.Headers.Get("Content-Type")

@@ -41,6 +41,8 @@ func CheckPathConfusion(urlStr string) {
 		return
 	}
 
+	common.AddToCrawlMap(urlStr, "pathconfusion", 200) //TODO: can be accurate
+
 	var wg sync.WaitGroup
 
 	for _, encoding := range encodings {

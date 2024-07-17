@@ -15,6 +15,7 @@ import (
 	"github.com/lormars/octohunter/common/clients/proxyP"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 // Two source of inputs:
@@ -45,6 +46,9 @@ func CheckCl0(urlstr string) {
 		logger.Debugf("Cache hit for %s\n", urlstr)
 		return
 	}
+
+	common.AddToCrawlMap(urlstr, "cl0", 200) //TODO: can be accurate
+
 	proxyP.Proxies.Mu.Lock()
 	proxy := proxyP.Proxies.Proxies[rand.Intn(len(proxyP.Proxies.Proxies))]
 	proxyP.Proxies.Mu.Unlock()
@@ -84,5 +88,9 @@ func CheckCl0(urlstr string) {
 	// fmt.Println(getResponse.Resp.StatusCode)
 	if getResponse.Resp.StatusCode == 404 && postResponse.Resp.StatusCode != 404 {
 		logger.Warnf("Potential CL0: %s\n", urlstr)
+		msg := "[CL0] Potential CL0 found: " + urlstr
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
 	}
+
 }

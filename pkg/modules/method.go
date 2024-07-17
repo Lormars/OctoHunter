@@ -46,6 +46,7 @@ func SingleMethodCheck(options *common.Opts) {
 				notify.SendMessage(msg)
 				common.OutputP.PublishMessage(msg)
 			}
+			common.AddToCrawlMap(options.Target, "method", ccode)
 		} else if errCtrl != nil || errTreat != nil {
 			logger.Debugf("Error testing access control: control - %v | treament - %v\n", errCtrl, errTreat)
 			break

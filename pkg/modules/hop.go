@@ -51,6 +51,9 @@ func SingleHopCheck(options *common.Opts) {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
 		return
 	}
+
+	common.AddToCrawlMap(options.Target, "hop", controlResp.StatusCode)
+
 	result, place := comparer.CompareResponse(controlResp, treatmentResp)
 	if !result && place == "status" {
 		if treatmentResp.StatusCode < 400 && controlResp.StatusCode != 429 {

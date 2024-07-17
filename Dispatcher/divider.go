@@ -21,6 +21,8 @@ func Divider(result *common.ServerResult) {
 		return
 	}
 
+	common.AddToCrawlMap(urlStr, "divider", result.StatusCode)
+
 	useHttps := strings.HasPrefix(urlStr, "https")
 
 	//tweaks

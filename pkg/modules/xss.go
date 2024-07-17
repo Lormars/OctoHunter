@@ -24,6 +24,8 @@ func Xss(xssInput *common.XssInput) {
 		return
 	}
 
+	common.AddToCrawlMap(xssInput.Url, "xss", 200) //TODO: can be accurate
+
 	// Do the xss check here
 	if xssInput.Location == "attribute" {
 		checkXssInAttribute(xssInput.Url, xssInput.Param)
