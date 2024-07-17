@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	cmap "github.com/lormars/crawlmap/pkg"
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients/health"
@@ -236,6 +237,11 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
 
+		nodeInput := &cmap.NodeInput{
+			Url:        resp.Request.URL.String(),
+			StatusCode: resp.StatusCode,
+		}
+		cmap.AddNode(nodeInput)
 		return resp, nil
 	}
 

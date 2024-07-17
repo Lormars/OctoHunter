@@ -61,6 +61,17 @@ func CheckQuirks(res *common.ServerResult) {
 		return
 	}
 
+	//secret miner
+	pattern := `(?i)(?:key|api|token|secret|client|passwd|password|auth|access)(?:[0-9a-z\\-_\\t .]{0,20})(?:[\\s|']|[\\s|\"]){0,3}(?:=|>|:{1,3}=|\\|\\|:|<=|=>|:|\\?=)(?:'|\"|\\s|=|\\x60){0,5}([0-9a-z\\-_.=]{10,150})(?:['|\"|\\n|\\r|\\s|\\x60|;]|$)`
+	re := regexp.MustCompile(pattern)
+	match := re.FindString(result.Body)
+	if match != "" {
+		msg := fmt.Sprintf("[Quirks] Secret Miner in %s: %s", result.Url, match)
+		common.OutputP.PublishMessage(msg)
+		notify.SendMessage(msg)
+		color.Red(msg)
+	}
+
 	//dependency confusion check
 	if strings.Contains(result.Body, "package.json") ||
 		strings.Contains(result.Body, "requirements.txt") ||

@@ -3,6 +3,8 @@ module github.com/lormars/octohunter
 go 1.22.3
 
 require (
+	github.com/BishopFox/jsluice v0.0.0-20240110145140-0ddfab153e06
+	github.com/PuerkitoBio/goquery v1.9.2
 	github.com/aws/aws-sdk-go-v2 v1.30.0
 	github.com/aws/aws-sdk-go-v2/config v1.27.22
 	github.com/aws/aws-sdk-go-v2/service/lightsail v1.40.0
@@ -10,6 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/gorilla/mux v1.8.1
 	github.com/joho/godotenv v1.5.1
+	github.com/lormars/crawlmap v0.0.1
 	github.com/lormars/http2 v0.0.0-20240701015325-423fec2c7501
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/miekg/dns v1.1.61
@@ -21,8 +24,6 @@ require (
 )
 
 require (
-	github.com/BishopFox/jsluice v0.0.0-20240110145140-0ddfab153e06 // indirect
-	github.com/PuerkitoBio/goquery v1.9.2 // indirect
 	github.com/andybalholm/brotli v1.0.6 // indirect
 	github.com/andybalholm/cascadia v1.3.2 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.17.22 // indirect

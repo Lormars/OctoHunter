@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"github.com/joho/godotenv"
+	cmap "github.com/lormars/crawlmap/pkg"
 	dispatcher "github.com/lormars/octohunter/Dispatcher"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -79,6 +80,8 @@ func main() {
 
 	common.Close()
 	logger.Infof("All connections closed. Exiting...\n")
+
+	cmap.Save("output")
 	if err := cmd.Process.Kill(); err != nil {
 		log.Fatalf("Error killing node server: %v", err)
 	}
