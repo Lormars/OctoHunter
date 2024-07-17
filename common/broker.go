@@ -144,7 +144,11 @@ func (p *Producer) PublishMessage(body interface{}) {
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
 		<-waitCh
-		p.messageChan <- messageBody
+		mu.Lock()
+		if !p.closed {
+			p.messageChan <- messageBody
+		}
+		mu.Unlock()
 	} else {
 		messageBody = []byte(body.(string))
 		err = p.pubCh.Publish(
