@@ -63,7 +63,9 @@ func Input(opts *common.Opts) {
 		file.Close()
 		close(lineCh)
 		wg.Wait()
-		common.OutputP.PublishMessage("Finished processing all domains")
+		if common.SendOutput {
+			common.OutputP.PublishMessage("Finished processing all domains")
+		}
 		notify.SendMessage("Finished processing all domains")
 		time.Sleep(1 * time.Hour)
 	}

@@ -82,7 +82,7 @@ func singleDork(options *common.Opts) {
 		for _, match := range matches {
 			fmt.Println(match)
 			msg := fmt.Sprintf("[Dork]: %s, Match: %s", query, match)
-			if options.Module.Contains("broker") {
+			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}
 		}

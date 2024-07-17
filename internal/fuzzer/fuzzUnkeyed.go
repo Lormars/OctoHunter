@@ -157,7 +157,9 @@ func FuzzUnkeyed(urlStr string) {
 							//can directly report it, as it is already interesting to have a header reflected in the body
 							if strings.Contains(resp.Body, sig) {
 								msg := fmt.Sprintf("[Fuzz Unkeyed] Unkeyed header found: %s on %s", param[0], urlStr)
-								common.OutputP.PublishMessage(msg)
+								if common.SendOutput {
+									common.OutputP.PublishMessage(msg)
+								}
 								notify.SendMessage(msg)
 							}
 						} else if param[1] == "param" {
@@ -222,7 +224,9 @@ func FuzzUnkeyed(urlStr string) {
 							continue
 						}
 						msg := fmt.Sprintf("[Fuzz Unkeyed] Prefix %s found on %s", prefix, urlStr)
-						common.OutputP.PublishMessage(msg)
+						if common.SendOutput {
+							common.OutputP.PublishMessage(msg)
+						}
 						notify.SendMessage(msg)
 						mu.Lock()
 						found = -1 //just disable it in current url to prevent information flood

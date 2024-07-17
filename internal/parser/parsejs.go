@@ -37,7 +37,9 @@ func ParseJS(result *common.ServerResult) {
 			common.CrawlP.PublishMessage(resp)
 			if strings.Contains(resolvedURL, "EXPR") {
 				msg := fmt.Sprintf("[JS DOM] %s in %s", resolvedURL, result.Url)
-				common.OutputP.PublishMessage(msg)
+				if common.SendOutput {
+					common.OutputP.PublishMessage(msg)
+				}
 				notify.SendMessage(msg)
 			}
 
@@ -48,7 +50,9 @@ func ParseJS(result *common.ServerResult) {
 		} else {
 			if strings.Contains(resolvedURL, "graphql") {
 				msg := fmt.Sprintf("[GQL Suspect] %s in %s", resolvedURL, result.Url)
-				common.OutputP.PublishMessage(msg)
+				if common.SendOutput {
+					common.OutputP.PublishMessage(msg)
+				}
 				notify.SendMessage(msg)
 			} else {
 				//this is used to fuzz and test for API

@@ -101,6 +101,7 @@ func RunCommand(name string, args []string) error {
 var DB *sql.DB
 var Paths sync.Map
 var Domains sync.Map
+var SendOutput bool
 
 type ServerResult struct {
 	Url        string      `json:"url"`

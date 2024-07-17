@@ -89,7 +89,9 @@ func CheckCl0(urlstr string) {
 	if getResponse.Resp.StatusCode == 404 && postResponse.Resp.StatusCode != 404 {
 		logger.Warnf("Potential CL0: %s\n", urlstr)
 		msg := "[CL0] Potential CL0 found: " + urlstr
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 

@@ -47,7 +47,9 @@ func CheckQuirks(res *common.ServerResult) {
 
 	if strings.Contains(result.Url, "/_next/image") {
 		msg := fmt.Sprintf("[Quirks] Next.js Image URL in %s", result.Url)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 
@@ -82,7 +84,9 @@ func CheckQuirks(res *common.ServerResult) {
 		strings.Contains(result.Url, "Gemfile") ||
 		strings.Contains(result.Url, "composer.json") {
 		msg := fmt.Sprintf("[Quirks] Dependency Confusion in %s", result.Url)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 
@@ -92,7 +96,9 @@ func CheckQuirks(res *common.ServerResult) {
 		strings.Contains(result.Url, "response_type") &&
 		!strings.Contains(result.Url, "state") {
 		msg := fmt.Sprintf("[Quirks] OAuth in URL %s without state parameter", result.Url)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 
@@ -179,7 +185,9 @@ func checkJSONP() {
 				match := callbackRegex.FindString(result.Body)
 				if match != "" {
 					msg := "[JSONP Suspect] " + match + " in " + result.Url
-					common.OutputP.PublishMessage(msg)
+					if common.SendOutput {
+						common.OutputP.PublishMessage(msg)
+					}
 					notify.SendMessage(msg)
 					color.Red(msg)
 				}
@@ -206,7 +214,9 @@ func doubleHTML() {
 		}
 
 		msg := fmt.Sprintf("[Quirks] Double HTML in %s", result.Url)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 }
@@ -221,7 +231,9 @@ func jsonwithHTML() {
 	}
 	if strings.HasPrefix(result.Body, "{") || strings.HasPrefix(result.Body, "[") {
 		msg := fmt.Sprintf("[Quirks] JSON with HTML mime in %s", result.Url)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 }
@@ -229,7 +241,9 @@ func jsonwithHTML() {
 func leakenv() {
 	if strings.Count(result.Body, "HTTP_") > 2 {
 		msg := fmt.Sprintf("[Quirks] HTTP_ ENV leak in %s", result.Url)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 }

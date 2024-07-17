@@ -104,7 +104,9 @@ func CheckPathConfusion(urlStr string) {
 					if same && ((matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit")) || elapse1 > elapse2*2) {
 						msg := fmt.Sprintf("[WCD Suspect] Found using %s", payload1)
 						color.Red(msg)
-						common.OutputP.PublishMessage(msg)
+						if common.SendOutput {
+							common.OutputP.PublishMessage(msg)
+						}
 						notify.SendMessage(msg)
 					}
 				}

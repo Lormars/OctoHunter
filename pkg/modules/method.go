@@ -42,8 +42,8 @@ func SingleMethodCheck(options *common.Opts) {
 			}
 			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s: %d vs. %d \n", options.Target, method, ccode, tcode)
 			color.Red(msg)
-			if options.Module.Contains("broker") {
-				notify.SendMessage(msg)
+			notify.SendMessage(msg)
+			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}
 			common.AddToCrawlMap(options.Target, "method", ccode)

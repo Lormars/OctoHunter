@@ -14,6 +14,7 @@ import (
 	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/matcher"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
 func RequestSplitting(result *common.ServerResult) {
@@ -145,7 +146,10 @@ func paramSplitTest(result *common.ServerResult) {
 				if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
 					msg := fmt.Sprintf("[Param Split] Vulnerable to HTTP Request Splitting: %s\n", parsedURL.String())
 					logger.Infof(msg)
-					common.OutputP.PublishMessage(msg)
+					if common.SendOutput {
+						common.OutputP.PublishMessage(msg)
+					}
+					notify.SendMessage(msg)
 				}
 			}(param, pay)
 		}
@@ -204,7 +208,10 @@ func pathSplitTest(result *common.ServerResult) {
 			if matcher.HeaderKeyContainsSignature(resp, "X-Injected") {
 				msg := fmt.Sprintf("[Path Split] Vulnerable to HTTP Request Splitting: %s\n", payloadUrl)
 				logger.Infof(msg)
-				common.OutputP.PublishMessage(msg)
+				if common.SendOutput {
+					common.OutputP.PublishMessage(msg)
+				}
+				notify.SendMessage(msg)
 			}
 		}(payload)
 	}

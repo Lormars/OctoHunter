@@ -56,7 +56,9 @@ func CheckSSTI(input *common.XssInput) {
 
 	if resp.StatusCode >= 500 {
 		msg := fmt.Sprintf("[SSTI Errbased] %s in %s", input.Param, input.Url)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	} else {
 		sstiSuspect := make(map[string][]string)
@@ -114,7 +116,9 @@ func CheckSSTI(input *common.XssInput) {
 				allSuspects += key + " or "
 			}
 			msg := fmt.Sprintf("[SSTI NonErrbased] %s in %s possibly using %s", input.Param, input.Url, allSuspects)
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			notify.SendMessage(msg)
 			return
 		}

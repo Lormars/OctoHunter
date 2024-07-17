@@ -36,7 +36,9 @@ func PullCustomObjects(urlString string) error {
 	matches := re.FindAllString(string(resp.Body), -1)
 	for _, match := range matches {
 		msg := "[Salesforce] Custom Object Found: " + match
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 

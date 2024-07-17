@@ -113,7 +113,9 @@ func apiWorker(tasks chan Fuzz3Part) {
 		}
 
 		msg := fmt.Sprintf("[Fuzz API] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 		//if work, check path traversal first
 		common.PathTraversalP.PublishMessage(reconstructed)

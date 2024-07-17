@@ -95,7 +95,9 @@ func RaceCondition(urlStr string) {
 		if match != "" && match != buster {
 			common.CrawlP.PublishMessage(response)
 			msg := fmt.Sprintf("[RC Confirmed] Race Condition on endpoint %s (match is %s)", response.Url, match)
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			notify.SendMessage(msg)
 		}
 
@@ -148,7 +150,9 @@ func RaceCondition(urlStr string) {
 		if resp.StatusCode != controlStatus && resp.StatusCode > 400 && resp.StatusCode != 429 && resp.StatusCode != 502 && resp.StatusCode != 503 && resp.StatusCode != 403 {
 			msg := fmt.Sprintf("[RC Suspect] Race Condition on %s with status %d", resp.Url, resp.StatusCode)
 			common.CrawlP.PublishMessage(resp)
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			notify.SendMessage(msg)
 			break
 		}

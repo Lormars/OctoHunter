@@ -34,6 +34,7 @@ func main() {
 	options, config := parser.Parse_Options()
 	if config.MemoryUsage {
 		go bench.PrintMemUsage(options)
+		common.SendOutput = true
 	}
 	logger.SetLogLevel(logger.ParseLogLevel(config.Loglevel))
 	cacher.SetCacheTime(config.CacheTime)

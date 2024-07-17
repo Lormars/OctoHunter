@@ -114,8 +114,8 @@ func checkSig(domain string, opts *common.Opts) bool {
 				if strings.Contains(temp_cname, sig) {
 					msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
 					color.Red(msg)
-					if opts.Module.Contains("broker") {
-						notify.SendMessage(msg)
+					notify.SendMessage(msg)
+					if common.SendOutput {
 						common.OutputP.PublishMessage(msg)
 					}
 					return true
@@ -134,9 +134,10 @@ func checkSig(domain string, opts *common.Opts) bool {
 				if record.Fingerprint != "" && strings.Contains(result.Body, record.Fingerprint) {
 					msg := "[CNAME Potential] " + result.Url + " | Cname: " + temp_cname + " | Service: " + record.Service
 					color.Red(msg)
-					if opts.Module.Contains("broker") {
+					if common.SendOutput {
 						common.OutputP.PublishMessage(msg)
 					}
+					notify.SendMessage(msg)
 					return true
 				}
 			}

@@ -67,8 +67,8 @@ func checkUnusualLength(finalURL *url.URL, opts *common.Opts) {
 	if length > 1000 {
 		msg := fmt.Sprintf("[Redirect] from %s to %s with length %d\n", opts.Target, finalURL.String(), length)
 		color.Red(msg)
-		if opts.Module.Contains("broker") {
-			notify.SendMessage(msg)
+		notify.SendMessage(msg)
+		if common.SendOutput {
 			common.OutputP.PublishMessage(msg)
 		}
 	}
@@ -95,11 +95,10 @@ func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
 
 				msg := fmt.Sprintf("[OR Suspect] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
 				color.Red(msg)
-				if opts.Module.Contains("broker") {
-					notify.SendMessage(msg)
+				notify.SendMessage(msg)
+				if common.SendOutput {
 					common.OutputP.PublishMessage(msg)
 				}
-
 				parsedOriginalURL, err := url.Parse(opts.Target)
 				if err != nil {
 					logger.Warnf("Error parsing URL: %v\n", err)
@@ -131,8 +130,8 @@ func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
 				if strings.Contains(resp.Body, "illustrative examples") {
 					msg := fmt.Sprintf("[OR Confirmed] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
 					color.Red(msg)
-					if opts.Module.Contains("broker") {
-						notify.SendMessage(msg)
+					notify.SendMessage(msg)
+					if common.SendOutput {
 						common.OutputP.PublishMessage(msg)
 					}
 				}

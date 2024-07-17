@@ -49,7 +49,9 @@ func CheckCors(response *common.ServerResult) {
 		if strings.Contains(AllowCredentials, "true") && !strings.Contains(response.Url, "wp-json") {
 			msg := fmt.Sprintf("[CORS Confirmed] on %s\n", response.Url)
 			color.Red(msg)
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			notify.SendMessage(msg)
 		}
 	}

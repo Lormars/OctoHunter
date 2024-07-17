@@ -65,8 +65,8 @@ func SingleHopCheck(options *common.Opts) {
 			}
 			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, controlResp.StatusCode, treatmentResp.StatusCode)
 			color.Red(msg)
-			if options.Module.Contains("broker") {
-				notify.SendMessage(msg)
+			notify.SendMessage(msg)
+			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}
 		}

@@ -31,7 +31,9 @@ func PrintMemUsage(opts *common.Opts) {
 			diversity, rate := common.Sliding.GetHostDiversityScore()
 			msg += fmt.Sprintf(" Diversity: %.2f. ", diversity)
 			msg += fmt.Sprintf(" Rate: %.2f. ", rate)
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			sys, err := strconv.Atoi(bToMb(m.Sys))
 			if err != nil {
 				logger.Debugf("Error converting Alloc to int: %v\n", err)

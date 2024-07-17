@@ -60,7 +60,9 @@ func CheckJSQuirks(result *common.ServerResult) {
 		for _, issue := range response.Issues {
 			msg := fmt.Sprintf("[Quirks JS] insecure postmessage listener in %s on line %d column %d", result.Url, issue.Location.Line, issue.Location.Column)
 			color.Red(msg)
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			notify.SendMessage(msg)
 		}
 	}

@@ -69,7 +69,9 @@ func CheckPathTraversal(urlStr string) {
 			return
 		}
 		msg := "[Path Traversal] " + urlStr
-		common.OutputP.PublishMessage(msg)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
 		notify.SendMessage(msg)
 	}
 }

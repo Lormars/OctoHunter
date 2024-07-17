@@ -69,7 +69,9 @@ func checkXssInAttribute(urlStr string, param string) {
 		}
 		if strings.Contains(resp.Body, toCheck) {
 			msg := "[XSS] Possible XSS in attribute found: " + urlStr + " with parameter " + param
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			notify.SendMessage(msg)
 		}
 	}
@@ -105,7 +107,9 @@ func checkXssInTag(urlStr string, param string) {
 		}
 		if strings.Contains(resp.Body, toCheck) {
 			msg := "[XSS] Possible XSS in tag found: " + urlStr + " with parameter " + param
-			common.OutputP.PublishMessage(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
 			notify.SendMessage(msg)
 		}
 	}
