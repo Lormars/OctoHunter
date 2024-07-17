@@ -57,7 +57,7 @@ func failOnError(err error, msg string) {
 }
 
 func NewProducer(name string) *Producer {
-	return &Producer{name: name, messageChan: make(chan interface{}, 1000), ShutdownChan: make(chan struct{})}
+	return &Producer{name: name, messageChan: make(chan interface{}, 1000), ShutdownChan: make(chan struct{}), closed: false}
 }
 
 func Init(options *Opts, purgebroker bool) []*Producer {
