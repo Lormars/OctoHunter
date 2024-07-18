@@ -72,6 +72,8 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 
 	sig := <-sigChan
+
+	cmap.Save("output")
 	logger.Infof("Received signal: %s. Shutting down gracefully...\n", sig)
 	for _, producer := range producers {
 		close(producer.ShutdownChan)
@@ -82,7 +84,6 @@ func main() {
 	common.Close()
 	logger.Infof("All connections closed. Exiting...\n")
 
-	cmap.Save("output")
 	if err := cmd.Process.Kill(); err != nil {
 		log.Fatalf("Error killing node server: %v", err)
 	}

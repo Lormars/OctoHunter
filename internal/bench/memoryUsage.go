@@ -20,10 +20,10 @@ func PrintMemUsage(opts *common.Opts) {
 		runtime.ReadMemStats(&m)
 
 		// For more info, see: https://golang.org/pkg/runtime/#MemStats
-		logger.Debugf("Alloc = %v MiB", bToMb(m.Alloc))
-		logger.Debugf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
-		logger.Debugf("\tSys = %v MiB", bToMb(m.Sys))
-		logger.Debugf("\tNumGC = %v\n", m.NumGC)
+		// logger.Debugf("Alloc = %v MiB", bToMb(m.Alloc))
+		// logger.Debugf("\tTotalAlloc = %v MiB", bToMb(m.TotalAlloc))
+		// logger.Debugf("\tSys = %v MiB", bToMb(m.Sys))
+		// logger.Debugf("\tNumGC = %v\n", m.NumGC)
 		if opts.Module.Contains("broker") {
 			msg := "[MU] Alloc = " + bToMb(m.Alloc) + " MiB." + "\tSys = " + bToMb(m.Sys) + " MiB. "
 			msg += fmt.Sprintf("Data: %.6f GB. ", clients.GetTotalDataTransferred())

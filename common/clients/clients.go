@@ -74,12 +74,12 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	retryDelay := 1 * time.Second
 	acquireSemaphore := func() {
 		concurrentReq <- struct{}{}
-		// logger.Infof("acquired")
+		logger.Debugf("acquired")
 	}
 
 	releaseSemaphore := func() {
 		<-concurrentReq
-		// logger.Infof("released")
+		logger.Debugf("released")
 	}
 
 	// Retry loop

@@ -55,6 +55,8 @@ github.com/klauspost/compress v1.17.4 h1:Ej5ixsIri7BrIjBkRZLTo6ghwrEtHFk7ijlczPW
 github.com/klauspost/compress v1.17.4/go.mod h1:/dCuZOvVtNoHsyb+cuJD3itjs3NbnF6KH9zAO4BDxPM=
 github.com/lormars/crawlmap v0.0.5 h1:vucSe5DcY27eqWkfU92ZnuQ/3oqWJZXJ+vu5387ZV6o=
 github.com/lormars/crawlmap v0.0.5/go.mod h1:ATM5GpA337QFO171FP9ijvN1TQj75xOaNjERFWmjSJg=
+github.com/lormars/crawlmap v0.0.6 h1:w1rfrUogbNVkOA2pXmqcBxHKtXL9GiYaglYjLeSnX58=
+github.com/lormars/crawlmap v0.0.6/go.mod h1:ATM5GpA337QFO171FP9ijvN1TQj75xOaNjERFWmjSJg=
 github.com/lormars/http2 v0.0.0-20240701015325-423fec2c7501 h1:5GbC2wXKejYbTttLcSMteIXQ4fmS8sTe/7aN6t00Ezk=
 github.com/lormars/http2 v0.0.0-20240701015325-423fec2c7501/go.mod h1:R+dPjbJ3CUFBUwAdws/AZXsObgImaP2OB3wIvGtiebs=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=
