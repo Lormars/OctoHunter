@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/score"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -17,6 +18,14 @@ var scanned int
 
 func Input(opts *common.Opts) {
 	Init(opts)
+
+	go func() {
+		for {
+			time.Sleep(10 * time.Second)
+			score.CalculateScore()
+		}
+	}()
+
 	for {
 		time.Sleep(5 * time.Second)
 		file, err := os.Open(opts.DispatcherFile)
@@ -49,9 +58,9 @@ func Input(opts *common.Opts) {
 					if errhttps == nil && httpsStatus.Online {
 						go common.DividerP.PublishMessage(httpsStatus)
 					}
-					if (errhttp == nil && httpStatus.Online) || (errhttps == nil && httpsStatus.Online) {
-						go common.WaybackP.PublishMessage(domainString)
-					}
+					// if (errhttp == nil && httpStatus.Online) || (errhttps == nil && httpsStatus.Online) {
+					// 	go common.WaybackP.PublishMessage(domainString)
+					// }
 				}
 				wg.Done()
 			}()

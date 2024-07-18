@@ -22,6 +22,9 @@ func GetWaybackURLs(domain string) {
 	if !cacher.CheckCache(domain, "wayback") {
 		return
 	}
+
+	logger.Warnf("Waybackurls for %s", domain)
+
 	startTime := time.Now()
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -75,7 +78,7 @@ func GetWaybackURLs(domain string) {
 			if err != nil {
 				return
 			}
-			logger.Debugf("[Wayback Debug] %s - %d", u, resp.StatusCode)
+			logger.Warnf("[Wayback Debug] %s - %d", u, resp.StatusCode)
 			common.AddToCrawlMap(u, "wayback", resp.StatusCode)
 			common.DividerP.PublishMessage(resp)
 		}(u)

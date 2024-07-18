@@ -64,6 +64,7 @@ func fuzzAllPath(urlStr string) {
 	//this is necessary to filter out duplicate false positives
 	for _, resp := range resultMap {
 		common.DividerP.PublishMessage(resp)
+		common.AddToCrawlMap(resp.Url, "fuzz", resp.StatusCode)
 		// logger.Warnf("found new endpoint: %s", fuzzPath)
 		msg := fmt.Sprintf("[Fuzz Path(S)] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
 		if common.SendOutput {
@@ -99,6 +100,7 @@ func fuzzNewPath(domainWithPath string) {
 			return true
 		}
 		if resp.StatusCode != 404 && resp.StatusCode != 403 {
+			common.AddToCrawlMap(resp.Url, "fuzz", resp.StatusCode)
 			common.DividerP.PublishMessage(resp)
 			// logger.Warnf("found new endpoint: %s", fuzzPath)
 		}

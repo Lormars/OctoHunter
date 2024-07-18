@@ -66,16 +66,18 @@ func CheckQuirks(res *common.ServerResult) {
 	//secret miner
 	pattern := `(?i)(?:key|api|token|secret|client|passwd|password|auth|access)(?:[0-9a-z\\-_\\t .]{0,20})(?:[\\s|']|[\\s|\"]){0,3}(?:=|>|:{1,3}=|\\|\\|:|<=|=>|:|\\?=)(?:'|\"|\\s|=|\\x60){0,5}([0-9a-z\\-_.=]{10,150})(?:['|\"|\\n|\\r|\\s|\\x60|;]|$)`
 	re := regexp.MustCompile(pattern)
-	match := re.FindString(result.Body)
-	if match != "" {
-
-		if strings.HasPrefix(match, "sk-") {
-			msg := fmt.Sprintf("[Quirks] OPENAI API Key in %s: %s", result.Url, match)
-			if common.SendOutput {
-				common.OutputP.PublishMessage(msg)
+	matches := re.FindAllString(result.Body, -1)
+	for _, match := range matches {
+		if match != "" {
+			if strings.HasPrefix(match, "sk-") {
+				common.AddToCrawlMap(result.Url, "quirk", result.StatusCode)
+				msg := fmt.Sprintf("[Quirks] OPENAI API Key in %s: %s", result.Url, match)
+				if common.SendOutput {
+					common.OutputP.PublishMessage(msg)
+				}
+				notify.SendMessage(msg)
+				color.Red(msg)
 			}
-			notify.SendMessage(msg)
-			color.Red(msg)
 		}
 	}
 
@@ -93,6 +95,7 @@ func CheckQuirks(res *common.ServerResult) {
 						if claim == "" {
 							continue
 						}
+						common.AddToCrawlMap(result.Url, "quirk", result.StatusCode)
 						msg := fmt.Sprintf("[Quirks] JWT in URL %s: %s", result.Url, claim)
 						if common.SendOutput {
 							common.OutputP.PublishMessage(msg)
@@ -114,6 +117,7 @@ func CheckQuirks(res *common.ServerResult) {
 		strings.Contains(result.Url, "requirements.txt") ||
 		strings.Contains(result.Url, "Gemfile") ||
 		strings.Contains(result.Url, "composer.json") {
+		common.AddToCrawlMap(result.Url, "quirk", result.StatusCode)
 		msg := fmt.Sprintf("[Quirks] Dependency Confusion in %s", result.Url)
 		if common.SendOutput {
 			common.OutputP.PublishMessage(msg)
@@ -126,6 +130,7 @@ func CheckQuirks(res *common.ServerResult) {
 		strings.Contains(result.Url, "redirect_uri") &&
 		strings.Contains(result.Url, "response_type") &&
 		!strings.Contains(result.Url, "state") {
+		common.AddToCrawlMap(result.Url, "quirk", result.StatusCode)
 		msg := fmt.Sprintf("[Quirks] OAuth in URL %s without state parameter", result.Url)
 		if common.SendOutput {
 			common.OutputP.PublishMessage(msg)
@@ -215,6 +220,7 @@ func checkJSONP() {
 				callbackRegex := regexp.MustCompile(fmt.Sprintf("%s%s%s", start, regexp.QuoteMeta(value), end))
 				match := callbackRegex.FindString(result.Body)
 				if match != "" {
+					common.AddToCrawlMap(result.Url, "quirk", result.StatusCode)
 					msg := "[JSONP Suspect] " + match + " in " + result.Url
 					if common.SendOutput {
 						common.OutputP.PublishMessage(msg)
@@ -261,6 +267,7 @@ func jsonwithHTML() {
 		return
 	}
 	if strings.HasPrefix(result.Body, "{") || strings.HasPrefix(result.Body, "[") {
+		common.AddToCrawlMap(result.Url, "quirk", result.StatusCode)
 		msg := fmt.Sprintf("[Quirks] JSON with HTML mime in %s", result.Url)
 		if common.SendOutput {
 			common.OutputP.PublishMessage(msg)

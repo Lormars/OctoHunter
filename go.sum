@@ -61,6 +61,8 @@ github.com/lormars/crawlmap v0.0.7 h1:T6kyaROYixzQEQwl9yeBGBUGd4aDlIjX5txs0TO/PE
 github.com/lormars/crawlmap v0.0.7/go.mod h1:ATM5GpA337QFO171FP9ijvN1TQj75xOaNjERFWmjSJg=
 github.com/lormars/crawlmap v0.0.8 h1:iodG/EQNC8AQtu9Cqe5jKbkdl2hvWV2e5DywvNu2YY0=
 github.com/lormars/crawlmap v0.0.8/go.mod h1:ATM5GpA337QFO171FP9ijvN1TQj75xOaNjERFWmjSJg=
+github.com/lormars/crawlmap v1.0.0 h1:ZCM4XSBSnn4m/6LDD/+Vf3sJI223wlnkuiD5NVjOQ14=
+github.com/lormars/crawlmap v1.0.0/go.mod h1:ATM5GpA337QFO171FP9ijvN1TQj75xOaNjERFWmjSJg=
 github.com/lormars/http2 v0.0.0-20240701015325-423fec2c7501 h1:5GbC2wXKejYbTttLcSMteIXQ4fmS8sTe/7aN6t00Ezk=
 github.com/lormars/http2 v0.0.0-20240701015325-423fec2c7501/go.mod h1:R+dPjbJ3CUFBUwAdws/AZXsObgImaP2OB3wIvGtiebs=
 github.com/mattn/go-colorable v0.1.13 h1:fFA4WZxdEF4tXPZVKMLwD8oUnCTTo08duU7wxecdEvA=

@@ -18,3 +18,8 @@ func AddToCrawlMap(urlStr, origin string, statusCode int) {
 	cmap.AddNode(cmapInput)
 	crawlmu.Unlock()
 }
+
+func GetOriginMap() map[string][]string {
+	originMap := cmap.ReturnOrigin()
+	return originMap
+}

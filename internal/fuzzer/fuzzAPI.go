@@ -115,6 +115,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 			continue
 		}
 
+		common.AddToCrawlMap(resp.Url, "fuzz", resp.StatusCode)
 		msg := fmt.Sprintf("[Fuzz API] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
 		if common.SendOutput {
 			common.OutputP.PublishMessage(msg)
