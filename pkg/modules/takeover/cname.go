@@ -56,7 +56,7 @@ func Takeover(opts *common.Opts) {
 	if !cacher.CheckCache(opts.Target, "cname") {
 		return
 	}
-	logger.Debugln("Takeover module running")
+	// logger.Debugln("Takeover module running")
 	domain := opts.Target
 	hasCname, cname, _ := checker.HasCname(domain)
 	if hasCname {
@@ -84,7 +84,7 @@ func checkSig(domain string, opts *common.Opts) bool {
 			return false
 		}
 		if temp_cname == temp_domain || count > 10 { //prevent circular cname
-			logger.Debugf("Circular CNAME detected on %s\n", domain)
+			// logger.Debugf("Circular CNAME detected on %s\n", domain)
 			break
 		}
 		//salesforce site, check salesforce

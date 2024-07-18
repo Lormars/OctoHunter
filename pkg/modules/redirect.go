@@ -65,6 +65,9 @@ func checkUnusualLength(finalURL *url.URL, opts *common.Opts) {
 		return
 	}
 	if length > 1000 {
+		if opts.Target == finalURL.String() {
+			return
+		}
 		msg := fmt.Sprintf("[Redirect] from %s to %s with length %d\n", opts.Target, finalURL.String(), length)
 		color.Red(msg)
 		notify.SendMessage(msg)

@@ -86,12 +86,15 @@ func apifuzzerinit() {
 
 func apiWorker(tasks chan Fuzz3Part) {
 	for task := range tasks {
+		if !interesting(task.Part3) {
+			continue
+		}
 		time.Sleep(100 * time.Millisecond)
 		//I just find it hard to believe that any api endpoint would be in http...
 		reconstructed := "https://" + task.Part1 + "/" + task.Part2 + "/" + task.Part3
 		//check cache to avoid fuzz the original input api endpoint
 		if !cacher.CheckCache(reconstructed, "fuzzapi") {
-			return
+			continue
 		}
 		// logger.Warnf("[Fuzz API Debug] reconstructed is: %s", reconstructed)
 		req, err := http.NewRequest("GET", reconstructed, nil)
@@ -151,4 +154,11 @@ func FuzzAPI(urlStr string) {
 		prefixes <- dirPath
 	}
 
+}
+
+func interesting(part3 string) bool {
+	if !strings.HasSuffix(part3, ".js") && !strings.HasSuffix(part3, ".css") {
+		return true
+	}
+	return false
 }

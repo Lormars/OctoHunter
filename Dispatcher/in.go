@@ -33,7 +33,7 @@ func Input(opts *common.Opts) {
 				for domainString := range lineCh {
 					if !strings.HasPrefix(domainString, "http") {
 						if !checker.ResolveDNS(domainString) {
-							logger.Debugln("DNS resolution failed for: ", domainString)
+							// logger.Debugln("DNS resolution failed for: ", domainString)
 							go common.CnameP.PublishMessage(domainString)
 							continue
 						}

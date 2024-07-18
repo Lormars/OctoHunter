@@ -165,7 +165,7 @@ func (p *Producer) PublishMessage(body interface{}) {
 			logger.Warnf("Failed to publish a message: %s", err)
 		}
 	}
-	logger.Debugf(" [x] Sent to %s", p.name)
+	// logger.Debugf(" [x] Sent to %s", p.name)
 }
 
 func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {

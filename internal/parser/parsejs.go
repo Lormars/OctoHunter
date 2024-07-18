@@ -43,7 +43,7 @@ func ParseJS(result *common.ServerResult) {
 				notify.SendMessage(msg)
 			}
 
-			if strings.Contains(resolvedURL, "api") && !strings.HasSuffix(resolvedURL, ".js") {
+			if strings.Contains(resolvedURL, "api") && !strings.HasSuffix(resolvedURL, ".js") && !strings.HasSuffix(resolvedURL, ".css") {
 				common.PathTraversalP.PublishMessage(resolvedURL)
 				common.FuzzAPIP.PublishMessage(resolvedURL)
 			}
@@ -56,7 +56,7 @@ func ParseJS(result *common.ServerResult) {
 				notify.SendMessage(msg)
 			} else {
 				//this is used to fuzz and test for API
-				if !strings.HasSuffix(resolvedURL, ".js") {
+				if !strings.HasSuffix(resolvedURL, ".js") && !strings.HasSuffix(resolvedURL, ".css") {
 					common.PathTraversalP.PublishMessage(resolvedURL)
 					common.FuzzAPIP.PublishMessage(resolvedURL)
 				}
