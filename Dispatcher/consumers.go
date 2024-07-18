@@ -24,7 +24,6 @@ func Init(opts *common.Opts) {
 		go methodConsumer(opts)
 		go hopperConsumer(opts)
 		go salesforceConsumer(opts)
-		go splittingConsumer(opts)
 		go cl0Consumer(opts)
 		go dividerConsumer(opts)
 		go raceConditionConsumer(opts)
@@ -41,6 +40,7 @@ func Init(opts *common.Opts) {
 		go fuzzAPIConsumer(opts)
 		go fuzzUnkeyedConsumer(opts)
 		go sstiConsumer(opts)
+		go splittingConsumer(opts)
 	}
 }
 

@@ -34,6 +34,7 @@ func ParseJS(result *common.ServerResult) {
 				logger.Debugf("Error getting response from %s: %v\n", url.URL, err)
 				continue
 			}
+			common.AddToCrawlMap(resolvedURL, "jsParse", resp.StatusCode)
 			common.CrawlP.PublishMessage(resp)
 			if strings.Contains(resolvedURL, "EXPR") {
 				msg := fmt.Sprintf("[JS DOM] %s in %s", resolvedURL, result.Url)

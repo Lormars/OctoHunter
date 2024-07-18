@@ -27,11 +27,10 @@ var nonerrbased = []string{
 
 func CheckSSTI(input *common.XssInput) {
 
-	if !cacher.CheckCache(input.Url, "ssti") {
+	for_cache := input.Url + input.Param
+	if !cacher.CheckCache(for_cache, "ssti") {
 		return
 	}
-
-	common.AddToCrawlMap(input.Url, "ssti", 200) //TODO: can be accurate
 
 	logger.Debugf("Checking SSTI for %s for param %s\n", input.Url, input.Param)
 
@@ -44,6 +43,7 @@ func CheckSSTI(input *common.XssInput) {
 	queries.Set(input.Param, errbased)
 	parsedURL.RawQuery = queries.Encode()
 
+	common.AddToCrawlMap(parsedURL.String(), "ssti", 200) //TODO: can be accurate
 	req, err := http.NewRequest("GET", parsedURL.String(), nil)
 	if err != nil {
 		logger.Warnf("Error creating request: %v", err)
