@@ -58,7 +58,7 @@ func GetWaybackURLs(domain string) {
 	wg.Wait()
 
 	semaphore := make(chan struct{}, 10)
-
+	// fmt.Println(allURLs)
 	for u := range allURLs {
 		if !cacher.CanScan(u, "divider") || !cacher.CheckCache(u, "wayback") {
 			continue

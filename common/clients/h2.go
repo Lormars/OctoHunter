@@ -31,7 +31,7 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 
 		conn, err = dialer.Dial(network, addr)
 		if err != nil {
-			logger.Debugf("Error dialing: %v\n", err)
+			logger.Warnf("Error dialing: %v\n", err)
 			return nil, err
 		}
 	} else {
@@ -40,13 +40,13 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 		}
 		conn, err = dialer.DialContext(ctx, network, addr)
 		if err != nil {
-			logger.Debugf("Error dialing: %v\n", err)
+			logger.Warnf("Error dialing: %v\n", err)
 			return nil, err
 		}
 	}
 	host, _, err := net.SplitHostPort(addr)
 	if err != nil {
-		logger.Debugf("Error splitting host and port: %v\n", err)
+		logger.Warnf("Error splitting host and port: %v\n", err)
 		return nil, err
 	}
 	config := &utls.Config{
@@ -57,7 +57,7 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 	tlsConn := utls.UClient(conn, config, utls.HelloRandomized)
 	err = tlsConn.Handshake()
 	if err != nil {
-		logger.Debugf("Error handshaking: %v\n", err)
+		logger.Warnf("Error handshaking: %v\n", err)
 		return nil, err
 	}
 	return tlsConn, nil

@@ -70,7 +70,7 @@ var ratelimiters = make(map[string]map[string]*rateLimiterEntry)
 func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	var proxy string
 	var ok bool
-	maxRetries := 2
+	maxRetries := 3
 	retryDelay := 1 * time.Second
 	acquireSemaphore := func() {
 		concurrentReq <- struct{}{}
@@ -167,7 +167,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		acquireSemaphore()
 		// Measure concurrent requests
 
-		proxiedCtx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
+		proxiedCtx, cancel := context.WithTimeout(req.Context(), 30*time.Second)
 		req = req.WithContext(proxiedCtx)
 
 		mu.Lock()
@@ -180,7 +180,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		duration := time.Since(start)
 
 		if err != nil {
-			logger.Debugf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
+			// logger.Warnf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
 			// If this was not the last attempt, wait before retrying
 			if attempt < maxRetries-1 {
 				mu.Lock()
@@ -189,6 +189,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				time.Sleep(retryDelay)
 				continue
 			}
+			logger.Warnf("Request failed after %d attempts: %s %s %v (%v)\n", maxRetries, req.Method, req.URL.String(), err, duration)
 
 			mu.Lock()
 			health.ProxyHealthInstance.AddBad(proxy)
