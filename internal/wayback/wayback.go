@@ -23,7 +23,7 @@ func GetWaybackURLs(domain string) {
 		return
 	}
 
-	logger.Warnf("Waybackurls for %s", domain)
+	// logger.Warnf("Waybackurls for %s", domain)
 
 	startTime := time.Now()
 	var wg sync.WaitGroup
@@ -60,7 +60,7 @@ func GetWaybackURLs(domain string) {
 	semaphore := make(chan struct{}, 10)
 
 	for u := range allURLs {
-		if !cacher.CanScan(u, "divider") {
+		if !cacher.CanScan(u, "divider") || !cacher.CheckCache(u, "wayback") {
 			continue
 		}
 		wg.Add(1)
@@ -72,10 +72,12 @@ func GetWaybackURLs(domain string) {
 			}()
 			req, err := http.NewRequest("GET", u, nil)
 			if err != nil {
+				logger.Warnf("Error creating request: %v", err)
 				return
 			}
-			resp, err := checker.CheckServerCustom(req, clients.Normalh1Client)
+			resp, err := checker.CheckServerCustom(req, clients.NormalClient)
 			if err != nil {
+				logger.Warnf("Error getting response from %s: %v", u, err)
 				return
 			}
 			logger.Warnf("[Wayback Debug] %s - %d", u, resp.StatusCode)
@@ -98,6 +100,7 @@ func getWaybackURLs(domain string) ([]string, error) {
 		fmt.Sprintf("http://web.archive.org/cdx/search/cdx?url=%s%s/*&output=json&collapse=urlkey", subsWildcard, domain),
 	)
 	if err != nil {
+		logger.Warnf("Error getting waybackurls: %v", err)
 		return nil, err
 	}
 
@@ -105,12 +108,14 @@ func getWaybackURLs(domain string) ([]string, error) {
 
 	res.Body.Close()
 	if err != nil {
+		logger.Warnf("Error reading waybackurls: %v", err)
 		return nil, err
 	}
 
 	var wrapper [][]string
 	err = json.Unmarshal(raw, &wrapper)
 	if err != nil {
+		logger.Warnf("Error unmarshalling waybackurls: %v", err)
 		return nil, err
 	}
 
@@ -124,6 +129,7 @@ func getWaybackURLs(domain string) ([]string, error) {
 			skip = false
 			continue
 		}
+
 		out = append(out, urls[2])
 	}
 
@@ -138,6 +144,7 @@ func getCommonCrawlURLs(domain string) ([]string, error) {
 		fmt.Sprintf("http://index.commoncrawl.org/CC-MAIN-2018-22-index?url=%s%s/*&output=json", subsWildcard, domain),
 	)
 	if err != nil {
+		logger.Warnf("Error getting commoncrawl urls: %v", err)
 		return nil, err
 	}
 
@@ -155,6 +162,7 @@ func getCommonCrawlURLs(domain string) ([]string, error) {
 		err = json.Unmarshal([]byte(sc.Text()), &wrapper)
 
 		if err != nil {
+			logger.Warnf("Error unmarshalling commoncrawl urls: %v", err)
 			continue
 		}
 

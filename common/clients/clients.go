@@ -167,7 +167,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		acquireSemaphore()
 		// Measure concurrent requests
 
-		proxiedCtx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
+		proxiedCtx, cancel := context.WithTimeout(req.Context(), 20*time.Second)
 		req = req.WithContext(proxiedCtx)
 
 		mu.Lock()
