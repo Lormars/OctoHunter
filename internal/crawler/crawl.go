@@ -71,6 +71,8 @@ func Crawl(response *common.ServerResult) {
 				// }
 
 				resp.Depth = response.Depth + 1
+
+				common.AddToCrawlMap(resp.Url, "crawl", resp.StatusCode)
 				common.DividerP.PublishMessage(resp)
 			}
 		}(url)

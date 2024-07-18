@@ -1,0 +1,163 @@
+package wayback
+
+import (
+	"bufio"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"sync"
+	"time"
+
+	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/logger"
+)
+
+// modified from tomnomnom's waybackurls
+
+func GetWaybackURLs(domain string) {
+	if !cacher.CheckCache(domain, "wayback") {
+		return
+	}
+	startTime := time.Now()
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	allURLs := make(map[string]bool)
+
+	go func() {
+		defer wg.Done()
+		urls, err := getWaybackURLs(domain)
+		if err != nil {
+			return
+		}
+
+		for _, u := range urls {
+			allURLs[u] = true
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		urls, err := getCommonCrawlURLs(domain)
+		if err != nil {
+			return
+		}
+
+		for _, u := range urls {
+			allURLs[u] = true
+		}
+	}()
+
+	wg.Wait()
+
+	semaphore := make(chan struct{}, 10)
+
+	for u := range allURLs {
+		if !cacher.CanScan(u, "divider") {
+			continue
+		}
+		wg.Add(1)
+		semaphore <- struct{}{}
+		go func(u string) {
+			defer wg.Done()
+			defer func() {
+				<-semaphore
+			}()
+			req, err := http.NewRequest("GET", u, nil)
+			if err != nil {
+				return
+			}
+			resp, err := checker.CheckServerCustom(req, clients.Normalh1Client)
+			if err != nil {
+				return
+			}
+			logger.Debugf("[Wayback Debug] %s - %d", u, resp.StatusCode)
+			common.AddToCrawlMap(u, "wayback", resp.StatusCode)
+			common.DividerP.PublishMessage(resp)
+		}(u)
+	}
+	wg.Wait()
+
+	elapsed := time.Since(startTime)
+	if elapsed < 4*time.Second {
+		time.Sleep(4*time.Second - elapsed)
+	}
+}
+
+func getWaybackURLs(domain string) ([]string, error) {
+	subsWildcard := "*."
+
+	res, err := http.Get(
+		fmt.Sprintf("http://web.archive.org/cdx/search/cdx?url=%s%s/*&output=json&collapse=urlkey", subsWildcard, domain),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	raw, err := io.ReadAll(res.Body)
+
+	res.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	var wrapper [][]string
+	err = json.Unmarshal(raw, &wrapper)
+	if err != nil {
+		return nil, err
+	}
+
+	out := make([]string, 0, len(wrapper))
+
+	skip := true
+	for _, urls := range wrapper {
+		// The first item is always just the string "original",
+		// so we should skip the first item
+		if skip {
+			skip = false
+			continue
+		}
+		out = append(out, urls[2])
+	}
+
+	return out, nil
+
+}
+
+func getCommonCrawlURLs(domain string) ([]string, error) {
+	subsWildcard := "*."
+
+	res, err := http.Get(
+		fmt.Sprintf("http://index.commoncrawl.org/CC-MAIN-2018-22-index?url=%s%s/*&output=json", subsWildcard, domain),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	defer res.Body.Close()
+	sc := bufio.NewScanner(res.Body)
+
+	out := make([]string, 0)
+
+	for sc.Scan() {
+
+		wrapper := struct {
+			URL       string `json:"url"`
+			Timestamp string `json:"timestamp"`
+		}{}
+		err = json.Unmarshal([]byte(sc.Text()), &wrapper)
+
+		if err != nil {
+			continue
+		}
+
+		out = append(out, wrapper.URL)
+	}
+
+	return out, nil
+
+}

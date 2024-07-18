@@ -42,6 +42,7 @@ var FuzzAPIP = NewProducer("fuzzapi_broker")
 var FuzzUnkeyedP = NewProducer("fuzzunkeyed_broker")
 var XssP = NewProducer("xss_broker")
 var SstiP = NewProducer("ssti_broker")
+var WaybackP = NewProducer("wayback_broker")
 
 var mu sync.Mutex
 
@@ -65,7 +66,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
 		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz4034P,
-		PathTraversalP, FuzzAPIP, FuzzUnkeyedP, XssP, SstiP,
+		PathTraversalP, FuzzAPIP, FuzzUnkeyedP, XssP, SstiP, WaybackP,
 	}
 
 	rabbitMQSetup()

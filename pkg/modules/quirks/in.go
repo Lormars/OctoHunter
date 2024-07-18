@@ -64,15 +64,46 @@ func CheckQuirks(res *common.ServerResult) {
 	}
 
 	//secret miner
-	// pattern := `(?i)(?:key|api|token|secret|client|passwd|password|auth|access)(?:[0-9a-z\\-_\\t .]{0,20})(?:[\\s|']|[\\s|\"]){0,3}(?:=|>|:{1,3}=|\\|\\|:|<=|=>|:|\\?=)(?:'|\"|\\s|=|\\x60){0,5}([0-9a-z\\-_.=]{10,150})(?:['|\"|\\n|\\r|\\s|\\x60|;]|$)`
-	// re := regexp.MustCompile(pattern)
-	// match := re.FindString(result.Body)
-	// if match != "" {
-	// 	msg := fmt.Sprintf("[Quirks] Secret Miner in %s: %s", result.Url, match)
-	// 	common.OutputP.PublishMessage(msg)
-	// 	notify.SendMessage(msg)
-	// 	color.Red(msg)
-	// }
+	pattern := `(?i)(?:key|api|token|secret|client|passwd|password|auth|access)(?:[0-9a-z\\-_\\t .]{0,20})(?:[\\s|']|[\\s|\"]){0,3}(?:=|>|:{1,3}=|\\|\\|:|<=|=>|:|\\?=)(?:'|\"|\\s|=|\\x60){0,5}([0-9a-z\\-_.=]{10,150})(?:['|\"|\\n|\\r|\\s|\\x60|;]|$)`
+	re := regexp.MustCompile(pattern)
+	match := re.FindString(result.Body)
+	if match != "" {
+
+		if strings.HasPrefix(match, "sk-") {
+			msg := fmt.Sprintf("[Quirks] OPENAI API Key in %s: %s", result.Url, match)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
+			notify.SendMessage(msg)
+			color.Red(msg)
+		}
+	}
+
+	//JWT preliminary check
+	jwtPattern := `^[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+\.[A-Za-z0-9-_]+$`
+	re, err := regexp.Compile(jwtPattern)
+	if err == nil {
+		parsedURL, err := url.Parse(result.Url)
+		if err == nil {
+			params := parsedURL.Query()
+			for _, values := range params {
+				for _, value := range values {
+					if re.MatchString(value) {
+						claim := parser.ParseJWT(value)
+						if claim == "" {
+							continue
+						}
+						msg := fmt.Sprintf("[Quirks] JWT in URL %s: %s", result.Url, claim)
+						if common.SendOutput {
+							common.OutputP.PublishMessage(msg)
+						}
+						notify.SendMessage(msg)
+						color.Red(msg)
+					}
+				}
+			}
+		}
+	}
 
 	//dependency confusion check
 	if strings.Contains(result.Body, "package.json") ||

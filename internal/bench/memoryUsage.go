@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	dispatcher "github.com/lormars/octohunter/Dispatcher"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/logger"
@@ -26,11 +27,13 @@ func PrintMemUsage(opts *common.Opts) {
 		if opts.Module.Contains("broker") {
 			msg := "[MU] Alloc = " + bToMb(m.Alloc) + " MiB." + "\tSys = " + bToMb(m.Sys) + " MiB. "
 			msg += fmt.Sprintf("Data: %.6f GB. ", clients.GetTotalDataTransferred())
-			msg += fmt.Sprintf("Concurrent: %d. ", clients.GetConcurrentRequests())
+			msg += fmt.Sprintf("Con: %d. ", clients.GetConcurrentRequests())
 			msg += clients.PrintResStats()
 			diversity, rate := common.Sliding.GetHostDiversityScore()
-			msg += fmt.Sprintf(" Diversity: %.2f. ", diversity)
+			msg += fmt.Sprintf(" Div: %.2f. ", diversity)
 			msg += fmt.Sprintf(" Rate: %.2f. ", rate)
+			scanned := dispatcher.GetScanned()
+			msg += fmt.Sprintf(" Scanned: %d. ", scanned)
 			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}

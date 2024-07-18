@@ -74,10 +74,12 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 	retryDelay := 1 * time.Second
 	acquireSemaphore := func() {
 		concurrentReq <- struct{}{}
+		// logger.Infof("acquired")
 	}
 
 	releaseSemaphore := func() {
 		<-concurrentReq
+		// logger.Infof("released")
 	}
 
 	// Retry loop
@@ -164,11 +166,16 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 
 		acquireSemaphore()
 		// Measure concurrent requests
+
+		proxiedCtx, cancel := context.WithTimeout(req.Context(), 10*time.Second)
+		req = req.WithContext(proxiedCtx)
+
 		mu.Lock()
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
 		resp, err := lrt.Proxied.RoundTrip(req)
+		cancel()
 		releaseSemaphore()
 		duration := time.Since(start)
 
@@ -226,6 +233,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			health.ProxyHealthInstance.AddBad(proxy)
 		} else {
 			health.ProxyHealthInstance.AddGood(proxy)
+
 			newrl := entry.ratelimiter.GetRPS() + 1
 			newbt := entry.ratelimiter.GetBurst() + 1
 			entry.ratelimiter.Update(newrl, newbt)

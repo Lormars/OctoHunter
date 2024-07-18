@@ -35,7 +35,7 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 		}
 	} else {
 		dialer := &net.Dialer{
-			Timeout: 30 * time.Second,
+			Timeout: 10 * time.Second,
 		}
 		conn, err = dialer.DialContext(ctx, network, addr)
 		if err != nil {
@@ -80,7 +80,7 @@ func customDialContext(ctx context.Context, network, addr string) (net.Conn, err
 		}
 	} else {
 		dialer := &net.Dialer{
-			Timeout: 30 * time.Second,
+			Timeout: 10 * time.Second,
 		}
 		conn, err = dialer.DialContext(ctx, network, addr)
 		if err != nil {

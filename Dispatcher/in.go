@@ -13,6 +13,8 @@ import (
 	"github.com/lormars/octohunter/internal/notify"
 )
 
+var scanned int
+
 func Input(opts *common.Opts) {
 	Init(opts)
 	for {
@@ -47,14 +49,19 @@ func Input(opts *common.Opts) {
 					if errhttps == nil && httpsStatus.Online {
 						go common.DividerP.PublishMessage(httpsStatus)
 					}
+					if (errhttp == nil && httpStatus.Online) || (errhttps == nil && httpsStatus.Online) {
+						go common.WaybackP.PublishMessage(domainString)
+					}
 				}
 				wg.Done()
 			}()
 		}
+		scanned = 0
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			lineCh <- line
+			scanned++
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -69,4 +76,8 @@ func Input(opts *common.Opts) {
 		notify.SendMessage("Finished processing all domains")
 		time.Sleep(1 * time.Hour)
 	}
+}
+
+func GetScanned() int {
+	return scanned
 }

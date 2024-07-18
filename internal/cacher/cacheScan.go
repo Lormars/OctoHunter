@@ -89,6 +89,7 @@ func UpdateScanTime(endpoint, module string) {
 }
 
 func CanScan(endpoint, module string) bool {
+	endpoint = cleanURL(endpoint) //this is a bit redundant, but wayback would directly call this function
 	var LastScanned int64
 	currentTime := time.Now().Unix()
 

@@ -4,6 +4,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/internal/fuzzer"
+	"github.com/lormars/octohunter/internal/wayback"
 	"github.com/lormars/octohunter/pkg/modules"
 	pathconfusion "github.com/lormars/octohunter/pkg/modules/pathConfusion"
 	"github.com/lormars/octohunter/pkg/modules/quirks"
@@ -15,6 +16,9 @@ import (
 )
 
 func Init(opts *common.Opts) {
+
+	go waybackConsumer(opts) //only one due to rate limit
+
 	for i := 0; i < opts.Concurrency/10; i++ {
 		go redirectConsumer(opts)
 		go methodConsumer(opts)
@@ -26,7 +30,6 @@ func Init(opts *common.Opts) {
 		go raceConditionConsumer(opts)
 		go corsConsumer(opts)
 		go xssConsumer(opts)
-
 	}
 	for i := 0; i < opts.Concurrency; i++ {
 		go cnameConsumer(opts)
@@ -39,6 +42,10 @@ func Init(opts *common.Opts) {
 		go fuzzUnkeyedConsumer(opts)
 		go sstiConsumer(opts)
 	}
+}
+
+func waybackConsumer(opts *common.Opts) {
+	common.WaybackP.ConsumeMessage(wayback.GetWaybackURLs, opts)
 }
 
 func sstiConsumer(opts *common.Opts) {
