@@ -81,7 +81,6 @@ var Normalh2Client = &http.Client{
 		return nil
 	},
 	Transport: loggingh2Transport,
-	Timeout:   120 * time.Second,
 }
 
 var NoRedirecth2Client = &http.Client{
@@ -89,5 +88,4 @@ var NoRedirecth2Client = &http.Client{
 		return http.ErrUseLastResponse
 	},
 	Transport: loggingh2Transport,
-	Timeout:   120 * time.Second,
 }

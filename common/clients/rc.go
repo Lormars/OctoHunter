@@ -86,7 +86,6 @@ var NormalRCClient = &http.Client{
 		return nil
 	},
 	Transport: loggingRCh2Transport,
-	Timeout:   120 * time.Second,
 }
 
 var NoRedirectRCClient = &http.Client{
@@ -94,5 +93,4 @@ var NoRedirectRCClient = &http.Client{
 		return http.ErrUseLastResponse
 	},
 	Transport: loggingRCh2Transport,
-	Timeout:   120 * time.Second,
 }

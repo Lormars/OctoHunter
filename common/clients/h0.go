@@ -2,7 +2,6 @@ package clients
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/lormars/octohunter/internal/logger"
 	"golang.org/x/net/http2"
@@ -50,7 +49,6 @@ var NormalClient = &http.Client{
 		return nil
 	},
 	Transport: loggingH0Transport,
-	Timeout:   120 * time.Second,
 }
 
 var NoRedirectClient = &http.Client{
@@ -58,5 +56,4 @@ var NoRedirectClient = &http.Client{
 		return http.ErrUseLastResponse
 	},
 	Transport: loggingH0Transport,
-	Timeout:   120 * time.Second,
 }
