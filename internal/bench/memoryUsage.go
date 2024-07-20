@@ -34,6 +34,8 @@ func PrintMemUsage(opts *common.Opts) {
 			msg += fmt.Sprintf(" Rate: %.2f. ", rate)
 			scanned := dispatcher.GetScanned()
 			msg += fmt.Sprintf(" Scanned: %d. ", scanned)
+			all429 := clients.Get429Count()
+			msg += fmt.Sprintf(" 429: %d. ", all429)
 			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}

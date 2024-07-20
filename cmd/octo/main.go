@@ -28,6 +28,19 @@ func main() {
 	// 	log.Println(http.ListenAndServe("localhost:6060", nil))
 	// }()
 
+	// Directory to check and delete
+	dirPath := "output"
+
+	// Check if the directory exists
+	if _, err := os.Stat(dirPath); err == nil {
+		// Directory exists, delete it and all its contents
+		err = os.RemoveAll(dirPath)
+		if err != nil {
+			log.Fatalf("Error deleting directory: %v", err)
+			return
+		}
+	}
+
 	//disable default logger to get rid of unwanted warning
 	log.SetOutput(io.Discard)
 

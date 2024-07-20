@@ -152,7 +152,7 @@ func FuzzUnkeyed(urlStr string) {
 				}
 
 				if specialHeader {
-					if resp.StatusCode >= 300 {
+					if resp.StatusCode >= 300 && resp.StatusCode != 429 && resp.StatusCode != 403 {
 						msg := fmt.Sprintf("[Fuzz Unkeyed] Special header found: %s on %s with sc %d", header, urlStr, resp.StatusCode)
 						if common.SendOutput {
 							common.OutputP.PublishMessage(msg)

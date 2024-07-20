@@ -33,6 +33,7 @@ var (
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
 	errRequestsCount = 0
+	all429Count      = 0
 	UseProxy         = false
 )
 
@@ -44,6 +45,9 @@ type responseStats struct {
 type rateLimiterEntry struct {
 	ratelimiter *common.DynamicRateLimiter
 	lastUsed    time.Time
+	successes   int
+	max         int
+	hit         bool
 }
 
 type LoggingRoundTripper struct {
@@ -115,6 +119,8 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				entry = &rateLimiterEntry{
 					ratelimiter: common.NewDynamicRateLimiter(float64(2), rl),
 					lastUsed:    time.Now(),
+					max:         12,
+					hit:         false,
 				}
 				proxyentry[proxy] = entry
 
@@ -131,10 +137,12 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				logger.Debugf("Rate limit Error for %s: %v\n", currentHost, err)
 				//mostly it is because exceeding context deadline
 				mu.Lock()
-				newrl := entry.ratelimiter.GetRPS() + 1
-				newbt := entry.ratelimiter.GetBurst() + 1
-				entry.ratelimiter.Update(newrl, newbt)
-				logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
+				if entry.max > int(entry.ratelimiter.GetRPS()) {
+					newrl := entry.ratelimiter.GetRPS() + 1
+					newbt := entry.ratelimiter.GetBurst() + 1
+					entry.ratelimiter.Update(newrl, newbt)
+					logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
+				}
 				mu.Unlock()
 				return nil, err
 			}
@@ -220,27 +228,42 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			duration:   duration,
 		}
 		resStats[currentHost] = append(resStats[currentHost], respStats)
-
-		if resp.StatusCode == 429 {
-			if !okrace {
-				if entry != nil {
-					newrl := entry.ratelimiter.GetRPS() - 1
-					newbt := entry.ratelimiter.GetBurst() - 1
-					entry.ratelimiter.Update(newrl, newbt)
-					logger.Debugf("Decrease Rate limit for %s to %f\n", currentHost, newrl)
+		if !okrace {
+			if entry != nil {
+				if resp.StatusCode == 429 {
+					entry.successes = 0
+					currentRPS := entry.ratelimiter.GetRPS()
+					if currentRPS > 2 && !entry.hit {
+						all429Count++
+						entry.hit = true
+						newrl := currentRPS - 10
+						newbt := entry.ratelimiter.GetBurst() - 10
+						entry.max = int(currentRPS - 10)
+						entry.ratelimiter.Update(newrl, newbt)
+						logger.Warnf("Decrease Rate limit for %s to %f and set max to %d\n", currentHost, newrl, entry.max)
+					}
+				} else if resp.StatusCode == 403 {
+					health.ProxyHealthInstance.AddBad(proxy)
+				} else {
+					entry.successes++
+					health.ProxyHealthInstance.AddGood(proxy)
+					if entry.successes > 300 && !entry.hit { //to make sure the current rate is not too high
+						entry.successes = 0
+						if entry.max > int(entry.ratelimiter.GetRPS()) {
+							newrl := entry.ratelimiter.GetRPS() + 1
+							newbt := entry.ratelimiter.GetBurst() + 1
+							entry.ratelimiter.Update(newrl, newbt)
+							logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
+						} else {
+							entry.max += 5
+						}
+					} else if entry.successes > 1000 {
+						entry.hit = false
+					}
 				}
 			}
-		} else if resp.StatusCode == 403 {
-			health.ProxyHealthInstance.AddBad(proxy)
-		} else {
-			health.ProxyHealthInstance.AddGood(proxy)
-
-			newrl := entry.ratelimiter.GetRPS() + 1
-			newbt := entry.ratelimiter.GetBurst() + 1
-			entry.ratelimiter.Update(newrl, newbt)
-			logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
 		}
-		logger.Debugf("Current ratelimit for %s: %f\n", currentHost, entry.ratelimiter.GetRPS())
+		logger.Debugf("Current ratelimit for %s: %d with max %d\n", currentHost, int(entry.ratelimiter.GetRPS()), entry.max)
 		mu.Unlock()
 
 		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
@@ -293,6 +316,12 @@ func GetConcurrentRequests() int {
 	mu.Lock()
 	defer mu.Unlock()
 	return len(concurrentReq)
+}
+
+func Get429Count() int {
+	mu.Lock()
+	defer mu.Unlock()
+	return all429Count
 }
 
 // This calculates the bad rate and error rate for all hosts for all requests.

@@ -34,6 +34,7 @@ func Divider(result *common.ServerResult) {
 			go common.RedirectP.PublishMessage(result.Url)
 		}
 	} else if checker.CheckRequestError(result.StatusCode) {
+		// logger.Warnf("Request error for %s (%d)", result.Url, result.StatusCode)
 		go common.MethodP.PublishMessage(result.Url)
 		go common.HopP.PublishMessage(result.Url)
 		//if the homepage itself is 403 or 404, fuzz for directories

@@ -49,17 +49,18 @@ func SingleMethodCheck(options *common.Opts) {
 			common.AddToCrawlMap(options.Target, "method", ccode)
 		} else if errCtrl != nil || errTreat != nil {
 			logger.Debugf("Error testing access control: control - %v | treament - %v\n", errCtrl, errTreat)
-			break
+			continue
 		}
 	}
 	for _, header := range headers {
-		if ok, payload := checkHeaderOverwrite(options, header); ok {
-			msg := fmt.Sprintf("[Method] Access Control Bypassed for target %s using header %s and payload %s\n", options.Target, header, payload)
+		if ok, payload, sc := checkHeaderOverwrite(options, header); ok {
+			msg := fmt.Sprintf("[Method] Access Control Bypassed for target %s using header %s and payload %s (%d)\n", options.Target, header, payload, sc)
 			color.Red(msg)
 			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}
 			notify.SendMessage(msg)
+			break //to avoid flood
 		}
 	}
 
@@ -97,11 +98,11 @@ func testAccessControl(options *common.Opts, verb string) (bool, int, int, error
 
 }
 
-func checkHeaderOverwrite(options *common.Opts, header string) (bool, string) {
+func checkHeaderOverwrite(options *common.Opts, header string) (bool, string, int) {
 	treatmentReq, err := http.NewRequest("GET", options.Target, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)
-		return false, ""
+		return false, "", 0
 	}
 
 	payloads := []string{"127.0.0.1", "localhost"}
@@ -114,9 +115,9 @@ func checkHeaderOverwrite(options *common.Opts, header string) (bool, string) {
 			continue
 		}
 		if treatmentResp.StatusCode < 400 {
-			return true, payload
+			return true, payload, treatmentResp.StatusCode
 		}
 	}
-	return false, ""
+	return false, "", 0
 
 }
