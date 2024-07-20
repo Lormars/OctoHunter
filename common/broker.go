@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -45,9 +46,11 @@ var SstiP = NewProducer("ssti_broker")
 var WaybackP = NewProducer("wayback_broker")
 
 var mu sync.Mutex
+var GlobalMu sync.Mutex
 
 var (
 	queueProducers []*Producer
+	WaitingQueue   = make(map[string]bool)
 	// concurrency    int
 )
 
@@ -168,10 +171,13 @@ func (p *Producer) PublishMessage(body interface{}) {
 	// logger.Debugf(" [x] Sent to %s", p.name)
 }
 
-func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
+func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan struct{} {
+	closeChan := make(chan struct{})
 	go func() {
 		for {
 			select {
+			case <-closeChan:
+				return
 			case <-p.ShutdownChan:
 				return
 			default:
@@ -221,17 +227,34 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) {
 			}
 		}
 	}()
+	return closeChan
 }
 
 func monitorChannels(producers []*Producer) {
+
+	lastWait := make(map[string]int)
 	for {
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 		for _, p := range producers {
+			GlobalMu.Lock()
 			if p.name != "dork_broker" {
+
 				if len(p.messageChan) > 500 {
 					logger.Infof("Queue %s has %d messages waiting", p.name, len(p.messageChan))
 				}
+				// logger.Infof("lastwait %s %d and queue %d", p.name, lastWait[p.name], len(p.messageChan))
+				if (lastWait[p.name] - 10) <= len(p.messageChan) {
+					name := strings.Split(p.name, "_")[0]
+
+					// logger.Infof("Queue %s has %d up", p.name, len(p.messageChan))
+					WaitingQueue[name] = true
+				} else {
+					name := strings.Split(p.name, "_")[0]
+					delete(WaitingQueue, name)
+				}
+				lastWait[p.name] = len(p.messageChan)
 			}
+			GlobalMu.Unlock()
 		}
 	}
 }

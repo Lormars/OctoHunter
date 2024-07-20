@@ -1,9 +1,13 @@
 package dispatcher
 
 import (
+	"sync"
+	"time"
+
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/internal/fuzzer"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/wayback"
 	"github.com/lormars/octohunter/pkg/modules"
 	pathconfusion "github.com/lormars/octohunter/pkg/modules/pathConfusion"
@@ -15,112 +19,192 @@ import (
 	"github.com/lormars/octohunter/pkg/modules/takeover"
 )
 
+type numChan struct {
+	num   int
+	chans []chan struct{}
+}
+
 func Init(opts *common.Opts) {
 
 	go waybackConsumer(opts) //only one due to rate limit
 
-	for i := 0; i < opts.Concurrency/10; i++ {
-		go redirectConsumer(opts)
-		go methodConsumer(opts)
-		go hopperConsumer(opts)
-		go salesforceConsumer(opts)
-		go cl0Consumer(opts)
-		go dividerConsumer(opts)
-		go raceConditionConsumer(opts)
-		go corsConsumer(opts)
-		go xssConsumer(opts)
+	var nameFuncMap = map[string]func(*common.Opts) chan struct{}{
+		"cname":         cnameConsumer,
+		"redirect":      redirectConsumer,
+		"method":        methodConsumer,
+		"hopper":        hopperConsumer,
+		"divider":       dividerConsumer,
+		"crawl":         crawlerConsumer,
+		"salesforce":    salesforceConsumer,
+		"splitting":     splittingConsumer,
+		"cl0":           cl0Consumer,
+		"quirks":        quirksConsumer,
+		"rc":            raceConditionConsumer,
+		"cors":          corsConsumer,
+		"pathconfuse":   pathConfuse,
+		"fuzz4034":      fuzz404Consumer,
+		"pathtraversal": pathTraversalConsumer,
+		"fuzzapi":       fuzzAPIConsumer,
+		"fuzzunkeyed":   fuzzUnkeyedConsumer,
+		"xss":           xssConsumer,
+		"ssti":          sstiConsumer,
 	}
-	for i := 0; i < opts.Concurrency; i++ {
-		go cnameConsumer(opts)
-		go crawlerConsumer(opts)
-		go quirksConsumer(opts)
-		go pathConfuse(opts)
-		go fuzz404Consumer(opts)
-		go pathTraversalConsumer(opts)
-		go fuzzAPIConsumer(opts)
-		go fuzzUnkeyedConsumer(opts)
-		go sstiConsumer(opts)
-		go splittingConsumer(opts)
-	}
+
+	semaphore := make(chan struct{}, 1000)
+
+	go func() {
+		mu := sync.Mutex{}
+		var numMap = make(map[string]numChan)
+		for _, function := range nameFuncMap {
+			go function(opts)
+		}
+		for {
+			common.GlobalMu.Lock()
+			for name := range common.WaitingQueue {
+				if name == "wayback" {
+					continue
+				}
+				semaphore <- struct{}{}
+				go func(name string) {
+					closeChan := nameFuncMap[name](opts)
+					mu.Lock()
+					if _, ok := numMap[name]; !ok {
+						numMap[name] = numChan{num: 1, chans: []chan struct{}{closeChan}}
+					} else {
+						numchan := numMap[name]
+						numchan.num++
+						numchan.chans = append(numchan.chans, closeChan)
+						numMap[name] = numchan
+					}
+					mu.Unlock()
+					logger.Infof("Starting %s, have %d running", name, numMap[name].num)
+					<-closeChan
+					mu.Lock()
+					newNum := numMap[name].num - 1
+					if newNum == 0 {
+						delete(numMap, name)
+					} else {
+						numMap[name] = numChan{num: newNum, chans: numMap[name].chans[1:]}
+					}
+					mu.Unlock()
+					logger.Infof("Stopping %s, have %d running", name, newNum+1)
+					<-semaphore
+				}(name)
+
+			}
+			mu.Lock()
+			for name, numChan := range numMap {
+				if _, ok := common.WaitingQueue[name]; !ok {
+					if numChan.num > 0 {
+						closeChan := numChan.chans[0]
+						close(closeChan)
+					}
+				}
+			}
+			mu.Unlock()
+			common.GlobalMu.Unlock()
+			time.Sleep(1 * time.Second)
+		}
+	}()
+
 }
 
 func waybackConsumer(opts *common.Opts) {
 	common.WaybackP.ConsumeMessage(wayback.GetWaybackURLs, opts)
 }
 
-func sstiConsumer(opts *common.Opts) {
-	common.SstiP.ConsumeMessage(modules.CheckSSTI, opts)
+func sstiConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.SstiP.ConsumeMessage(modules.CheckSSTI, opts)
+	return closeChan
 }
 
-func xssConsumer(opts *common.Opts) {
-	common.XssP.ConsumeMessage(modules.Xss, opts)
+func xssConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.XssP.ConsumeMessage(modules.Xss, opts)
+	return closeChan
 }
 
-func fuzzUnkeyedConsumer(opts *common.Opts) {
-	common.FuzzUnkeyedP.ConsumeMessage(fuzzer.FuzzUnkeyed, opts)
+func fuzzUnkeyedConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.FuzzUnkeyedP.ConsumeMessage(fuzzer.FuzzUnkeyed, opts)
+	return closeChan
 }
 
-func fuzzAPIConsumer(opts *common.Opts) {
-	common.FuzzAPIP.ConsumeMessage(fuzzer.FuzzAPI, opts)
+func fuzzAPIConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.FuzzAPIP.ConsumeMessage(fuzzer.FuzzAPI, opts)
+	return closeChan
 
 }
 
-func pathTraversalConsumer(opts *common.Opts) {
-	common.PathTraversalP.ConsumeMessage(modules.CheckPathTraversal, opts)
+func pathTraversalConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.PathTraversalP.ConsumeMessage(modules.CheckPathTraversal, opts)
+	return closeChan
 }
 
-func fuzz404Consumer(opts *common.Opts) {
-	common.Fuzz4034P.ConsumeMessage(fuzzer.Fuzz4034, opts)
+func fuzz404Consumer(opts *common.Opts) chan struct{} {
+	closeChan := common.Fuzz4034P.ConsumeMessage(fuzzer.Fuzz4034, opts)
+	return closeChan
 }
 
-func cnameConsumer(opts *common.Opts) {
-	common.CnameP.ConsumeMessage(takeover.Takeover, opts)
+func cnameConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.CnameP.ConsumeMessage(takeover.Takeover, opts)
+	return closeChan
 }
 
-func redirectConsumer(opts *common.Opts) {
-	common.RedirectP.ConsumeMessage(modules.SingleRedirectCheck, opts)
+func redirectConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.RedirectP.ConsumeMessage(modules.SingleRedirectCheck, opts)
+	return closeChan
 }
 
-func methodConsumer(opts *common.Opts) {
-	common.MethodP.ConsumeMessage(modules.SingleMethodCheck, opts)
+func methodConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.MethodP.ConsumeMessage(modules.SingleMethodCheck, opts)
+	return closeChan
 }
 
-func hopperConsumer(opts *common.Opts) {
-	common.HopP.ConsumeMessage(modules.SingleHopCheck, opts)
+func hopperConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.HopP.ConsumeMessage(modules.SingleHopCheck, opts)
+	return closeChan
 }
 
-func dividerConsumer(opts *common.Opts) {
-	common.DividerP.ConsumeMessage(Divider, opts)
+func dividerConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.DividerP.ConsumeMessage(Divider, opts)
+	return closeChan
 }
 
-func crawlerConsumer(opts *common.Opts) {
-	common.CrawlP.ConsumeMessage(crawler.Crawl, opts)
+func crawlerConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.CrawlP.ConsumeMessage(crawler.Crawl, opts)
+	return closeChan
 }
 
-func salesforceConsumer(opts *common.Opts) {
-	common.SalesforceP.ConsumeMessage(salesforce.SalesforceScan, opts)
+func salesforceConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.SalesforceP.ConsumeMessage(salesforce.SalesforceScan, opts)
+	return closeChan
 }
 
-func splittingConsumer(opts *common.Opts) {
-	common.SplittingP.ConsumeMessage(request.RequestSplitting, opts)
+func splittingConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.SplittingP.ConsumeMessage(request.RequestSplitting, opts)
+	return closeChan
 }
 
-func cl0Consumer(opts *common.Opts) {
-	common.Cl0P.ConsumeMessage(smuggle.CheckCl0, opts)
+func cl0Consumer(opts *common.Opts) chan struct{} {
+	closeChan := common.Cl0P.ConsumeMessage(smuggle.CheckCl0, opts)
+	return closeChan
 }
 
-func quirksConsumer(opts *common.Opts) {
-	common.QuirksP.ConsumeMessage(quirks.CheckQuirks, opts)
+func quirksConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.QuirksP.ConsumeMessage(quirks.CheckQuirks, opts)
+	return closeChan
 }
 
-func raceConditionConsumer(opts *common.Opts) {
-	common.RCP.ConsumeMessage(racecondition.RaceCondition, opts)
+func raceConditionConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.RCP.ConsumeMessage(racecondition.RaceCondition, opts)
+	return closeChan
 }
 
-func corsConsumer(opts *common.Opts) {
-	common.CorsP.ConsumeMessage(modules.CheckCors, opts)
+func corsConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.CorsP.ConsumeMessage(modules.CheckCors, opts)
+	return closeChan
 }
 
-func pathConfuse(opts *common.Opts) {
-	common.PathConfuseP.ConsumeMessage(pathconfusion.CheckPathConfusion, opts)
+func pathConfuse(opts *common.Opts) chan struct{} {
+	closeChan := common.PathConfuseP.ConsumeMessage(pathconfusion.CheckPathConfusion, opts)
+	return closeChan
 }

@@ -148,8 +148,6 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			}
 		}
 
-		start := time.Now()
-
 		logger.Debugf("Making request: at %s\n", req.URL.String())
 
 		randomIndex := rand.Intn(len(asset.Useragent))
@@ -182,10 +180,11 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
+		start := time.Now()
 		resp, err := lrt.Proxied.RoundTrip(req)
+		duration := time.Since(start)
 		cancel()
 		releaseSemaphore()
-		duration := time.Since(start)
 
 		if err != nil {
 			// logger.Warnf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
