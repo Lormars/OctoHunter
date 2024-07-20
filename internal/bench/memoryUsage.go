@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	dispatcher "github.com/lormars/octohunter/Dispatcher"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
+	dispatcher "github.com/lormars/octohunter/dispatcher"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
 )

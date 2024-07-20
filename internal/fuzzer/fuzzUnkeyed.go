@@ -127,9 +127,20 @@ func FuzzUnkeyed(urlStr string) {
 					logger.Errorf("Error generating signature: %v\n", err)
 					return
 				}
+
+				specialHeader := false
 				if header != "" {
-					req.Header.Set(header, prefix+signature)
-					sigMap[prefix+signature] = []string{header, "header"}
+					if strings.Contains(header, "~") {
+						specialHeader = true
+						parts := strings.Split(header, "~")
+						value := fmt.Sprintf(parts[1], prefix+signature+".com")
+						req.Header.Set(parts[0], value)
+						sigMap[prefix+signature+".com"] = []string{header, "header"}
+						logger.Warnf("[DEBUG] Special header: %s with value %s", parts[0], value)
+					} else {
+						req.Header.Set(header, prefix+signature)
+						sigMap[prefix+signature] = []string{header, "header"}
+					}
 				}
 
 				logger.Debugf("[DEBUG] Checking %s", parsedURL.String())
@@ -138,6 +149,16 @@ func FuzzUnkeyed(urlStr string) {
 				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 				if err != nil {
 					continue
+				}
+
+				if specialHeader {
+					if resp.StatusCode >= 300 {
+						msg := fmt.Sprintf("[Fuzz Unkeyed] Special header found: %s on %s with sc %d", header, urlStr, resp.StatusCode)
+						if common.SendOutput {
+							common.OutputP.PublishMessage(msg)
+						}
+						notify.SendMessage(msg)
+					}
 				}
 
 				for sig, param := range sigMap {

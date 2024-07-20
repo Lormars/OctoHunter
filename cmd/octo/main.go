@@ -11,9 +11,9 @@ import (
 
 	"github.com/joho/godotenv"
 	cmap "github.com/lormars/crawlmap/pkg"
-	dispatcher "github.com/lormars/octohunter/Dispatcher"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
+	dispatcher "github.com/lormars/octohunter/dispatcher"
 	"github.com/lormars/octohunter/internal/bench"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
