@@ -136,7 +136,7 @@ func FuzzUnkeyed(urlStr string) {
 						value := fmt.Sprintf(parts[1], prefix+signature+".com")
 						req.Header.Set(parts[0], value)
 						sigMap[prefix+signature+".com"] = []string{header, "header"}
-						logger.Warnf("[DEBUG] Special header: %s with value %s", parts[0], value)
+						// logger.Warnf("[DEBUG] Special header: %s with value %s", parts[0], value)
 					} else {
 						req.Header.Set(header, prefix+signature)
 						sigMap[prefix+signature] = []string{header, "header"}
