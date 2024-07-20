@@ -21,6 +21,7 @@ func CheckRedirect(statusCode int) bool {
 	return false
 }
 
+// check if the status code is between 400 and 500
 func CheckRequestError(statusCode int) bool {
 	if statusCode >= 400 && statusCode < 500 {
 		return true

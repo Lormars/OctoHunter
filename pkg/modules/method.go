@@ -33,7 +33,7 @@ func SingleMethodCheck(options *common.Opts) {
 	}
 	logger.Debugln("SingleMethodCheck module running")
 	methods := []string{"POST", "FOO"}
-	//headers := []string{"X-HTTP-Method-Override", "X-HTTP-Method", "X-Method-Override", "X-Method"}
+	headers := []string{"X-Forwarded-For", "X-Forward-For", "X-Remote-IP", "X-Originating-IP", "X-Remote-Addr", "X-Client-IP"}
 	for _, method := range methods { //FIXME: not optimal, do not need to send GET request for each method
 		if ok, ccode, tcode, errCtrl, errTreat := testAccessControl(options, method); ok {
 			if ccode == 429 {
@@ -52,20 +52,16 @@ func SingleMethodCheck(options *common.Opts) {
 			break
 		}
 	}
-	//temporary disable due to high false positive
-	// for _, header := range headers {
-	// 	if ok, errCtrl, errTreat := checkMethodOverwrite(options, header); ok {
-	// 		msg := fmt.Sprintf("[Method] Method Overwrite Bypassed for target %s using header %s\n", options.Target, header)
-	// 		color.Red(msg)
-	// 		if options.Module.Contains("broker") {
-	// 			common.OutputP.PublishMessage(msg)
-	// 			notify.SendMessage(msg)
-	// 		}
-	// 	} else if errCtrl != nil || errTreat != nil {
-	// 		logger.Debugf("Error testing method overwrite: control - %v | treament - %v\n", errCtrl, errTreat)
-	// 		break
-	// 	}
-	// }
+	for _, header := range headers {
+		if ok, payload := checkHeaderOverwrite(options, header); ok {
+			msg := fmt.Sprintf("[Method] Access Control Bypassed for target %s using header %s and payload %s\n", options.Target, header, payload)
+			color.Red(msg)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
+			notify.SendMessage(msg)
+		}
+	}
 
 }
 
@@ -101,28 +97,26 @@ func testAccessControl(options *common.Opts, verb string) (bool, int, int, error
 
 }
 
-func checkMethodOverwrite(options *common.Opts, header string) (bool, error, error) {
-	controlReq, err := http.NewRequest("DELETE", options.Target, nil)
+func checkHeaderOverwrite(options *common.Opts, header string) (bool, string) {
+	treatmentReq, err := http.NewRequest("GET", options.Target, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)
-		return false, err, nil
-	}
-	treatmentReq, err := http.NewRequest("DELETE", options.Target, nil)
-	if err != nil {
-		logger.Debugf("Error creating request: %v\n", err)
-		return false, err, nil
-	}
-	treatmentReq.Header.Set(header, "GET")
-	controlResp, errCtrl := checker.CheckServerCustom(controlReq, clients.NoRedirectClient)
-	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirectClient)
-	if errCtrl != nil || errTreat != nil {
-		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
-		return false, errCtrl, errTreat
-	}
-	if checker.Check405(controlResp) && !checker.Check405(treatmentResp) && !checker.Check429(treatmentResp) {
-		return true, nil, nil
+		return false, ""
 	}
 
-	return false, nil, nil
+	payloads := []string{"127.0.0.1", "localhost"}
+
+	for _, payload := range payloads {
+		treatmentReq.Header.Set(header, payload)
+		treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirectClient)
+		if errTreat != nil {
+			logger.Debugf("Error getting response: treament - %v\n", errTreat)
+			continue
+		}
+		if treatmentResp.StatusCode < 400 {
+			return true, payload
+		}
+	}
+	return false, ""
 
 }
