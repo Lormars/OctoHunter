@@ -46,6 +46,7 @@ type rateLimiterEntry struct {
 	ratelimiter *common.DynamicRateLimiter
 	lastUsed    time.Time
 	successes   int
+	failures    int
 	max         int
 	hit         bool
 }
@@ -231,15 +232,17 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			if entry != nil {
 				if resp.StatusCode == 429 {
 					entry.successes = 0
+					entry.failures++
 					currentRPS := entry.ratelimiter.GetRPS()
-					if currentRPS > 2 && !entry.hit {
+					if currentRPS > 2 && !entry.hit && entry.failures > 10 {
 						all429Count++
+						entry.failures = 0
 						entry.hit = true
 						newrl := currentRPS - 10
 						newbt := entry.ratelimiter.GetBurst() - 10
 						entry.max = int(currentRPS - 10)
 						entry.ratelimiter.Update(newrl, newbt)
-						logger.Warnf("Decrease Rate limit for %s to %f and set max to %d\n", currentHost, newrl, entry.max)
+						logger.Infof("Decrease Rate limit for %s to %f and set max to %d\n", currentHost, newrl, entry.max)
 					}
 				} else if resp.StatusCode == 403 {
 					health.ProxyHealthInstance.AddBad(proxy)
@@ -252,7 +255,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 							newrl := entry.ratelimiter.GetRPS() + 1
 							newbt := entry.ratelimiter.GetBurst() + 1
 							entry.ratelimiter.Update(newrl, newbt)
-							logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
+							logger.Infof("Increase Rate limit for %s to %f\n", currentHost, newrl)
 						} else {
 							entry.max += 5
 						}

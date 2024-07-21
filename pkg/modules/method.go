@@ -43,7 +43,7 @@ func SingleMethodCheck(result *common.ServerResult) {
 	}
 	for _, header := range headers {
 		if ok, payload, sc := checkHeaderOverwrite(result.Url, header); ok {
-			msg := fmt.Sprintf("[Method] Access Control Bypassed for target %s using header %s and payload %s (%d)\n", result.Url, header, payload, sc)
+			msg := fmt.Sprintf("[Method] Access Control Bypassed for target %s using header %s and payload %s (%d vs. %d)\n", result.Url, header, payload, controlSC, sc)
 			color.Red(msg)
 			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
