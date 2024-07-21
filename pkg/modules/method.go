@@ -18,6 +18,12 @@ func SingleMethodCheck(result *common.ServerResult) {
 	if !cacher.CheckCache(result.Url, "method") {
 		return
 	}
+
+	controlSC := checker.CheckWithRealBrowser(result.Url) //to filter out false positive due to browser or ip check or 403 caused by fuzzing and checks in other modules
+	if !checker.CheckRequestError(controlSC) {
+		return
+	}
+
 	logger.Debugln("SingleMethodCheck module running")
 	methods := []string{"POST", "FOO"}
 	headers := []string{"X-Forwarded-For", "X-Forward-For", "X-Remote-IP", "X-Originating-IP", "X-Remote-Addr", "X-Client-IP"}

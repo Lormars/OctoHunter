@@ -159,8 +159,8 @@ func CheckQuirks(res *common.ServerResult) {
 
 	if checker.CheckAccess(result) {
 		if result.Body != "" {
-			go bodyreflected()
-			go common.FuzzUnkeyedP.PublishMessage(result.Url)
+			go bodyreflected()                                //check if any parameter value in url is reflected in body
+			go common.FuzzUnkeyedP.PublishMessage(result.Url) //find more unkeyed headers and params that are reflected in body
 		}
 	}
 

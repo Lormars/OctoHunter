@@ -80,7 +80,7 @@ func GetWaybackURLs(domain string) {
 				logger.Warnf("Error getting response from %s: %v", u, err)
 				return
 			}
-			logger.Warnf("[Wayback Debug] %s - %d", u, resp.StatusCode)
+			// logger.Warnf("[Wayback Debug] %s - %d", u, resp.StatusCode)
 			common.AddToCrawlMap(u, "wayback", resp.StatusCode)
 			common.DividerP.PublishMessage(resp)
 		}(u)

@@ -23,7 +23,7 @@ var inClient = &http.Client{
 
 // for puppeteer
 var puppClient = &http.Client{}
-var limiter = rate.NewLimiter(2, 2)
+var limiter = rate.NewLimiter(2, 4)
 
 // Usage: check if the server is online, using NoRedirectClient
 func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.ServerResult, error, error) {
@@ -56,9 +56,8 @@ func checkServer(url string) (*common.ServerResult, error) {
 		bodyBytes = []byte{}
 	}
 	if resp.StatusCode == 403 {
-		checkURL := req.URL.Scheme + "://" + req.URL.Hostname()
-		if cacher.CheckCache(checkURL, "browser") {
-			statusCode := checkWithRealBrowser(checkURL)
+		if cacher.CheckCache(url, "browser") {
+			statusCode := CheckWithRealBrowser(url)
 			if statusCode != 403 {
 				browserErr := fmt.Errorf("endpoint has browser check")
 				// msg := fmt.Sprintf("Endpoint %s has browser check", checkURL)
@@ -114,7 +113,7 @@ func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerRe
 	}, nil
 }
 
-func checkWithRealBrowser(urlStr string) int {
+func CheckWithRealBrowser(urlStr string) int {
 	requestURL := "http://localhost:9999/status"
 	requestData := map[string]string{"url": urlStr}
 
