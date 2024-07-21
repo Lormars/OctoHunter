@@ -1,63 +1,33 @@
 package takeover
 
 import (
-	"bufio"
-	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"strings"
-	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
-	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
 var records []common.TakeoverRecord
-var targetDomains []string
 var skip []string = []string{"incapdns", "ctripgslb", "gitlab", "impervadns", "sendgrid.net", "akamaiedge"}
 
 func init() {
-	fileName := "list/takeover_domains"
-	file, err := os.Open(fileName)
-	if err != nil {
-		logger.Errorln("Error opening file: ", fileName)
-		return
-	}
-	defer file.Close()
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		targetDomains = append(targetDomains, line)
-	}
-	if err := scanner.Err(); err != nil {
-		logger.Errorln("Error reading file: ", err)
-	}
-}
-
-func CNAMETakeover(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
-	defer wg.Done()
 	parseSignature("asset/fingerprints.json")
-	if options.Target == "none" {
-		multiplex.Conscan(ctx, Takeover, options, options.CnameFile, "cname", 10)
-	} else {
-		Takeover(options)
-	}
 }
 
-// TODO: can add the ability to only target specific domains
-func Takeover(opts *common.Opts) {
-	if !cacher.CheckCache(opts.Target, "cname") {
+func Takeover(domainStr string) {
+	if !cacher.CheckCache(domainStr, "cname") {
 		return
 	}
 	// logger.Debugln("Takeover module running")
-	domain := opts.Target
+	domain := domainStr
 	hasCname, cname, _ := checker.HasCname(domain)
 	if hasCname {
 		for _, s := range skip {
@@ -66,12 +36,12 @@ func Takeover(opts *common.Opts) {
 				return
 			}
 		}
-		checkSig(domain, opts)
+		checkSig(domain)
 	}
 
 }
 
-func checkSig(domain string, opts *common.Opts) bool {
+func checkSig(domain string) bool {
 	var dnsError error
 	var temp_cname string
 
@@ -121,14 +91,14 @@ func checkSig(domain string, opts *common.Opts) bool {
 					return true
 				}
 			}
+			var serverResults []*common.ServerResult
 			httpResult, httpsResult, errHttp, errHttps := checker.CheckHTTPAndHTTPSServers(temp_cname)
-			if errHttp != nil && errHttps != nil {
-				//when the status is noerror but there is no ip address...
-				logger.Debugf("Error getting response from %s: %v\n", errHttp, errHttps)
-				return false
+			if errHttp == nil {
+				serverResults = append(serverResults, httpResult)
 			}
-
-			serverResults := []common.ServerResult{*httpResult, *httpsResult}
+			if errHttps == nil {
+				serverResults = append(serverResults, httpsResult)
+			}
 
 			for _, result := range serverResults {
 				if record.Fingerprint != "" && strings.Contains(result.Body, record.Fingerprint) {

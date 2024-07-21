@@ -18,8 +18,6 @@ import (
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/parser"
-	"github.com/lormars/octohunter/pkg/modules"
-	"github.com/lormars/octohunter/tools/controller"
 )
 
 func main() {
@@ -72,13 +70,6 @@ func main() {
 
 	if options.Module.Contains("dispatcher") {
 		go dispatcher.Input(options)
-	}
-
-	if options.Module.Contains("monitor") {
-		modules.Monitor(options)
-	} else {
-		moduleManager := controller.NewModuleManager()
-		modules.Startup(moduleManager, options)
 	}
 
 	sigChan := make(chan os.Signal, 1)

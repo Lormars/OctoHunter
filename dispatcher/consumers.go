@@ -91,7 +91,7 @@ func Init(opts *common.Opts) {
 						<-semaphore
 					}(name)
 
-				} else if waitingNum <= -5 {
+				} else if waitingNum <= -10 {
 					mu.Lock()
 					if numChan, ok := numMap[name]; ok {
 						closeChan := numChan.chans[0]

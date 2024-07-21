@@ -1,11 +1,9 @@
 package modules
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -14,30 +12,20 @@ import (
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/comparer"
 	"github.com/lormars/octohunter/internal/logger"
-	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
-func CheckHop(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
-	defer wg.Done()
-	if options.Target != "none" {
-		SingleHopCheck(options)
-	} else {
-		multiplex.Conscan(ctx, SingleHopCheck, options, options.HopperFile, "hop", 10)
-	}
-}
-
-func SingleHopCheck(options *common.Opts) {
-	if !cacher.CheckCache(options.Target, "hop") {
+func SingleHopCheck(result *common.ServerResult) {
+	if !cacher.CheckCache(result.Url, "hop") {
 		return
 	}
 	logger.Debugln("SingleHopCheck module running")
-	controlReq, err := http.NewRequest("GET", options.Target, nil)
+	controlReq, err := http.NewRequest("GET", result.Url, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)
 		return
 	}
-	treatmentReq, err := http.NewRequest("GET", options.Target, nil)
+	treatmentReq, err := http.NewRequest("GET", result.Url, nil)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)
 		return
@@ -52,10 +40,10 @@ func SingleHopCheck(options *common.Opts) {
 		return
 	}
 
-	common.AddToCrawlMap(options.Target, "hop", controlResp.StatusCode)
+	common.AddToCrawlMap(result.Url, "hop", controlResp.StatusCode)
 
-	result, place := comparer.CompareResponse(controlResp, treatmentResp)
-	if !result && place == "status" {
+	compareResult, place := comparer.CompareResponse(controlResp, treatmentResp)
+	if !compareResult && place == "status" {
 		if treatmentResp.StatusCode < 400 && controlResp.StatusCode != 429 {
 			if checker.CheckAccess(treatmentResp) {
 				common.CrawlP.PublishMessage(treatmentResp)
@@ -63,7 +51,7 @@ func SingleHopCheck(options *common.Opts) {
 			if strings.Contains(treatmentResp.Body, "Request Rejected") {
 				return
 			}
-			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", options.Target, controlResp.StatusCode, treatmentResp.StatusCode)
+			msg := fmt.Sprintf("[Hop] The responses are different for %s: %d vs %d\n", result.Url, controlResp.StatusCode, treatmentResp.StatusCode)
 			color.Red(msg)
 			notify.SendMessage(msg)
 			if common.SendOutput {

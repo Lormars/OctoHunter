@@ -1,14 +1,12 @@
 package modules
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -17,32 +15,22 @@ import (
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
-	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
-func CheckRedirect(ctx context.Context, wg *sync.WaitGroup, opts *common.Opts) {
-	defer wg.Done()
-	if opts.Target != "none" {
-		SingleRedirectCheck(opts)
-	} else {
-		multiplex.Conscan(ctx, SingleRedirectCheck, opts, opts.RedirectFile, "redirect", 5)
-	}
-}
-
-func SingleRedirectCheck(opts *common.Opts) {
-	if !cacher.CheckCache(opts.Target, "redirect") {
+func SingleRedirectCheck(result *common.ServerResult) {
+	if !cacher.CheckCache(result.Url, "redirect") {
 		return
 	}
 	logger.Debugln("SingleRedirectCheck module running")
-	finalURL, err := getFinalURL(opts.Target)
+	finalURL, err := getFinalURL(result.Url)
 
 	if err != nil {
 		logger.Warnf("Error getting final URL: %v\n", err)
 		return
 	}
 
-	logger.Debugf("finalURL: %s for original url: %s", finalURL, opts.Target)
+	logger.Debugf("finalURL: %s for original url: %s", finalURL, result.Url)
 
 	req, err := http.NewRequest("GET", finalURL.String(), nil)
 	if err == nil {
@@ -52,23 +40,23 @@ func SingleRedirectCheck(opts *common.Opts) {
 		}
 	}
 
-	common.AddToCrawlMap(opts.Target, "redirect", 301) //TODO: can be more accurate
+	common.AddToCrawlMap(result.Url, "redirect", result.StatusCode)
 
-	checkUnusualLength(finalURL, opts)
-	checkOpenRedirect(finalURL, opts)
+	checkUnusualLength(finalURL, result)
+	checkOpenRedirect(finalURL, result)
 
 }
 
-func checkUnusualLength(finalURL *url.URL, opts *common.Opts) {
-	length, err := getLength(opts.Target)
+func checkUnusualLength(finalURL *url.URL, result *common.ServerResult) {
+	length, err := getLength(result.Url)
 	if err != nil {
 		return
 	}
 	if length > 1000 {
-		if opts.Target == finalURL.String() {
+		if result.Url == finalURL.String() {
 			return
 		}
-		msg := fmt.Sprintf("[Redirect] from %s to %s with length %d\n", opts.Target, finalURL.String(), length)
+		msg := fmt.Sprintf("[Redirect] from %s to %s with length %d\n", result.Url, finalURL.String(), length)
 		color.Red(msg)
 		notify.SendMessage(msg)
 		if common.SendOutput {
@@ -77,8 +65,8 @@ func checkUnusualLength(finalURL *url.URL, opts *common.Opts) {
 	}
 }
 
-func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
-	parsedURL, err := url.Parse(opts.Target)
+func checkOpenRedirect(finalURL *url.URL, result *common.ServerResult) {
+	parsedURL, err := url.Parse(result.Url)
 	if err != nil {
 		logger.Warnf("Error parsing URL: %v\n", err)
 		return
@@ -96,13 +84,13 @@ func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
 			//this is necessary to filter out false positive on query parameters
 			if strings.Contains(value, finalURL.Hostname()) {
 
-				msg := fmt.Sprintf("[OR Suspect] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
+				msg := fmt.Sprintf("[OR Suspect] from %s to %s on param %s\n", result.Url, finalURL.String(), key)
 				color.Red(msg)
 				notify.SendMessage(msg)
 				if common.SendOutput {
 					common.OutputP.PublishMessage(msg)
 				}
-				parsedOriginalURL, err := url.Parse(opts.Target)
+				parsedOriginalURL, err := url.Parse(result.Url)
 				if err != nil {
 					logger.Warnf("Error parsing URL: %v\n", err)
 					continue
@@ -131,7 +119,7 @@ func checkOpenRedirect(finalURL *url.URL, opts *common.Opts) {
 				}
 				//since example.com contains "illustrative examples", we can check for that
 				if strings.Contains(resp.Body, "illustrative examples") {
-					msg := fmt.Sprintf("[OR Confirmed] from %s to %s on param %s\n", opts.Target, finalURL.String(), key)
+					msg := fmt.Sprintf("[OR Confirmed] from %s to %s on param %s\n", result.Url, finalURL.String(), key)
 					color.Red(msg)
 					notify.SendMessage(msg)
 					if common.SendOutput {

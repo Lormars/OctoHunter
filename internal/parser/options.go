@@ -20,11 +20,6 @@ func Parse_Options() (*common.Opts, *common.Config) {
 		purgeBroker    = flag.Bool("pb", false, "Purge the broker")
 		useProxy       = flag.Bool("px", false, "Use proxy")
 		ratelimit      = flag.Int("ratelimit", 4, "The rate limit to use per second")
-		cnameFile      = flag.String("cnamefile", "none", "The file to scan for subdomain takeover")
-		dorkFile       = flag.String("dorkfile", "none", "The file to scan for Google dork")
-		methodFile     = flag.String("methodfile", "none", "The file to scan for HTTP method checker")
-		redirectFile   = flag.String("redirectfile", "none", "The file to scan for redirect checker")
-		hopperFile     = flag.String("hopperfile", "none", "The file to scan for hopper")
 		dispatcherFile = flag.String("dispatcherfile", "list/distest", "The file to scan for dispatcher")
 	)
 	flag.Parse()
@@ -32,11 +27,6 @@ func Parse_Options() (*common.Opts, *common.Config) {
 			Module:         modules,
 			Concurrency:    *concurrency,
 			Target:         *target,
-			CnameFile:      *cnameFile,
-			DorkFile:       *dorkFile,
-			MethodFile:     *methodFile,
-			RedirectFile:   *redirectFile,
-			HopperFile:     *hopperFile,
 			DispatcherFile: *dispatcherFile,
 		}, &common.Config{
 			Loglevel:    *logLevel,

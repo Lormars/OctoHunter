@@ -207,20 +207,6 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 					}
 					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, xssInput.Url)
 					handler(&xssInput)
-				case func(*Opts):
-					localOpts := &Opts{
-						Module:         opts.Module,
-						Concurrency:    opts.Concurrency,
-						Target:         string(d.([]byte)),
-						DorkFile:       opts.DorkFile,
-						HopperFile:     opts.HopperFile,
-						MethodFile:     opts.MethodFile,
-						RedirectFile:   opts.RedirectFile,
-						CnameFile:      opts.CnameFile,
-						DispatcherFile: opts.DispatcherFile,
-					}
-					logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.([]byte))
-					handler(localOpts)
 				default:
 					failOnError(fmt.Errorf("unknown type %T", handler), "Failed to consume a message")
 				}
@@ -238,16 +224,15 @@ func monitorChannels(producers []*Producer) {
 		for _, p := range producers {
 			GlobalMu.Lock()
 			if p.name != "dork_broker" {
-
+				name := strings.Split(p.name, "_")[0]
 				if len(p.messageChan) > 500 {
 					logger.Infof("Queue %s has %d messages waiting", p.name, len(p.messageChan))
+					WaitingQueue[name] = 10 //if longer than 500, then just add more
+					lastWait[p.name] = len(p.messageChan)
+				} else {
+					WaitingQueue[name] = len(p.messageChan) - lastWait[p.name]
+					lastWait[p.name] = len(p.messageChan)
 				}
-				// logger.Infof("lastwait %s %d and queue %d", p.name, lastWait[p.name], len(p.messageChan))
-				name := strings.Split(p.name, "_")[0]
-
-				// logger.Infof("Queue %s has %d up", p.name, len(p.messageChan))
-				WaitingQueue[name] = len(p.messageChan) - lastWait[p.name]
-				lastWait[p.name] = len(p.messageChan)
 			}
 			GlobalMu.Unlock()
 		}

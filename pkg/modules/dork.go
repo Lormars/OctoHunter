@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"math/rand"
@@ -9,23 +8,12 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/internal/multiplex"
 	"github.com/lormars/octohunter/internal/proxy"
 )
-
-func GoogleDork(ctx context.Context, wg *sync.WaitGroup, options *common.Opts) {
-	defer wg.Done()
-	if options.Target != "none" {
-		singleDork(options)
-	} else {
-		multiplex.Conscan(ctx, singleDork, options, options.DorkFile, "dork", 1)
-	}
-}
 
 func singleDork(options *common.Opts) {
 	site := "site:" + options.Target

@@ -45,11 +45,6 @@ type Opts struct {
 	Module         ModuleList `json:"modules"`
 	Concurrency    int        `json:"concurrency"`
 	Target         string     `json:"target"`
-	DorkFile       string     `json:"dorkFile"`
-	HopperFile     string     `json:"hopperFile"`
-	MethodFile     string     `json:"methodFile"`
-	RedirectFile   string     `json:"redirectFile"`
-	CnameFile      string     `json:"cnameFile"`
 	DispatcherFile string     `json:"dispatcherFile"`
 }
 

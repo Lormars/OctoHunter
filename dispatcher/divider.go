@@ -31,12 +31,12 @@ func Divider(result *common.ServerResult) {
 		//though param splitting does not happen only in redirect, most of it happens here, so...
 		go common.SplittingP.PublishMessage(result)
 		if useHttps {
-			go common.RedirectP.PublishMessage(result.Url)
+			go common.RedirectP.PublishMessage(result)
 		}
 	} else if checker.CheckRequestError(result.StatusCode) {
 		// logger.Warnf("Request error for %s (%d)", result.Url, result.StatusCode)
 		go common.MethodP.PublishMessage(result)
-		go common.HopP.PublishMessage(result.Url)
+		go common.HopP.PublishMessage(result)
 		//if the homepage itself is 403 or 404, fuzz for directories
 		if (result.StatusCode == 403 || result.StatusCode == 404) && checker.CheckHomePage(result.Url) {
 			saveDomainToMap(result.Url)
