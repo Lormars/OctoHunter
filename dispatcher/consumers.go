@@ -7,7 +7,6 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/internal/fuzzer"
-	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/wayback"
 	"github.com/lormars/octohunter/pkg/modules"
 	pathconfusion "github.com/lormars/octohunter/pkg/modules/pathConfusion"
@@ -60,48 +59,48 @@ func Init(opts *common.Opts) {
 		}
 		for {
 			common.GlobalMu.Lock()
-			for name := range common.WaitingQueue {
+			for name, waitingNum := range common.WaitingQueue {
 				if name == "wayback" {
 					continue
 				}
-				semaphore <- struct{}{}
-				go func(name string) {
-					closeChan := nameFuncMap[name](opts)
-					mu.Lock()
-					if _, ok := numMap[name]; !ok {
-						numMap[name] = numChan{num: 1, chans: []chan struct{}{closeChan}}
-					} else {
-						numchan := numMap[name]
-						numchan.num++
-						numchan.chans = append(numchan.chans, closeChan)
-						numMap[name] = numchan
-					}
-					mu.Unlock()
-					logger.Infof("Starting %s, have %d running", name, numMap[name].num)
-					<-closeChan
-					mu.Lock()
-					newNum := numMap[name].num - 1
-					if newNum == 0 {
-						delete(numMap, name)
-					} else {
-						numMap[name] = numChan{num: newNum, chans: numMap[name].chans[1:]}
-					}
-					mu.Unlock()
-					logger.Infof("Stopping %s, have %d running", name, newNum+1)
-					<-semaphore
-				}(name)
+				if waitingNum >= 2 {
+					semaphore <- struct{}{}
+					go func(name string) {
+						closeChan := nameFuncMap[name](opts)
+						mu.Lock()
+						if _, ok := numMap[name]; !ok {
+							numMap[name] = numChan{num: 1, chans: []chan struct{}{closeChan}}
+						} else {
+							numchan := numMap[name]
+							numchan.num++
+							numchan.chans = append(numchan.chans, closeChan)
+							numMap[name] = numchan
+						}
+						// logger.Infof("Starting %s, have %d running", name, numMap[name].num+1)
+						mu.Unlock()
+						<-closeChan
+						mu.Lock()
+						newNum := numMap[name].num - 1
+						if newNum == 0 {
+							delete(numMap, name)
+						} else {
+							numMap[name] = numChan{num: newNum, chans: numMap[name].chans[1:]}
+						}
+						// logger.Infof("Stopping %s, have %d running", name, newNum+1)
+						mu.Unlock()
+						<-semaphore
+					}(name)
 
-			}
-			mu.Lock()
-			for name, numChan := range numMap {
-				if _, ok := common.WaitingQueue[name]; !ok {
-					if numChan.num > 0 {
+				} else if waitingNum <= -5 {
+					mu.Lock()
+					if numChan, ok := numMap[name]; ok {
 						closeChan := numChan.chans[0]
 						close(closeChan)
 					}
+					mu.Unlock()
 				}
 			}
-			mu.Unlock()
+
 			common.GlobalMu.Unlock()
 			time.Sleep(1 * time.Second)
 		}

@@ -16,10 +16,6 @@ func Startup(moduleManager *controller.ModuleManager, options *common.Opts) {
 		moduleManager.StartModule("dork", GoogleDork, options)
 	}
 
-	if options.Module.Contains("method") {
-		moduleManager.StartModule("method", CheckMethod, options)
-	}
-
 	if options.Module.Contains("redirect") {
 		moduleManager.StartModule("redirect", CheckRedirect, options)
 	}

@@ -50,7 +50,7 @@ var GlobalMu sync.Mutex
 
 var (
 	queueProducers []*Producer
-	WaitingQueue   = make(map[string]bool)
+	WaitingQueue   = make(map[string]int)
 	// concurrency    int
 )
 
@@ -243,15 +243,10 @@ func monitorChannels(producers []*Producer) {
 					logger.Infof("Queue %s has %d messages waiting", p.name, len(p.messageChan))
 				}
 				// logger.Infof("lastwait %s %d and queue %d", p.name, lastWait[p.name], len(p.messageChan))
-				if (lastWait[p.name] - 10) <= len(p.messageChan) {
-					name := strings.Split(p.name, "_")[0]
+				name := strings.Split(p.name, "_")[0]
 
-					// logger.Infof("Queue %s has %d up", p.name, len(p.messageChan))
-					WaitingQueue[name] = true
-				} else {
-					name := strings.Split(p.name, "_")[0]
-					delete(WaitingQueue, name)
-				}
+				// logger.Infof("Queue %s has %d up", p.name, len(p.messageChan))
+				WaitingQueue[name] = len(p.messageChan) - lastWait[p.name]
 				lastWait[p.name] = len(p.messageChan)
 			}
 			GlobalMu.Unlock()
