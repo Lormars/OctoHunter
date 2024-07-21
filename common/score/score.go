@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/logger"
 )
 
 // weight
@@ -15,12 +16,14 @@ const (
 	method        = 10
 	hop           = 10
 	cors          = 10
-	split         = 10
+	split         = 5
 	cl0           = 10
 	pathconfuse   = 20
 	fuzz          = 10
 	quirk         = 5
 )
+
+var LowScoreDomains []string
 
 func CalculateScore() {
 	originMap := common.GetOriginMap()
@@ -29,13 +32,14 @@ func CalculateScore() {
 	var totalScore int
 	var count int
 	for domain, origins := range originMap {
-		if len(origins) < 20 {
+		if len(origins) < 50 {
 			continue
 		}
 		score[domain] = 0
 		for _, origin := range origins {
 			score[domain] += getScore(origin)
 		}
+		score[domain] /= len(origins)
 		totalScore += score[domain]
 		count++
 	}
@@ -66,6 +70,14 @@ func CalculateScore() {
 
 	for _, result := range results {
 		go common.WaybackP.PublishMessage(result)
+	}
+
+	threshold = average - 2*stdDev
+	for domain, s := range score {
+		if float64(s) < threshold {
+			logger.Warnf("Low score domain added: %s, score: %d", domain, s)
+			LowScoreDomains = append(LowScoreDomains, domain)
+		}
 	}
 
 }

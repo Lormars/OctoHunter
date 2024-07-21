@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/score"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 	"golang.org/x/time/rate"
@@ -79,6 +81,16 @@ func checkServer(url string) (*common.ServerResult, error) {
 
 // The ultra-important requester for (nearly) all request...
 func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerResult, error) {
+
+	// Check if the request is in the lowscoredomain
+	currentHostName := req.URL.Hostname()
+	for _, lowscore := range score.LowScoreDomains {
+		if strings.Contains(currentHostName, lowscore) {
+			logger.Warnf("Low score domain filtered: %s\n", currentHostName)
+			return nil, fmt.Errorf("low score domain")
+		}
+	}
+
 	respCh := common.AddToQueue(req.URL.Hostname(), []*http.Request{req}, client)
 	resps := <-respCh
 	resp := resps[0].Resp

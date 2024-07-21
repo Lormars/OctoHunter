@@ -14,6 +14,7 @@ func CheckAccess(resp *common.ServerResult) bool {
 	return false
 }
 
+// check if the status code is between 300 and 400
 func CheckRedirect(statusCode int) bool {
 	if statusCode >= 300 && statusCode < 400 {
 		return true

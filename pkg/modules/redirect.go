@@ -38,7 +38,7 @@ func SingleRedirectCheck(opts *common.Opts) {
 	finalURL, err := getFinalURL(opts.Target)
 
 	if err != nil {
-		logger.Debugf("Error getting final URL: %v\n", err)
+		logger.Warnf("Error getting final URL: %v\n", err)
 		return
 	}
 
@@ -165,7 +165,7 @@ func getFinalURL(initialURL string) (*url.URL, error) {
 	}
 	resp, err := checker.CheckServerCustom(req, clients.NormalClient)
 	if err != nil {
-		logger.Debugf("Error getting response from %s: %v\n", initialURL, err)
+		logger.Warnf("Error getting response from %s: %v\n", initialURL, err)
 		return nil, err
 	}
 
