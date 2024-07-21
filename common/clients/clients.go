@@ -174,8 +174,8 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		acquireSemaphore()
 		// Measure concurrent requests
 
-		proxiedCtx, cancel := context.WithTimeout(req.Context(), 30*time.Second)
-		req = req.WithContext(proxiedCtx)
+		// proxiedCtx, cancel := context.WithTimeout(req.Context(), 120*time.Second)
+		// req = req.WithContext(proxiedCtx)
 
 		mu.Lock()
 		allRequestsCount++
@@ -184,7 +184,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		start := time.Now()
 		resp, err := lrt.Proxied.RoundTrip(req)
 		duration := time.Since(start)
-		cancel()
+		// cancel()
 		releaseSemaphore()
 
 		if err != nil {
