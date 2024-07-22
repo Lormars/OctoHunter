@@ -13,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/comparer"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -157,8 +158,14 @@ func getFinalURL(initialURL string) (*url.URL, error) {
 		return nil, err
 	}
 
-	finalURL := resp.FinalUrl
+	ok, err := comparer.AreSiblingDomains(resp.Url, resp.FinalUrl.String())
+	if err == nil {
+		if ok {
+			finalURL := resp.FinalUrl
+			return finalURL, nil
+		}
+	}
 
-	return finalURL, nil
+	return nil, fmt.Errorf("final url out of scope")
 
 }

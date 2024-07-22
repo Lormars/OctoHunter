@@ -21,7 +21,6 @@ func CheckGraphql(urlStr string) {
 		target := strings.TrimRight(urlStr, "/")
 		for _, payload := range payloads {
 			testURL := target + payload
-			logger.Infof("Checking %s", testURL)
 			req, err := http.NewRequest("GET", testURL, nil)
 			if err != nil {
 				logger.Warnf("Error creating request: %v", err)

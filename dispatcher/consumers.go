@@ -53,7 +53,7 @@ func Init(opts *common.Opts) {
 	}
 
 	var maxConcurrent = map[string]int{
-		"cname":         10,
+		"cname":         25,
 		"redirect":      35,
 		"method":        25,
 		"hopper":        10,
@@ -75,11 +75,12 @@ func Init(opts *common.Opts) {
 		"graphql":       25,
 	}
 
-	semaphore := make(chan struct{}, 525)
+	semaphore := make(chan struct{}, 540)
 
 	go func() {
 		mu := sync.Mutex{}
 		var numMap = make(map[string]numChan)
+		var borrowMap = make(map[string]int)
 		for _, function := range nameFuncMap {
 			for i := 0; i < opts.Concurrency; i++ {
 				go function(opts)
@@ -92,8 +93,39 @@ func Init(opts *common.Opts) {
 					continue
 				}
 				mu.Lock()
-				startConsumer := waitingNum >= 2 && numMap[name].num < maxConcurrent[name]
+				startConsumer := waitingNum >= 2
+                stopConsumer := waitingNum <= -3 
+
+				if stopConsumer {
+					if numChan, ok := numMap[name]; ok {
+						closeChan := numChan.chans[0]
+						close(closeChan)
+					}
+				}
+
+				if startConsumer {
+					if numMap[name].num >= maxConcurrent[name] { //check if we are at max concurrency
+						if len(semaphore) < cap(semaphore) { //check if we have space in the semaphore
+							borrowMap[name]++ //borrow a consumer
+						} else {
+							startConsumer = false //if we are at max concurrency and no space in the semaphore, don't start a new consumer
+						}
+					} else if len(semaphore) == cap(semaphore) { //if we are not at max concurrency but no space in the semaphore
+						for borrowFun, borrowNum := range borrowMap { //check if there are borrowed consumers
+							if borrowNum > 0 { //if there are borrowed consumers, make them return
+								borrowMap[borrowFun]--
+								if numChan, ok := numMap[borrowFun]; ok {
+									closeChan := numChan.chans[0]
+									close(closeChan)
+								} else {
+									logger.Errorf("Shouldn't happen. Borrowed consumer not found: %s", borrowFun)
+								}
+								break
+						}
+					}
+				}
 				mu.Unlock()
+
 				if startConsumer {
 					semaphore <- struct{}{}
 					go func(name string) {
@@ -122,19 +154,13 @@ func Init(opts *common.Opts) {
 						<-semaphore
 					}(name)
 
-				} else if waitingNum <= -3 {
-					mu.Lock()
-					if numChan, ok := numMap[name]; ok {
-						closeChan := numChan.chans[0]
-						close(closeChan)
-					}
-					mu.Unlock()
-				}
+				} 
 			}
 
 			common.GlobalMu.Unlock()
-
-			logger.Warnf("sepamore running: %d", len(semaphore))
+			if len(semaphore) > 450 {
+				logger.Warnf("sepamore running: %d", len(semaphore))
+			}
 			time.Sleep(1 * time.Second)
 		}
 	}()
