@@ -94,7 +94,7 @@ func Init(opts *common.Opts) {
 				}
 				mu.Lock()
 				startConsumer := waitingNum >= 2
-                stopConsumer := waitingNum <= -3 
+				stopConsumer := waitingNum <= -3
 
 				if stopConsumer {
 					if numChan, ok := numMap[name]; ok {
@@ -121,6 +121,7 @@ func Init(opts *common.Opts) {
 									logger.Errorf("Shouldn't happen. Borrowed consumer not found: %s", borrowFun)
 								}
 								break
+							}
 						}
 					}
 				}
@@ -154,7 +155,7 @@ func Init(opts *common.Opts) {
 						<-semaphore
 					}(name)
 
-				} 
+				}
 			}
 
 			common.GlobalMu.Unlock()
