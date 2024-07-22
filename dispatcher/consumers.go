@@ -100,6 +100,9 @@ func Init(opts *common.Opts) {
 					if numChan, ok := numMap[name]; ok {
 						closeChan := numChan.chans[0]
 						close(closeChan)
+						if borrowNum, ok := borrowMap[name]; ok && borrowNum > 0 {
+							borrowMap[name]--
+						}
 					}
 				}
 
@@ -107,8 +110,6 @@ func Init(opts *common.Opts) {
 					if numMap[name].num >= maxConcurrent[name] { //check if we are at max concurrency
 						if len(semaphore) < cap(semaphore) { //check if we have space in the semaphore
 							borrowMap[name]++ //borrow a consumer
-						} else {
-							startConsumer = false //if we are at max concurrency and no space in the semaphore, don't start a new consumer
 						}
 					} else if len(semaphore) == cap(semaphore) { //if we are not at max concurrency but no space in the semaphore
 						for borrowFun, borrowNum := range borrowMap { //check if there are borrowed consumers
