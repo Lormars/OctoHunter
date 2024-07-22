@@ -63,6 +63,15 @@ func CheckQuirks(res *common.ServerResult) {
 		return
 	}
 
+	//check for cgi-bin to prepare for RCE check
+	if strings.Contains(result.Url, "cgi-bin") {
+		msg := fmt.Sprintf("[Quirks] CGI-BIN in URL %s", result.Url)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
+		notify.SendMessage(msg)
+	}
+
 	//secret miner
 	pattern := `(?i)(?:key|api|token|secret|client|passwd|password|auth|access)(?:[0-9a-z\\-_\\t .]{0,20})(?:[\\s|']|[\\s|\"]){0,3}(?:=|>|:{1,3}=|\\|\\|:|<=|=>|:|\\?=)(?:'|\"|\\s|=|\\x60){0,5}([0-9a-z\\-_.=]{10,150})(?:['|\"|\\n|\\r|\\s|\\x60|;]|$)`
 	re := regexp.MustCompile(pattern)

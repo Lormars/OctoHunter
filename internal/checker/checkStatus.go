@@ -51,6 +51,7 @@ func CheckMimeType(contentType, mimeToCheck string) bool {
 	return mimeType == mimeToCheck
 }
 
+// check if the url contains no path
 func CheckHomePage(urlStr string) bool {
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {

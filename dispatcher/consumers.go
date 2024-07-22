@@ -7,6 +7,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/crawler"
 	"github.com/lormars/octohunter/internal/fuzzer"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/wayback"
 	"github.com/lormars/octohunter/pkg/modules"
 	pathconfusion "github.com/lormars/octohunter/pkg/modules/pathConfusion"
@@ -49,13 +50,37 @@ func Init(opts *common.Opts) {
 		"ssti":          sstiConsumer,
 	}
 
-	semaphore := make(chan struct{}, 1000)
+	var maxConcurrent = map[string]int{
+		"cname":         10,
+		"redirect":      35,
+		"method":        25,
+		"hopper":        10,
+		"divider":       5,
+		"crawl":         25,
+		"salesforce":    5,
+		"splitting":     50,
+		"cl0":           35,
+		"quirks":        35,
+		"rc":            35,
+		"cors":          10,
+		"pathconfuse":   10,
+		"fuzz4034":      10,
+		"pathtraversal": 35,
+		"fuzzapi":       25,
+		"fuzzunkeyed":   45,
+		"xss":           35,
+		"ssti":          30,
+	}
+
+	semaphore := make(chan struct{}, 500)
 
 	go func() {
 		mu := sync.Mutex{}
 		var numMap = make(map[string]numChan)
 		for _, function := range nameFuncMap {
-			go function(opts)
+			for i := 0; i < opts.Concurrency; i++ {
+				go function(opts)
+			}
 		}
 		for {
 			common.GlobalMu.Lock()
@@ -63,7 +88,10 @@ func Init(opts *common.Opts) {
 				if name == "wayback" {
 					continue
 				}
-				if waitingNum >= 2 {
+				mu.Lock()
+				startConsumer := waitingNum >= 2 && numMap[name].num < maxConcurrent[name]
+				mu.Unlock()
+				if startConsumer {
 					semaphore <- struct{}{}
 					go func(name string) {
 						closeChan := nameFuncMap[name](opts)
@@ -91,7 +119,7 @@ func Init(opts *common.Opts) {
 						<-semaphore
 					}(name)
 
-				} else if waitingNum <= -10 {
+				} else if waitingNum <= -3 {
 					mu.Lock()
 					if numChan, ok := numMap[name]; ok {
 						closeChan := numChan.chans[0]
@@ -102,6 +130,8 @@ func Init(opts *common.Opts) {
 			}
 
 			common.GlobalMu.Unlock()
+
+			logger.Warnf("sepamore running: %d", len(semaphore))
 			time.Sleep(1 * time.Second)
 		}
 	}()

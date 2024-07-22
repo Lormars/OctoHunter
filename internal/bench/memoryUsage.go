@@ -13,6 +13,8 @@ import (
 	"github.com/lormars/octohunter/internal/notify"
 )
 
+var notified = false
+
 func PrintMemUsage(opts *common.Opts) {
 	time.Sleep(5 * time.Second)
 	for {
@@ -43,7 +45,8 @@ func PrintMemUsage(opts *common.Opts) {
 			if err != nil {
 				logger.Debugf("Error converting Alloc to int: %v\n", err)
 			}
-			if sys > 5000 {
+			if sys > 6000 && !notified {
+				notified = true
 				notify.SendMessage(msg)
 			}
 			time.Sleep(1 * time.Second)
