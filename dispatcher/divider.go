@@ -52,6 +52,7 @@ func Divider(result *common.ServerResult) {
 
 		if checker.CheckHomePage(result.Url) {
 			go common.RCP.PublishMessage(result.Url)
+			go common.GraphqlP.PublishMessage(result.Url)
 		}
 
 		//go common.PathConfuseP.PublishMessage(result.Url)

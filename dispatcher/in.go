@@ -36,7 +36,7 @@ func Input(opts *common.Opts) {
 
 		lineCh := make(chan string, opts.Concurrency)
 		var wg sync.WaitGroup
-		for i := 0; i < opts.Concurrency; i++ {
+		for i := 0; i < 50; i++ {
 			wg.Add(1)
 			go func() {
 				for domainString := range lineCh {

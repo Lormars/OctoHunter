@@ -4,32 +4,59 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/fatih/color"
+	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
+	"github.com/lormars/octohunter/internal/notify"
 )
 
-var payloads = []string{"/graphql", "/api", "/api/graphql", "/graphql/api", "/graphql/graphql"}
+var payloads = []string{"/graphql/v1", "/graphql", "/api", "/api/graphql", "/graphql/api", "/graphql/graphql"}
 
-var introspect = `{"query": "query IntrospectionQuery{__schema{queryType{name}mutationType{name}subscriptionType{name}types{...FullType}directives{name description locations args{...InputValue}}}}fragment FullType on __Type{kind name description fields(includeDeprecated:true){name description args{...InputValue}type{...TypeRef}isDeprecated deprecationReason}inputFields{...InputValue}interfaces{...TypeRef}enumValues(includeDeprecated:true){name description isDeprecated deprecationReason}possibleTypes{...TypeRef}}fragment InputValue on __InputValue{name description type{...TypeRef}defaultValue}fragment TypeRef on __Type{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name ofType{kind name}}}}}}}}"}`
+var introspect = `{"query": "{__schema{queryType{name}}}"}`
 
 func CheckGraphql(urlStr string) {
-	target := strings.TrimRight(urlStr, "/")
-	for _, payload := range payloads {
-		testURL := target + payload
-		req, err := http.NewRequest("GET", testURL, nil)
-		if err != nil {
-			logger.Warnf("Error creating request: %v", err)
-			continue
+	if !strings.Contains(urlStr, "graphql") {
+		target := strings.TrimRight(urlStr, "/")
+		for _, payload := range payloads {
+			testURL := target + payload
+			logger.Infof("Checking %s", testURL)
+			req, err := http.NewRequest("GET", testURL, nil)
+			if err != nil {
+				logger.Warnf("Error creating request: %v", err)
+				continue
+			}
+			_, err = checker.CheckServerCustom(req, clients.NoRedirectClient)
+			if err != nil {
+				logger.Debugf("Error checking server: %v", err)
+				continue
+			}
+			go checkIntrospect(testURL)
 		}
-		_, err = checker.CheckServerCustom(req, clients.NoRedirectClient)
-		if err != nil {
-			continue
-		}
-		checkIntrospect(testURL)
+	} else { // if the URL already contains "graphql" (sent from parsejs.go)
+		checkIntrospect(urlStr)
 	}
 }
 
 func checkIntrospect(urlStr string) {
-	logger.Infof(introspect)
+	req, err := http.NewRequest("POST", urlStr, strings.NewReader(introspect))
+	if err != nil {
+		logger.Warnf("Error creating request: %v", err)
+		return
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+	if err != nil {
+		logger.Debugf("Error checking server: %v", err)
+		return
+	}
+	if strings.Contains(resp.Body, "__schema") {
+		msg := "[GQL Introspection] Found introspection query in " + urlStr
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
+		notify.SendMessage(msg)
+		color.Red(msg)
+	}
 }

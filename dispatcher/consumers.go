@@ -10,6 +10,7 @@ import (
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/wayback"
 	"github.com/lormars/octohunter/pkg/modules"
+	"github.com/lormars/octohunter/pkg/modules/api"
 	pathconfusion "github.com/lormars/octohunter/pkg/modules/pathConfusion"
 	"github.com/lormars/octohunter/pkg/modules/quirks"
 	racecondition "github.com/lormars/octohunter/pkg/modules/raceCondition"
@@ -48,6 +49,7 @@ func Init(opts *common.Opts) {
 		"fuzzunkeyed":   fuzzUnkeyedConsumer,
 		"xss":           xssConsumer,
 		"ssti":          sstiConsumer,
+		"graphql":       graphqlConsumer,
 	}
 
 	var maxConcurrent = map[string]int{
@@ -70,9 +72,10 @@ func Init(opts *common.Opts) {
 		"fuzzunkeyed":   45,
 		"xss":           35,
 		"ssti":          30,
+		"graphql":       25,
 	}
 
-	semaphore := make(chan struct{}, 500)
+	semaphore := make(chan struct{}, 525)
 
 	go func() {
 		mu := sync.Mutex{}
@@ -136,6 +139,11 @@ func Init(opts *common.Opts) {
 		}
 	}()
 
+}
+
+func graphqlConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.GraphqlP.ConsumeMessage(api.CheckGraphql, opts)
+	return closeChan
 }
 
 func waybackConsumer(opts *common.Opts) {
