@@ -16,6 +16,7 @@ import (
 var notified = false
 
 func PrintMemUsage(opts *common.Opts) {
+	start := time.Now()
 	time.Sleep(5 * time.Second)
 	for {
 		var m runtime.MemStats
@@ -37,7 +38,11 @@ func PrintMemUsage(opts *common.Opts) {
 			scanned := dispatcher.GetScanned()
 			msg += fmt.Sprintf(" Scanned: %d. ", scanned)
 			all429 := clients.Get429Count()
-			msg += fmt.Sprintf(" 429: %d. ", all429)
+			msg += fmt.Sprintf(" Slowed: %d. ", all429)
+			consumerUsage := len(common.ConsumerSemaphore)
+			msg += fmt.Sprintf(" CUsage: %d. ", consumerUsage)
+			elapsed := time.Since(start)
+			msg += fmt.Sprintf(" Elapsed: %.2f. ", elapsed.Minutes())
 			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}
@@ -45,7 +50,7 @@ func PrintMemUsage(opts *common.Opts) {
 			if err != nil {
 				logger.Debugf("Error converting Alloc to int: %v\n", err)
 			}
-			if sys > 6000 && !notified {
+			if sys > 7000 && !notified {
 				notified = true
 				notify.SendMessage(msg)
 			}

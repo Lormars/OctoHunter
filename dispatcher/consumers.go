@@ -75,8 +75,6 @@ func Init(opts *common.Opts) {
 		"graphql":       25,
 	}
 
-	semaphore := make(chan struct{}, 540)
-
 	go func() {
 		mu := sync.Mutex{}
 		var numMap = make(map[string]numChan)
@@ -108,10 +106,10 @@ func Init(opts *common.Opts) {
 
 				if startConsumer {
 					if numMap[name].num >= maxConcurrent[name] { //check if we are at max concurrency
-						if len(semaphore) < cap(semaphore) { //check if we have space in the semaphore
+						if len(common.ConsumerSemaphore) < cap(common.ConsumerSemaphore) { //check if we have space in the semaphore
 							borrowMap[name]++ //borrow a consumer
 						}
-					} else if len(semaphore) == cap(semaphore) { //if we are not at max concurrency but no space in the semaphore
+					} else if len(common.ConsumerSemaphore) == cap(common.ConsumerSemaphore) { //if we are not at max concurrency but no space in the semaphore
 						for borrowFun, borrowNum := range borrowMap { //check if there are borrowed consumers
 							if borrowNum > 0 { //if there are borrowed consumers, make them return
 								borrowMap[borrowFun]--
@@ -129,7 +127,7 @@ func Init(opts *common.Opts) {
 				mu.Unlock()
 
 				if startConsumer {
-					semaphore <- struct{}{}
+					common.ConsumerSemaphore <- struct{}{}
 					go func(name string) {
 						closeChan := nameFuncMap[name](opts)
 						mu.Lock()
@@ -153,15 +151,15 @@ func Init(opts *common.Opts) {
 						}
 						// logger.Infof("Stopping %s, have %d running", name, newNum+1)
 						mu.Unlock()
-						<-semaphore
+						<-common.ConsumerSemaphore
 					}(name)
 
 				}
 			}
 
 			common.GlobalMu.Unlock()
-			if len(semaphore) > 450 {
-				logger.Warnf("sepamore running: %d", len(semaphore))
+			if len(common.ConsumerSemaphore) > 450 {
+				logger.Warnf("sepamore running: %d", len(common.ConsumerSemaphore))
 			}
 			time.Sleep(1 * time.Second)
 		}

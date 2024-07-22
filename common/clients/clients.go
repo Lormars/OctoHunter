@@ -372,5 +372,5 @@ func PrintResStats() string {
 	}
 	percentageBad := float64(count) / float64(all) * 100
 	percentageErr := float64(errRequestsCount) / float64(allRequestsCount) * 100
-	return fmt.Sprintf("Bad rate: %.2f. Err rate: %.2f", percentageBad, percentageErr)
+	return fmt.Sprintf("Bad: %.2f. Err: %.2f", percentageBad, percentageErr)
 }
