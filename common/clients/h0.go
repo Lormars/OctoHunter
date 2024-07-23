@@ -26,7 +26,7 @@ func (t *H0Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 			//logger.Warnf("HTTP/2 request succeeded for %s\n", req.URL.String())
 			return resp, nil
 		}
-		logger.Warnf("HTTP/2 request failed: %v, falling back to HTTP/1.1 for %s\n", err, req.URL.String())
+		// logger.Warnf("HTTP/2 request failed: %v, falling back to HTTP/1.1 for %s\n", err, req.URL.String())
 	}
 	return t.h1Transport.RoundTrip(req)
 }
