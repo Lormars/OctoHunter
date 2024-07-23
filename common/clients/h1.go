@@ -31,7 +31,7 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 		if err == nil {
 			break
 		}
-		logger.Debugf("Error dialing IP %v: %v\n", ipAddr, err)
+		logger.Warnf("Error dialing IP %v: %v\n", ipAddr, err)
 	}
 
 	if err != nil {
@@ -39,10 +39,10 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 	}
 
 	config := &utls.Config{ServerName: host}
-	tlsConn := utls.UClient(conn, config, utls.HelloRandomized)
+	tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
 	err = tlsConn.Handshake()
 	if err != nil {
-		logger.Debugf("Error handshaking: %v\n", err)
+		logger.Warnf("Error handshaking: %v\n", err)
 		return nil, err
 	}
 	return tlsConn, nil
@@ -51,7 +51,7 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 func customDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
 	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		logger.Debugf("Error splitting host and port: %v\n", err)
+		logger.Warnf("Error splitting host and port: %v\n", err)
 		return nil, err
 	}
 	ips, err := DnsCache.LookupIP(host)
@@ -68,7 +68,7 @@ func customDialContext(ctx context.Context, network, addr string) (net.Conn, err
 		}
 	}
 	if err != nil {
-		logger.Debugf("Error dialing: %v\n", err)
+		logger.Warnf("Error dialing: %v\n", err)
 		return nil, err
 	}
 	return conn, nil
