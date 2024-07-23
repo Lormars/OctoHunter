@@ -1,10 +1,15 @@
 package clients
 
 import (
+	"context"
+	"net"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/lormars/octohunter/internal/logger"
 	"golang.org/x/net/http2"
+	"golang.org/x/net/proxy"
 )
 
 type H0Transport struct {
@@ -56,4 +61,37 @@ var NoRedirectClient = &http.Client{
 		return http.ErrUseLastResponse
 	},
 	Transport: loggingH0Transport,
+}
+
+func dial(ctx context.Context, network, addr string) (net.Conn, error) {
+	var conn net.Conn
+	var err error
+	if UseProxy {
+		proxyStr, _ := ctx.Value("proxy").(string)
+		auth := &proxy.Auth{
+			User:     os.Getenv("PROXY_USER"),
+			Password: os.Getenv("PROXY_PASS"),
+		}
+		dialer, err := proxy.SOCKS5("tcp", proxyStr, auth, proxy.Direct)
+		if err != nil {
+			logger.Warnf("Error dialing: %v\n", err)
+			return nil, err
+		}
+
+		conn, err = dialer.Dial(network, addr)
+		if err != nil {
+			logger.Debugf("Error dialing: %v\n", err)
+			return nil, err
+		}
+	} else {
+		dialer := &net.Dialer{
+			Timeout: 10 * time.Second,
+		}
+		conn, err = dialer.DialContext(ctx, network, addr)
+		if err != nil {
+			logger.Debugf("Error dialing: %v\n", err)
+			return nil, err
+		}
+	}
+	return conn, nil
 }

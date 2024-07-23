@@ -5,50 +5,39 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
-	"os"
-	"time"
 
 	"github.com/lormars/octohunter/internal/logger"
 	utls "github.com/refraction-networking/utls"
 	"golang.org/x/net/http2"
-	"golang.org/x/net/proxy"
 )
 
 func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-	var conn net.Conn
-	var err error
-	if UseProxy {
-		proxyStr, _ := ctx.Value("proxy").(string)
-		auth := &proxy.Auth{
-			User:     os.Getenv("PROXY_USER"),
-			Password: os.Getenv("PROXY_PASS"),
-		}
-		dialer, err := proxy.SOCKS5("tcp", proxyStr, auth, proxy.Direct)
-		if err != nil {
-			logger.Warnf("Error dialing: %v\n", err)
-			return nil, err
-		}
-
-		conn, err = dialer.Dial(network, addr)
-		if err != nil {
-			logger.Warnf("Error dialing: %v\n", err)
-			return nil, err
-		}
-	} else {
-		dialer := &net.Dialer{
-			Timeout: 10 * time.Second,
-		}
-		conn, err = dialer.DialContext(ctx, network, addr)
-		if err != nil {
-			logger.Warnf("Error dialing: %v\n", err)
-			return nil, err
-		}
-	}
-	host, _, err := net.SplitHostPort(addr)
+	host, port, err := net.SplitHostPort(addr)
 	if err != nil {
-		logger.Warnf("Error splitting host and port: %v\n", err)
+		logger.Debugf("Error splitting host and port: %v\n", err)
 		return nil, err
 	}
+
+	ips, err := DnsCache.LookupIP(host)
+	if err != nil {
+		logger.Warnf("Error looking up IP: %v\n", err)
+		return nil, err
+	}
+
+	var conn net.Conn
+	for _, ip := range ips {
+		ipAddr := net.JoinHostPort(ip.String(), port)
+		conn, err = dial(ctx, network, ipAddr)
+		if err == nil {
+			break
+		}
+		logger.Debugf("Error dialing IP %v: %v\n", ipAddr, err)
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
 	config := &utls.Config{
 		ServerName: host,
 		MinVersion: tls.VersionTLS12,

@@ -2,12 +2,14 @@ package dispatcher
 
 import (
 	"bufio"
+	"net/http"
 	"os"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/common/score"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
@@ -41,26 +43,32 @@ func Input(opts *common.Opts) {
 			go func() {
 				for domainString := range lineCh {
 					if !strings.HasPrefix(domainString, "http") {
-						if !checker.ResolveDNS(domainString) {
-							// logger.Debugln("DNS resolution failed for: ", domainString)
-							go common.CnameP.PublishMessage(domainString)
-							continue
-						}
-
 						go common.CnameP.PublishMessage(domainString)
 					}
 					domainString = strings.TrimPrefix(domainString, "http://")
 					domainString = strings.TrimPrefix(domainString, "https://")
 					httpStatus, httpsStatus, errhttp, errhttps := checker.CheckHTTPAndHTTPSServers(domainString)
+					//why? to make sure the statuscode is right.
+					//using the default client may be blocked due to various bot checks.
+					//So need to use our client to request again to make sure the status code is right.
 					if errhttp == nil && httpStatus.Online {
-						go common.DividerP.PublishMessage(httpStatus)
+						req, err := http.NewRequest("GET", httpStatus.Url, nil)
+						if err == nil {
+							resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+							if err == nil {
+								go common.DividerP.PublishMessage(resp)
+							}
+						}
 					}
 					if errhttps == nil && httpsStatus.Online {
-						go common.DividerP.PublishMessage(httpsStatus)
+						req, err := http.NewRequest("GET", httpsStatus.Url, nil)
+						if err == nil {
+							resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+							if err == nil {
+								go common.DividerP.PublishMessage(resp)
+							}
+						}
 					}
-					// if (errhttp == nil && httpStatus.Online) || (errhttps == nil && httpsStatus.Online) {
-					// 	go common.WaybackP.PublishMessage(domainString)
-					// }
 				}
 				wg.Done()
 			}()

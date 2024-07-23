@@ -91,26 +91,28 @@ func checkSig(domain string) bool {
 					return true
 				}
 			}
-			var serverResults []*common.ServerResult
-			httpResult, httpsResult, errHttp, errHttps := checker.CheckHTTPAndHTTPSServers(temp_cname)
-			if errHttp == nil {
-				serverResults = append(serverResults, httpResult)
-			}
-			if errHttps == nil {
-				serverResults = append(serverResults, httpsResult)
-			}
 
-			for _, result := range serverResults {
-				if record.Fingerprint != "" && strings.Contains(result.Body, record.Fingerprint) {
-					msg := "[CNAME Potential] " + result.Url + " | Cname: " + temp_cname + " | Service: " + record.Service
-					color.Red(msg)
-					if common.SendOutput {
-						common.OutputP.PublishMessage(msg)
-					}
-					notify.SendMessage(msg)
-					return true
-				}
-			}
+			//comment out due to high false positive
+			// var serverResults []*common.ServerResult
+			// httpResult, httpsResult, errHttp, errHttps := checker.CheckHTTPAndHTTPSServers(temp_cname)
+			// if errHttp == nil {
+			// 	serverResults = append(serverResults, httpResult)
+			// }
+			// if errHttps == nil {
+			// 	serverResults = append(serverResults, httpsResult)
+			// }
+
+			// for _, result := range serverResults {
+			// 	if record.Fingerprint != "" && strings.Contains(result.Body, record.Fingerprint) {
+			// 		msg := "[CNAME Potential] " + result.Url + " | Cname: " + temp_cname + " | Service: " + record.Service
+			// 		color.Red(msg)
+			// 		if common.SendOutput {
+			// 			common.OutputP.PublishMessage(msg)
+			// 		}
+			// 		notify.SendMessage(msg)
+			// 		return true
+			// 	}
+			// }
 		}
 	}
 	return false

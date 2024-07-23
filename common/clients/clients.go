@@ -35,6 +35,7 @@ var (
 	errRequestsCount = 0
 	all429Count      = 0
 	UseProxy         = false
+	DnsCache         = NewDNSCache()
 )
 
 type responseStats struct {
