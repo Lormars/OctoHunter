@@ -60,7 +60,7 @@ func rch2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Config
 		return nil, err
 	}
 
-	tlsConn := utls.UClient(conn, config, utls.HelloRandomized)
+	tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
 	err = tlsConn.Handshake()
 	if err != nil {
 		logger.Debugf("Error handshaking: %v\n", err)
