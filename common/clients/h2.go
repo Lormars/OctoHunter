@@ -42,6 +42,7 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 		ServerName: host,
 		MinVersion: tls.VersionTLS12,
 		MaxVersion: tls.VersionTLS13,
+		NextProtos: []string{"h2"},
 	}
 	tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
 	err = tlsConn.Handshake()

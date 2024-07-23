@@ -53,6 +53,7 @@ func rch2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Config
 		ServerName: host,
 		MinVersion: tls.VersionTLS12,
 		MaxVersion: tls.VersionTLS13,
+		NextProtos: []string{"h2"},
 	}
 
 	if err := conn.(*net.TCPConn).SetNoDelay(false); err != nil {

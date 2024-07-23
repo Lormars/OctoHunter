@@ -16,7 +16,6 @@ allow
 authorization
 authenticate
 cache-control
-connection
 contact
 content-disposition
 content-encoding

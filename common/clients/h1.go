@@ -38,7 +38,10 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 		return nil, err
 	}
 
-	config := &utls.Config{ServerName: host}
+	config := &utls.Config{
+		ServerName: host,
+		NextProtos: []string{"http/1.1"},
+	}
 	tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
 	err = tlsConn.Handshake()
 	if err != nil {
