@@ -4,7 +4,6 @@ import (
 	"sync"
 
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
 )
@@ -24,10 +23,6 @@ func UrlToMap(urlStr string) {
 
 	pathMap.Store(path, true)
 	domainWithPath := domain + path
-
-	if !cacher.CheckCache(domainWithPath, "fuzz404") {
-		return
-	}
 
 	common.Fuzz4034P.PublishMessage(domainWithPath)
 

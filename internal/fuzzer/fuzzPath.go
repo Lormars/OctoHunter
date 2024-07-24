@@ -11,6 +11,7 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -33,6 +34,11 @@ func init() {
 }
 
 func FuzzPath(urlStr string) {
+
+	if !cacher.CheckCache(urlStr, "fuzzPath") {
+		return
+	}
+
 	logger.Debugf("FuzzPath: %s", urlStr)
 	var wg sync.WaitGroup
 	var mu sync.Mutex

@@ -67,51 +67,49 @@ func CheckPathConfusion(urlStr string) {
 				return
 			}
 
-			if resp1.StatusCode == 200 {
-				signature2, err := generator.GenerateSignature()
-				if err != nil {
-					logger.Debugf("Error generating signature: %v\n", err)
-					return
-				}
+			signature2, err := generator.GenerateSignature()
+			if err != nil {
+				logger.Debugf("Error generating signature: %v\n", err)
+				return
+			}
 
-				payload2 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature2 + ".css"
+			payload2 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature2 + ".css"
 
-				req2, err := http.NewRequest("GET", payload2, nil)
-				if err != nil {
-					logger.Debugf("Error creating request: %v", err)
-					return
-				}
+			req2, err := http.NewRequest("GET", payload2, nil)
+			if err != nil {
+				logger.Debugf("Error creating request: %v", err)
+				return
+			}
 
-				resp2, err := checker.CheckServerCustom(req2, clients.NoRedirectClient)
+			resp2, err := checker.CheckServerCustom(req2, clients.NoRedirectClient)
+			if err != nil {
+				logger.Debugf("Error getting response from %s: %v\n", payload2, err)
+				return
+			}
+
+			same := resp1.Body == resp2.Body
+			//if the response are different and the first request is not cached
+			//Cache is checked either in the header (it has cache and miss) or if there is nothing in the header.
+			if !same && ((matcher.HeaderKeyContainsSignature(resp1, "cache") && matcher.HeaderValueContainsSignature(resp1, "miss")) || !matcher.HeaderKeyContainsSignature(resp1, "cache")) {
+
+				elapse2, resp2, err := checker.MeasureElapse(req1, clients.NoRedirectClient)
 				if err != nil {
 					logger.Debugf("Error getting response from %s: %v\n", payload2, err)
 					return
 				}
-
-				same := resp1.Body == resp2.Body
-				//if the response are different and the first request is not cached
-				//Cache is checked either in the header (it has cache and miss) or if there is nothing in the header.
-				if !same && ((matcher.HeaderKeyContainsSignature(resp1, "cache") && matcher.HeaderValueContainsSignature(resp1, "miss")) || !matcher.HeaderKeyContainsSignature(resp1, "cache")) {
-
-					elapse2, resp2, err := checker.MeasureElapse(req1, clients.NoRedirectClient)
-					if err != nil {
-						logger.Debugf("Error getting response from %s: %v\n", payload2, err)
-						return
+				same, _ = comparer.CompareResponse(resp1, resp2)
+				//if the response are the same and the second request is cached.
+				//Cache is measured either in the header (cache hit) or in the response time
+				if same && ((matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit")) || elapse1 > elapse2*2) {
+					msg := fmt.Sprintf("[WCD Suspect] Found using %s", payload1)
+					color.Red(msg)
+					if common.SendOutput {
+						common.OutputP.PublishMessage(msg)
 					}
-					same, _ = comparer.CompareResponse(resp1, resp2)
-					//if the response are the same and the second request is cached.
-					//Cache is measured either in the header (cache hit) or in the response time
-					if same && ((matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit")) || elapse1 > elapse2*2) {
-						msg := fmt.Sprintf("[WCD Suspect] Found using %s", payload1)
-						color.Red(msg)
-						if common.SendOutput {
-							common.OutputP.PublishMessage(msg)
-						}
-						notify.SendMessage(msg)
-					}
+					notify.SendMessage(msg)
 				}
-
 			}
+
 		}(encoding)
 	}
 

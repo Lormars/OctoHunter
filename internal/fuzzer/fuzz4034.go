@@ -9,12 +9,16 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
 func Fuzz4034(inputStr string) {
+	if !cacher.CheckCache(inputStr, "fuzz404") {
+		return
+	}
 	if strings.HasPrefix(inputStr, "http") {
 		fuzzAllPath(inputStr)
 	} else {
