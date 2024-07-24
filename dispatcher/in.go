@@ -57,17 +57,31 @@ func Input(opts *common.Opts) {
 							resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 							if err == nil {
 								go common.DividerP.PublishMessage(resp)
+							} else {
+								logger.Debugf("Error checking http server: %v", err)
 							}
+						} else {
+							logger.Debugf("Error checking http server: %v", err)
 						}
+					} else {
+						logger.Debugf("Error checking http server: %v", errhttp)
 					}
 					if errhttps == nil && httpsStatus.Online {
 						req, err := http.NewRequest("GET", httpsStatus.Url, nil)
 						if err == nil {
 							resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+
+							// resp, err := checker.CheckServerCustom(req, http.DefaultClient)
 							if err == nil {
 								go common.DividerP.PublishMessage(resp)
+							} else {
+								logger.Debugf("Error checking https server: %v", err)
 							}
+						} else {
+							logger.Debugf("Error checking https server: %v", err)
 						}
+					} else {
+						logger.Debugf("Error checking https server: %v", errhttps)
 					}
 				}
 				wg.Done()

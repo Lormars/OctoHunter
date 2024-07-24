@@ -61,10 +61,25 @@ func checkServer(url string) (*common.ServerResult, error) {
 		if cacher.CheckCache(url, "browser") {
 			statusCode := CheckWithRealBrowser(url)
 			if statusCode != 403 {
-				browserErr := fmt.Errorf("endpoint has browser check")
-				// msg := fmt.Sprintf("Endpoint %s has browser check", checkURL)
-				// color.Red(msg)
-				return nil, browserErr
+				logger.Warnln("endpoint has browser check")
+				if strings.HasPrefix(url, "https://") {
+					hostname := req.URL.Hostname()
+					common.NeedBrowser[hostname] = true
+					result, err := common.RequestWithBrowser(req, inClient)
+					if err != nil {
+						logger.Warnf("Error checking server with browser: %v", err)
+						return nil, err
+					}
+					// logger.Warnf("Browser check result: %v", result)
+					return &common.ServerResult{
+						Url:        url,
+						Online:     result.StatusCode >= 100 && result.StatusCode < 600,
+						StatusCode: result.StatusCode,
+						Headers:    result.Header,
+						Body:       string(bodyBytes),
+					}, nil
+				}
+				return nil, fmt.Errorf("browser check")
 			}
 			// msg := fmt.Sprintf("Endpoint %s DOES NOT HAVE browser check", url)
 			// color.Red(msg)

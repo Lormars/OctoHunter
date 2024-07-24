@@ -97,7 +97,9 @@ var DB *sql.DB
 var Paths sync.Map
 var Domains sync.Map
 var SendOutput bool
-var ConsumerSemaphore = make(chan struct{}, 540)
+var ConsumerSemaphore = make(chan struct{}, 565)
+
+var NeedBrowser = make(map[string]bool)
 
 type ServerResult struct {
 	Url        string      `json:"url"`

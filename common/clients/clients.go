@@ -65,6 +65,10 @@ var AllClients = map[string]*http.Client{
 	"NoRedirecth1Client": NoRedirecth1Client,
 	"Normalh2Client":     Normalh2Client,
 	"NoRedirecth2Client": NoRedirecth2Client,
+	"NormalClient":       NormalClient,
+	"NoRedirectClient":   NoRedirectClient,
+	"NormalRCClient":     NormalRCClient,
+	"NoRedirectRCClient": NoRedirectRCClient,
 }
 
 var ratelimiters = make(map[string]map[string]*rateLimiterEntry)

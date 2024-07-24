@@ -37,7 +37,6 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 	if err != nil {
 		return nil, err
 	}
-
 	config := &utls.Config{
 		ServerName: host,
 		MinVersion: tls.VersionTLS12,

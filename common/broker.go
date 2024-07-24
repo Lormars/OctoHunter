@@ -45,6 +45,7 @@ var XssP = NewProducer("xss_broker")
 var SstiP = NewProducer("ssti_broker")
 var WaybackP = NewProducer("wayback_broker")
 var GraphqlP = NewProducer("graphql_broker")
+var MimeP = NewProducer("mime_broker")
 
 var mu sync.Mutex
 var GlobalMu sync.Mutex
@@ -70,7 +71,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
 		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz4034P,
-		PathTraversalP, FuzzAPIP, FuzzUnkeyedP, XssP, SstiP, WaybackP, GraphqlP,
+		PathTraversalP, FuzzAPIP, FuzzUnkeyedP, XssP, SstiP, WaybackP, GraphqlP, MimeP,
 	}
 
 	rabbitMQSetup()

@@ -50,6 +50,8 @@ func Divider(result *common.ServerResult) {
 			go common.CrawlP.PublishMessage(result)
 		}
 
+		go common.MimeP.PublishMessage(result)
+
 		if checker.CheckHomePage(result.Url) {
 			go common.RCP.PublishMessage(result.Url)
 			go common.GraphqlP.PublishMessage(result.Url)

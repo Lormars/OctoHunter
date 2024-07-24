@@ -85,11 +85,11 @@ func dial(ctx context.Context, network, addr string) (net.Conn, error) {
 		}
 	} else {
 		dialer := &net.Dialer{
-			Timeout: 10 * time.Second,
+			Timeout: 30 * time.Second,
 		}
 		conn, err = dialer.DialContext(ctx, network, addr)
 		if err != nil {
-			logger.Debugf("Error dialing: %v\n", err)
+			logger.Warnf("Error dialing: %v\n", err)
 			return nil, err
 		}
 	}

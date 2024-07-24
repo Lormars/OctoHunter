@@ -16,6 +16,7 @@ import (
 	racecondition "github.com/lormars/octohunter/pkg/modules/raceCondition"
 	"github.com/lormars/octohunter/pkg/modules/request"
 	"github.com/lormars/octohunter/pkg/modules/request/smuggle"
+	"github.com/lormars/octohunter/pkg/modules/research/mime"
 	"github.com/lormars/octohunter/pkg/modules/salesforce"
 	"github.com/lormars/octohunter/pkg/modules/takeover"
 )
@@ -50,6 +51,7 @@ func Init(opts *common.Opts) {
 		"xss":           xssConsumer,
 		"ssti":          sstiConsumer,
 		"graphql":       graphqlConsumer,
+		"mime":          mimeConsumer,
 	}
 
 	var maxConcurrent = map[string]int{
@@ -73,6 +75,7 @@ func Init(opts *common.Opts) {
 		"xss":           35,
 		"ssti":          30,
 		"graphql":       25,
+		"mime":          25,
 	}
 
 	go func() {
@@ -165,6 +168,11 @@ func Init(opts *common.Opts) {
 		}
 	}()
 
+}
+
+func mimeConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.MimeP.ConsumeMessage(mime.CheckMime, opts)
+	return closeChan
 }
 
 func graphqlConsumer(opts *common.Opts) chan struct{} {

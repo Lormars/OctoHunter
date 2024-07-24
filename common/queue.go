@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/lormars/octohunter/internal/logger"
 )
 
 type Queue struct {
@@ -161,6 +163,13 @@ func dispatch() {
 				for _, r := range req.Request.Reqs {
 					if r.Header.Get("Connection") == "" {
 						r.Close = true
+					}
+					currentHostName := r.URL.Hostname()
+					if _, exists := NeedBrowser[currentHostName]; exists {
+						logger.Warnf("Need browser for %s", currentHostName)
+						resp, err := RequestWithBrowser(r, req.Request.Client)
+						responses = append(responses, Response{Resp: resp, Err: err})
+						continue
 					}
 					resp, err := req.Request.Client.Do(r)
 					responses = append(responses, Response{Resp: resp, Err: err})
