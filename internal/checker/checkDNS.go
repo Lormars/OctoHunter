@@ -15,7 +15,7 @@ var resolver = &net.Resolver{
 	PreferGo: true,
 	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
 		d := net.Dialer{
-			Timeout: 5 * time.Second,
+			Timeout: 30 * time.Second,
 		}
 		return d.DialContext(ctx, network, "1.1.1.1:53")
 	},

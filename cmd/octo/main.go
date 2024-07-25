@@ -85,6 +85,7 @@ func main() {
 	logger.Infof("All producers shut down. Exiting...\n")
 
 	common.Close()
+	common.CloseBrowser()
 	logger.Infof("All connections closed. Exiting...\n")
 
 	if err := cmd.Process.Kill(); err != nil {

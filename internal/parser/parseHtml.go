@@ -49,10 +49,10 @@ func ExtractUrls(baseUrl, response string) []string {
 					if attr.Key == "href" || attr.Key == "src" {
 						resolvedUrl, err := resolveURL(baseUrl, attr.Val)
 						if err != nil {
-							logger.Debugf("Error resolving URL %s for %s: %v\n", attr.Val, baseUrl, err)
+							// logger.Debugf("Error resolving URL %s for %s: %v\n", attr.Val, baseUrl, err)
 							continue
 						}
-						logger.Debugf("Resolved URL: %s\n", resolvedUrl)
+						// logger.Debugf("Resolved URL: %s\n", resolvedUrl)
 						if !strings.HasSuffix(resolvedUrl, ".css") {
 							urls = append(urls, resolvedUrl)
 						}

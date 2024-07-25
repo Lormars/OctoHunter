@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"path"
 	"strings"
-	"time"
 
 	"math/rand"
 
@@ -26,7 +25,6 @@ func CheckCl0(urlstr string) {
 	//Due to the nature of the check, we need to use a custom client for each goroutine
 	client := &http.Client{
 		Transport: clients.WrapTransport(clients.KeepAliveh1Transport()),
-		Timeout:   120 * time.Second,
 	}
 	defer client.CloseIdleConnections()
 
@@ -43,8 +41,10 @@ func CheckCl0(urlstr string) {
 	cachePath := path.Join(hostName, dir)
 
 	if !cacher.CheckCache(cachePath, "cl0") {
-		logger.Debugf("Cache hit for %s\n", urlstr)
 		return
+	}
+	if _, exists := common.NeedBrowser[hostName]; exists {
+		return //TODO: return for now as it may hang due to http1
 	}
 
 	common.AddToCrawlMap(urlstr, "cl0", 200) //TODO: can be accurate

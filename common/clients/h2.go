@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/lormars/octohunter/internal/logger"
-	utls "github.com/refraction-networking/utls"
 	"golang.org/x/net/http2"
 )
 
@@ -37,19 +36,7 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 	if err != nil {
 		return nil, err
 	}
-	config := &utls.Config{
-		ServerName: host,
-		MinVersion: tls.VersionTLS12,
-		MaxVersion: tls.VersionTLS13,
-		NextProtos: []string{"h2"},
-	}
-	tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
-	err = tlsConn.Handshake()
-	if err != nil {
-		logger.Warnf("Error handshaking: %v\n", err)
-		return nil, err
-	}
-	return tlsConn, nil
+	return handshake(ctx, host, "h2", conn)
 }
 
 // Custom transport using utls for TLS fingerprinting
@@ -57,7 +44,9 @@ func CreateCustomh2Transport() (*http2.Transport, error) {
 	transport := &http2.Transport{
 		DialTLSContext:     customh2DialTLSContext,
 		DisableCompression: false,
-		AllowHTTP:          false,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 	}
 
 	return transport, nil

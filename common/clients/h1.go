@@ -2,11 +2,11 @@ package clients
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 
 	"github.com/lormars/octohunter/internal/logger"
-	utls "github.com/refraction-networking/utls"
 )
 
 // Custom dialer for utls
@@ -37,18 +37,7 @@ func customh1DialTLSContext(ctx context.Context, network, addr string) (net.Conn
 	if err != nil {
 		return nil, err
 	}
-
-	config := &utls.Config{
-		ServerName: host,
-		NextProtos: []string{"http/1.1"},
-	}
-	tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
-	err = tlsConn.Handshake()
-	if err != nil {
-		logger.Warnf("Error handshaking: %v\n", err)
-		return nil, err
-	}
-	return tlsConn, nil
+	return handshake(ctx, host, "http/1.1", conn)
 }
 
 func customDialContext(ctx context.Context, network, addr string) (net.Conn, error) {
@@ -83,6 +72,9 @@ func CreateCustomh1Transport() *http.Transport {
 		DialTLSContext:    customh1DialTLSContext,
 		ForceAttemptHTTP2: false,
 		DisableKeepAlives: true,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 	}
 
 	return transport
@@ -95,6 +87,9 @@ func KeepAliveh1Transport() *http.Transport {
 		ForceAttemptHTTP2:   false,
 		DisableKeepAlives:   false,
 		MaxIdleConnsPerHost: 1,
+		TLSClientConfig: &tls.Config{
+			InsecureSkipVerify: true,
+		},
 	}
 
 	return transport

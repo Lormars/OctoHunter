@@ -1,8 +1,3 @@
-accept
-accept-charset
-accept-encoding
-accept-language
-accept-ranges
 access-control-allow-credentials
 access-control-allow-headers
 access-control-allow-methods

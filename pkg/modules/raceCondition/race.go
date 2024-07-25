@@ -42,6 +42,13 @@ func RaceCondition(urlStr string) {
 		logger.Warnf("Failed to parse URL: %v", err)
 		return
 	}
+	currentHostName := parsedURL.Hostname()
+
+	var requester func(*http.Request, *http.Client) (*http.Response, error)
+	if _, exists := common.NeedBrowser[currentHostName]; exists {
+		requester = common.RequestWithBrowser
+		return //TODO: return for now as it may crash the program
+	}
 
 	pattern := `wxoyvz\d{1,2}`
 	re, err := regexp.Compile(pattern)
@@ -71,8 +78,12 @@ func RaceCondition(urlStr string) {
 		//req.Header.Set("User-Agent", "")
 
 		// Send the request
-
-		resp, err := clients.NoRedirectRCClient.Do(req)
+		var resp *http.Response
+		if requester != nil {
+			resp, err = requester(req, clients.NoRedirectRCClient)
+		} else {
+			resp, err = clients.NoRedirectRCClient.Do(req)
+		}
 		if err != nil {
 			logger.Debugf("Goroutine %d: Failed to send request: %v", id, err)
 			return

@@ -193,7 +193,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 		releaseSemaphore()
 
 		if err != nil {
-			// logger.Warnf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
+			logger.Warnf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
 			// If this was not the last attempt, wait before retrying
 			if attempt < maxRetries-1 {
 				mu.Lock()

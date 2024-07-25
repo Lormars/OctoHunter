@@ -9,6 +9,7 @@ import (
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
+	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
@@ -29,6 +30,7 @@ func CheckMime(result *common.ServerResult) {
 }
 
 func tryManipulate404Mime(urlStr, path string) {
+	logger.Infof("Checking for MIME confusion on %s\n", urlStr)
 	var payloads []string
 	//need to check if there are paths in the url. If not, can only check www.abc.com/nonexistent.xml
 	//if yes, can also check www.abc.com/path1nonexistent.xml

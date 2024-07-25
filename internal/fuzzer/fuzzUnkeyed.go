@@ -148,6 +148,7 @@ func FuzzUnkeyed(urlStr string) {
 
 				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
 				if err != nil {
+					logger.Warnf("Error checking server: %v", err)
 					continue
 				}
 
