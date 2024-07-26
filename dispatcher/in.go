@@ -51,42 +51,46 @@ func Input(opts *common.Opts) {
 					//why? to make sure the statuscode is right.
 					//using the default client may be blocked due to various bot checks.
 					//So need to use our client to request again to make sure the status code is right.
-					if errhttp == nil && httpStatus.Online {
-						req, err := http.NewRequest("GET", httpStatus.Url, nil)
-						if err == nil {
-							resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+					go func() {
+						if errhttp == nil && httpStatus.Online {
+							req, err := http.NewRequest("GET", httpStatus.Url, nil)
 							if err == nil {
-								go common.DividerP.PublishMessage(resp)
+								resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+								if err == nil {
+									go common.DividerP.PublishMessage(resp)
+								} else {
+									logger.Debugf("Error checking http server: %v", err)
+								}
 							} else {
 								logger.Debugf("Error checking http server: %v", err)
 							}
 						} else {
-							logger.Debugf("Error checking http server: %v", err)
+							logger.Debugf("Error checking http server: %v", errhttp)
 						}
-					} else {
-						logger.Debugf("Error checking http server: %v", errhttp)
-					}
-					if (errhttps == nil && httpsStatus.Online) || strings.Contains(errhttps.Error(), "browser check") {
-						if httpsStatus == nil {
-							logger.Warnf("shouldnt happen: %v", errhttps)
-							continue
-						}
-						req, err := http.NewRequest("GET", httpsStatus.Url, nil)
-						if err == nil {
-							resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
-
-							// resp, err := checker.CheckServerCustom(req, http.DefaultClient)
+					}()
+					go func() {
+						if (errhttps == nil && httpsStatus.Online) || strings.Contains(errhttps.Error(), "browser check") {
+							if httpsStatus == nil {
+								logger.Warnf("shouldnt happen: %v", errhttps)
+								return
+							}
+							req, err := http.NewRequest("GET", httpsStatus.Url, nil)
 							if err == nil {
-								go common.DividerP.PublishMessage(resp)
+								resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+
+								// resp, err := checker.CheckServerCustom(req, http.DefaultClient)
+								if err == nil {
+									go common.DividerP.PublishMessage(resp)
+								} else {
+									logger.Debugf("Error checking https server: %v", err)
+								}
 							} else {
 								logger.Debugf("Error checking https server: %v", err)
 							}
 						} else {
-							logger.Debugf("Error checking https server: %v", err)
+							logger.Debugf("Error checking https server: %v", errhttps)
 						}
-					} else {
-						logger.Debugf("Error checking https server: %v", errhttps)
-					}
+					}()
 				}
 				wg.Done()
 			}()

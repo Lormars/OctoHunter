@@ -100,6 +100,8 @@ func CheckPathConfusion(urlStr string) {
 				same, _ = comparer.CompareResponse(resp1, resp2)
 				//if the response are the same and the second request is cached.
 				//Cache is measured either in the header (cache hit) or in the response time
+				//TODO: upon reflection I don't get this logic, if we are sure (double-sure) that this page is dynamic, why check cache?
+				//How can the same request to a dynamic page returns the same response if it is not cached?
 				if same && ((matcher.HeaderKeyContainsSignature(resp2, "cache") && matcher.HeaderValueContainsSignature(resp2, "hit")) || elapse1 > elapse2*2) {
 					msg := fmt.Sprintf("[WCD Suspect] Found using %s", payload1)
 					color.Red(msg)
