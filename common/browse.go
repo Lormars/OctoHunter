@@ -37,6 +37,10 @@ func CloseBrowser() {
 
 func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response, error) {
 
+	if strings.HasPrefix(req.URL.String(), "http://") {
+		return nil, fmt.Errorf("http request")
+	}
+
 	logger.Warnf("RequestWithBrowser: %s", req.URL.String())
 	page := pool.MustGet(create)
 	defer pool.Put(page)
@@ -93,8 +97,10 @@ func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response,
 	case <-timeout:
 		// Timeout occurred
 		mu.Lock()
-		wg.Done() // Ensure we call Done in case of timeout
-		guard = true
+		if !guard {
+			guard = true
+			wg.Done()
+		}
 		mu.Unlock()
 		logger.Warnf("Timeout: %s", req.URL.String())
 	}

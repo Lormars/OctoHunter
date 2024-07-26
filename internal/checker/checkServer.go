@@ -1,9 +1,6 @@
 package checker
 
 import (
-	"bytes"
-	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -13,7 +10,6 @@ import (
 	"github.com/lormars/octohunter/common/score"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
-	"golang.org/x/time/rate"
 )
 
 // for input scan, just use a normal client is fine
@@ -24,8 +20,8 @@ var inClient = &http.Client{
 }
 
 // for puppeteer
-var puppClient = &http.Client{}
-var limiter = rate.NewLimiter(2, 4)
+// var puppClient = &http.Client{}
+// var limiter = rate.NewLimiter(2, 4)
 
 // Usage: check if the server is online, using NoRedirectClient
 func CheckHTTPAndHTTPSServers(domain string) (*common.ServerResult, *common.ServerResult, error, error) {
@@ -57,34 +53,30 @@ func checkServer(url string) (*common.ServerResult, error) {
 		logger.Debugf("Error reading response body: %v", err)
 		bodyBytes = []byte{}
 	}
-	if resp.StatusCode == 403 {
-		if cacher.CheckCache(url, "browser") {
-			statusCode := CheckWithRealBrowser(url)
-			if statusCode != 403 {
-				logger.Warnln("endpoint has browser check")
-				if strings.HasPrefix(url, "https://") {
-					hostname := req.URL.Hostname()
-					common.NeedBrowser[hostname] = true
-					result, err := common.RequestWithBrowser(req, inClient)
-					if err != nil {
-						logger.Warnf("Error checking server with browser: %v", err)
-						return nil, err
-					}
-					// logger.Warnf("Browser check result: %v", result)
-					return &common.ServerResult{
-						Url:        url,
-						Online:     result.StatusCode >= 100 && result.StatusCode < 600,
-						StatusCode: result.StatusCode,
-						Headers:    result.Header,
-						Body:       string(bodyBytes),
-					}, nil
+
+	if strings.HasPrefix(url, "https://") {
+		if resp.StatusCode == 403 {
+			hostname := req.URL.Hostname()
+			if cacher.CheckCache(hostname, "browser") {
+				// statusCode := CheckWithRealBrowser(url)
+				result, err := common.RequestWithBrowser(req, inClient)
+				if err != nil {
+					return nil, err
 				}
-				return nil, fmt.Errorf("browser check")
+				// logger.Warnf("rc %d", result.StatusCode)
+				if result.StatusCode != 403 {
+					logger.Warnln("endpoint has browser check")
+					common.NeedBrowser[hostname] = true
+					return &common.ServerResult{
+						Url: url,
+					}, fmt.Errorf("browser check")
+				}
 			}
 			// msg := fmt.Sprintf("Endpoint %s DOES NOT HAVE browser check", url)
 			// color.Red(msg)
 		}
 	}
+
 	return &common.ServerResult{
 		Url:        url,
 		Online:     resp.StatusCode >= 100 && resp.StatusCode < 600,
@@ -140,55 +132,55 @@ func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerRe
 	}, nil
 }
 
-func CheckWithRealBrowser(urlStr string) int {
-	requestURL := "http://localhost:9999/status"
-	requestData := map[string]string{"url": urlStr}
+// func CheckWithRealBrowser(urlStr string) int {
+// 	requestURL := "http://localhost:9999/status"
+// 	requestData := map[string]string{"url": urlStr}
 
-	jsonData, err := json.Marshal(requestData)
-	if err != nil {
-		logger.Warnf("Error marshalling request data: %v", err)
-		return 403
-	}
+// 	jsonData, err := json.Marshal(requestData)
+// 	if err != nil {
+// 		logger.Warnf("Error marshalling request data: %v", err)
+// 		return 403
+// 	}
 
-	ctx := context.Background()
+// 	ctx := context.Background()
 
-	if err := limiter.Wait(ctx); err != nil {
-		logger.Warnf("Error waiting for rate limiter: %v", err)
-		return 403
-	}
+// 	if err := limiter.Wait(ctx); err != nil {
+// 		logger.Warnf("Error waiting for rate limiter: %v", err)
+// 		return 403
+// 	}
 
-	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(jsonData))
-	if err != nil {
-		logger.Warnf("Error creating request: %v", err)
-		return 403
-	}
-	req.Header.Set("Content-Type", "application/json")
+// 	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(jsonData))
+// 	if err != nil {
+// 		logger.Warnf("Error creating request: %v", err)
+// 		return 403
+// 	}
+// 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := puppClient.Do(req)
-	if err != nil {
-		logger.Warnf("Error getting response from %s: %v\n", requestURL, err)
-		return 403
-	}
-	defer resp.Body.Close()
+// 	resp, err := puppClient.Do(req)
+// 	if err != nil {
+// 		logger.Warnf("Error getting response from %s: %v\n", requestURL, err)
+// 		return 403
+// 	}
+// 	defer resp.Body.Close()
 
-	// Read and print the response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		logger.Warnf("Error reading response body: %v", err)
-		return 403
-	}
+// 	// Read and print the response body
+// 	body, err := io.ReadAll(resp.Body)
+// 	if err != nil {
+// 		logger.Warnf("Error reading response body: %v", err)
+// 		return 403
+// 	}
 
-	// Unmarshal the response
-	var result map[string]interface{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		logger.Warnf("Error unmarshalling response: %v", err)
-		return 403
-	}
+// 	// Unmarshal the response
+// 	var result map[string]interface{}
+// 	if err := json.Unmarshal(body, &result); err != nil {
+// 		logger.Warnf("Error unmarshalling response: %v", err)
+// 		return 403
+// 	}
 
-	// Print the statusCode
-	if statusCode, ok := result["statusCode"].(float64); ok {
-		return int(statusCode)
-	}
-	return 403
+// 	// Print the statusCode
+// 	if statusCode, ok := result["statusCode"].(float64); ok {
+// 		return int(statusCode)
+// 	}
+// 	return 403
 
-}
+// }

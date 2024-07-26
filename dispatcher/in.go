@@ -38,7 +38,7 @@ func Input(opts *common.Opts) {
 
 		lineCh := make(chan string, opts.Concurrency)
 		var wg sync.WaitGroup
-		for i := 0; i < 50; i++ {
+		for i := 0; i < 100; i++ {
 			wg.Add(1)
 			go func() {
 				for domainString := range lineCh {
@@ -66,7 +66,11 @@ func Input(opts *common.Opts) {
 					} else {
 						logger.Debugf("Error checking http server: %v", errhttp)
 					}
-					if errhttps == nil && httpsStatus.Online {
+					if (errhttps == nil && httpsStatus.Online) || strings.Contains(errhttps.Error(), "browser check") {
+						if httpsStatus == nil {
+							logger.Warnf("shouldnt happen: %v", errhttps)
+							continue
+						}
 						req, err := http.NewRequest("GET", httpsStatus.Url, nil)
 						if err == nil {
 							resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)

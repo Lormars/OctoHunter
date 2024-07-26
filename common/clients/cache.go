@@ -5,8 +5,6 @@ import (
 	"net"
 	"sync"
 	"time"
-
-	"github.com/lormars/octohunter/internal/logger"
 )
 
 type DNSCache struct {
@@ -34,7 +32,7 @@ func (c *DNSCache) LookupIP(host string) ([]net.IP, error) {
 	c.mu.RLock()
 	if ips, found := c.cache[host]; found {
 		c.mu.RUnlock()
-		logger.Warnf("returnning")
+		// logger.Warnf("returnning")
 		return ips, nil
 	}
 	c.mu.RUnlock()
@@ -49,13 +47,13 @@ func (c *DNSCache) LookupIP(host string) ([]net.IP, error) {
 	for _, ip := range allIPs {
 		if ip.To4() != nil {
 			ipv4s = append(ipv4s, ip)
-			logger.Warnf("Found IPv4 address: %s\n", ip)
+			// logger.Warnf("Found IPv4 address: %s\n", ip)
 		}
 	}
 
 	c.mu.Lock()
 	c.cache[host] = ipv4s
 	c.mu.Unlock()
-	logger.Warnf("returnning")
+	// logger.Warnf("returnning")
 	return ipv4s, nil
 }

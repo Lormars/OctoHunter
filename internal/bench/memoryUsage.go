@@ -41,6 +41,8 @@ func PrintMemUsage(opts *common.Opts) {
 			msg += fmt.Sprintf(" Slowed: %d. ", all429)
 			consumerUsage := len(common.ConsumerSemaphore)
 			msg += fmt.Sprintf(" CUsage: %d. ", consumerUsage)
+			browserUsage := len(common.NeedBrowser)
+			msg += fmt.Sprintf(" Browser: %d. ", browserUsage)
 			elapsed := time.Since(start)
 			msg += fmt.Sprintf(" Elapsed: %.2f. ", elapsed.Minutes())
 			if common.SendOutput {
