@@ -98,7 +98,7 @@ var DB *sql.DB
 var Paths sync.Map
 var Domains sync.Map
 var SendOutput bool
-var ConsumerSemaphore = make(chan struct{}, 565)
+var ConsumerSemaphore = make(chan struct{}, 1130)
 var NeedBrowser = make(map[string]bool)
 
 type ServerResult struct {

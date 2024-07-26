@@ -247,7 +247,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 						newbt := entry.ratelimiter.GetBurst() - 10
 						entry.max = int(currentRPS - 10)
 						entry.ratelimiter.Update(newrl, newbt)
-						logger.Infof("Decrease Rate limit for %s to %f and set max to %d\n", currentHost, newrl, entry.max)
+						logger.Debugf("Decrease Rate limit for %s to %f and set max to %d\n", currentHost, newrl, entry.max)
 					}
 				} else if resp.StatusCode == 403 {
 					health.ProxyHealthInstance.AddBad(proxy)
@@ -260,7 +260,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 							newrl := entry.ratelimiter.GetRPS() + 1
 							newbt := entry.ratelimiter.GetBurst() + 1
 							entry.ratelimiter.Update(newrl, newbt)
-							logger.Infof("Increase Rate limit for %s to %f\n", currentHost, newrl)
+							logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
 						} else {
 							entry.max += 5
 						}

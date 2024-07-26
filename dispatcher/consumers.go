@@ -55,27 +55,27 @@ func Init(opts *common.Opts) {
 	}
 
 	var maxConcurrent = map[string]int{
-		"cname":         25,
-		"redirect":      35,
-		"method":        25,
-		"hopper":        10,
-		"divider":       5,
-		"crawl":         25,
-		"salesforce":    5,
-		"splitting":     50,
-		"cl0":           35,
-		"quirks":        35,
-		"rc":            35,
-		"cors":          10,
-		"pathconfuse":   10,
-		"fuzz4034":      10,
-		"pathtraversal": 35,
-		"fuzzapi":       25,
-		"fuzzunkeyed":   45,
-		"xss":           35,
-		"ssti":          30,
-		"graphql":       25,
-		"mime":          25,
+		"cname":         50,
+		"redirect":      70,
+		"method":        50,
+		"hopper":        20,
+		"divider":       10,
+		"crawl":         50,
+		"salesforce":    10,
+		"splitting":     100,
+		"cl0":           70,
+		"quirks":        70,
+		"rc":            70,
+		"cors":          20,
+		"pathconfuse":   20,
+		"fuzz4034":      20,
+		"pathtraversal": 70,
+		"fuzzapi":       50,
+		"fuzzunkeyed":   90,
+		"xss":           70,
+		"ssti":          60,
+		"graphql":       50,
+		"mime":          50,
 	}
 
 	go func() {
@@ -130,8 +130,8 @@ func Init(opts *common.Opts) {
 				mu.Unlock()
 
 				if startConsumer {
-					common.ConsumerSemaphore <- struct{}{}
 					go func(name string) {
+						common.ConsumerSemaphore <- struct{}{}
 						closeChan := nameFuncMap[name](opts)
 						mu.Lock()
 						if _, ok := numMap[name]; !ok {
@@ -161,7 +161,7 @@ func Init(opts *common.Opts) {
 			}
 
 			common.GlobalMu.Unlock()
-			if len(common.ConsumerSemaphore) > 450 {
+			if len(common.ConsumerSemaphore) > 1100 {
 				logger.Warnf("sepamore running: %d", len(common.ConsumerSemaphore))
 			}
 			time.Sleep(1 * time.Second)
