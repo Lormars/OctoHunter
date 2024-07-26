@@ -19,7 +19,7 @@ func Parse_Options() (*common.Opts, *common.Config) {
 		memoryUsage    = flag.Bool("mu", false, "Print memory usage")
 		purgeBroker    = flag.Bool("pb", false, "Purge the broker")
 		useProxy       = flag.Bool("px", false, "Use proxy")
-		headless       = flag.Bool("nhl", true, "Don't use headless browser")
+		headless       = flag.Bool("hl", false, "use headless browser")
 		ratelimit      = flag.Int("ratelimit", 4, "The rate limit to use per second")
 		dispatcherFile = flag.String("dispatcherfile", "list/distest", "The file to scan for dispatcher")
 	)

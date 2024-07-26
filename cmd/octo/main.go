@@ -46,7 +46,7 @@ func main() {
 		go bench.PrintMemUsage(options)
 		common.SendOutput = true
 	}
-	common.Headless = config.Headless
+	common.InitBrowser(config.Headless)
 	logger.SetLogLevel(logger.ParseLogLevel(config.Loglevel))
 	cacher.SetCacheTime(config.CacheTime)
 	clients.SetRateLimiter(config.RateLimit)

@@ -76,13 +76,13 @@ func dial(ctx context.Context, network, addr string) (net.Conn, error) {
 		}
 		dialer, err := proxy.SOCKS5("tcp", proxyStr, auth, proxy.Direct)
 		if err != nil {
-			logger.Warnf("Error dialing: %v\n", err)
+			logger.Debugf("Error dialing: %v\n", err)
 			return nil, err
 		}
 
 		conn, err = dialer.Dial(network, addr)
 		if err != nil {
-			logger.Warnf("Error dialing: %v\n", err)
+			logger.Debugf("Error dialing: %v\n", err)
 			return nil, err
 		}
 
@@ -90,7 +90,7 @@ func dial(ctx context.Context, network, addr string) (net.Conn, error) {
 		dialer := &net.Dialer{}
 		conn, err = dialer.DialContext(ctx, network, addr)
 		if err != nil {
-			logger.Warnf("Error dialing: %v\n", err)
+			logger.Debugf("Error dialing: %v\n", err)
 			return nil, err
 		}
 	}
@@ -100,7 +100,7 @@ func dial(ctx context.Context, network, addr string) (net.Conn, error) {
 func handshake(ctx context.Context, host, protocol string, conn net.Conn) (net.Conn, error) {
 	_, ok := ctx.Value("browser").(bool)
 	if ok {
-		logger.Infof("browsering")
+		logger.Debugf("browsering")
 		config := &tls.Config{
 			ServerName: host,
 			MinVersion: tls.VersionTLS12,
@@ -109,13 +109,13 @@ func handshake(ctx context.Context, host, protocol string, conn net.Conn) (net.C
 		}
 		tlsConn := tls.Client(conn, config)
 		err := tlsConn.Handshake()
-		logger.Infof("Handshake done\n")
+		logger.Debugf("Handshake done\n")
 		if err != nil {
-			logger.Warnf("Error handshaking: %v\n", err)
+			logger.Debugf("Error handshaking: %v\n", err)
 			return nil, err
 		}
 		state := tlsConn.ConnectionState()
-		logger.Infof("Negotiated Protocol: %s", state.NegotiatedProtocol) // Log the negotiated protocol
+		logger.Debugf("Negotiated Protocol: %s", state.NegotiatedProtocol) // Log the negotiated protocol
 
 		return tlsConn, nil
 	} else {
@@ -129,7 +129,7 @@ func handshake(ctx context.Context, host, protocol string, conn net.Conn) (net.C
 		err := tlsConn.Handshake()
 		// logger.Infof("Handshake done\n")
 		if err != nil {
-			logger.Warnf("Error handshaking: %v\n", err)
+			logger.Debugf("Error handshaking: %v\n", err)
 			return nil, err
 		}
 		state := tlsConn.ConnectionState()

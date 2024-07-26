@@ -19,10 +19,9 @@ var browser *rod.Browser
 var pool rod.Pool[rod.Page]
 var create func() *rod.Page
 
-func init() {
-	l := launcher.New().Headless(Headless).MustLaunch()
+func InitBrowser(headless bool) {
+	l := launcher.New().Headless(headless).MustLaunch()
 	browser = rod.New().ControlURL(l).MustConnect()
-
 	// browser = rod.New().MustConnect()
 	browser.IgnoreCertErrors(true)
 	pool = rod.NewPagePool(10)
@@ -41,7 +40,7 @@ func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response,
 		return nil, fmt.Errorf("http request")
 	}
 
-	logger.Warnf("RequestWithBrowser: %s", req.URL.String())
+	logger.Debugf("RequestWithBrowser: %s", req.URL.String())
 	page := pool.MustGet(create)
 	defer pool.Put(page)
 	timeout := time.After(10 * time.Second)
@@ -58,7 +57,7 @@ func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response,
 	router.MustAdd(pattern+"*", func(ctx *rod.Hijack) {
 		for key, values := range req.Header {
 			for _, v := range values {
-				logger.Warnf("Setting header: %s: %s", key, v)
+				logger.Debugf("Setting header: %s: %s", key, v)
 				ctx.Request.Req().Header.Set(key, v)
 			}
 		}
@@ -66,7 +65,7 @@ func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response,
 		c = context.WithValue(c, "browser", true)
 		ctx.Request.SetContext(c)
 
-		logger.Warnf("Request: %s", ctx.Request.URL())
+		logger.Debugf("Request: %s", ctx.Request.URL())
 		err := ctx.LoadResponse(client, true)
 		if err != nil {
 			logger.Warnf("Error loading response: %v", err)
@@ -102,7 +101,7 @@ func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response,
 			wg.Done()
 		}
 		mu.Unlock()
-		logger.Warnf("Timeout: %s", req.URL.String())
+		logger.Debugf("Timeout: %s", req.URL.String())
 	}
 
 	wg.Wait()
