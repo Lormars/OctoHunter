@@ -59,6 +59,10 @@ func tryManipulate404Mime(urlStr, path string) {
 		}
 		if checker.CheckMimeType(resp.Headers.Get("Content-Type"), "application/xml") ||
 			checker.CheckMimeType(resp.Headers.Get("Content-Type"), "text/xml") {
+			if len(resp.Body) == 0 || //to filter out empty body
+				strings.HasPrefix(resp.Body, "<?xml") { //to filter out dynamically generated 404 response with correct xml format
+				return
+			}
 			msg := "[MIME] Possible MIME confusion: 404 page with XML mime: " + fuzzURL
 			// common.AddToCrawlMap(fuzzURL, "mime", resp.StatusCode)
 			if common.SendOutput {
