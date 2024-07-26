@@ -20,7 +20,7 @@ var pool rod.Pool[rod.Page]
 var create func() *rod.Page
 
 func init() {
-	l := launcher.New().Headless(false).MustLaunch()
+	l := launcher.New().Headless(Headless).MustLaunch()
 	browser = rod.New().ControlURL(l).MustConnect()
 
 	// browser = rod.New().MustConnect()

@@ -55,6 +55,7 @@ type Config struct {
 	RateLimit   int
 	PurgeBroker bool
 	UseProxy    bool
+	Headless    bool
 }
 
 type TakeoverRecord struct {
@@ -98,7 +99,7 @@ var Paths sync.Map
 var Domains sync.Map
 var SendOutput bool
 var ConsumerSemaphore = make(chan struct{}, 565)
-
+var Headless = true
 var NeedBrowser = make(map[string]bool)
 
 type ServerResult struct {
