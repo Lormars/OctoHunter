@@ -3,14 +3,11 @@ package salesforce
 import (
 	"strings"
 
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
 func SalesforceScan(target string) {
-	if !cacher.CheckCache(target, "salesforce") {
-		return
-	}
+
 	logger.Debugf("SalesforceScan running on %s\n", target)
 	var endpointToTest string //url
 	var ok bool

@@ -23,7 +23,7 @@ func Input(opts *common.Opts) {
 
 	go func() {
 		for {
-			time.Sleep(10 * time.Second)
+			time.Sleep(60 * time.Second)
 			score.CalculateScore()
 		}
 	}()

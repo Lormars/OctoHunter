@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -41,6 +42,7 @@ var Fuzz4034P = NewProducer("fuzz4034_broker")
 var PathTraversalP = NewProducer("pathtraversal_broker")
 var FuzzAPIP = NewProducer("fuzzapi_broker")
 var FuzzUnkeyedP = NewProducer("fuzzunkeyed_broker")
+var FuzzPathP = NewProducer("fuzzpath_broker")
 var XssP = NewProducer("xss_broker")
 var SstiP = NewProducer("ssti_broker")
 var WaybackP = NewProducer("wayback_broker")
@@ -71,7 +73,7 @@ func Init(options *Opts, purgebroker bool) []*Producer {
 	queueProducers = []*Producer{
 		OutputP, CnameP, RedirectP, MethodP, HopP, DividerP, CrawlP,
 		SalesforceP, SplittingP, Cl0P, QuirksP, RCP, CorsP, PathConfuseP, Fuzz4034P,
-		PathTraversalP, FuzzAPIP, FuzzUnkeyedP, XssP, SstiP, WaybackP, GraphqlP, MimeP,
+		PathTraversalP, FuzzAPIP, FuzzUnkeyedP, XssP, SstiP, WaybackP, GraphqlP, MimeP, FuzzPathP,
 	}
 
 	rabbitMQSetup()
@@ -121,6 +123,10 @@ func (p *Producer) PublishMessage(body interface{}) {
 		switch v := body.(type) {
 		case string:
 			messageBody = []byte(v)
+			hashed := Hash(string(messageBody))
+			if !cacher.CheckCache(hashed, p.name) {
+				return
+			}
 			hostname := GetHostname(v)
 			mu.Lock()
 			BrokerSliding.AddRequest(hostname)
@@ -128,24 +134,32 @@ func (p *Producer) PublishMessage(body interface{}) {
 			waitCh = AddToBrokerQueue(hostname)
 		case *ServerResult:
 			messageBody, err = json.Marshal(v)
+			if err != nil {
+				failOnError(err, "Failed to marshal struct to JSON")
+			}
+			hashed := Hash(string(messageBody))
+			if !cacher.CheckCache(hashed, p.name) {
+				return
+			}
 			hostname := GetHostname(v.Url)
 			mu.Lock()
 			BrokerSliding.AddRequest(hostname)
 			mu.Unlock()
 			waitCh = AddToBrokerQueue(hostname)
-			if err != nil {
-				failOnError(err, "Failed to marshal struct to JSON")
-			}
 		case *XssInput:
 			messageBody, err = json.Marshal(v)
+			if err != nil {
+				failOnError(err, "Failed to marshal struct to JSON")
+			}
+			hashed := Hash(string(messageBody))
+			if !cacher.CheckCache(hashed, p.name) {
+				return
+			}
 			hostname := GetHostname(v.Url)
 			mu.Lock()
 			BrokerSliding.AddRequest(hostname)
 			mu.Unlock()
 			waitCh = AddToBrokerQueue(hostname)
-			if err != nil {
-				failOnError(err, "Failed to marshal struct to JSON")
-			}
 		default:
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}

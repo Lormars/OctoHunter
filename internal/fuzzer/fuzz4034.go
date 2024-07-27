@@ -9,16 +9,12 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
 func Fuzz4034(inputStr string) {
-	if !cacher.CheckCache(inputStr, "fuzz404") {
-		return
-	}
 	if strings.HasPrefix(inputStr, "http") {
 		fuzzAllPath(inputStr)
 	} else {
@@ -29,6 +25,13 @@ func Fuzz4034(inputStr string) {
 // a new 403/404 endpoint is found, fuzz all sibling path to find possible non-404 endpoints
 func fuzzAllPath(urlStr string) {
 	// logger.Warnf("Debug AllPath input %s", urlStr)
+	fuzzPathInput := &common.ServerResult{
+		Url:        urlStr,
+		StatusCode: 404, //403/404 does not matter, only used to send alert
+	}
+
+	go common.FuzzPathP.PublishMessage(fuzzPathInput)
+
 	rootDomain, err := getter.GetDomain(urlStr)
 	if err != nil {
 		return
@@ -56,7 +59,18 @@ func fuzzAllPath(urlStr string) {
 		}
 		if resp.StatusCode != 404 && resp.StatusCode != 403 && resp.StatusCode != 429 {
 			mu.Lock()
-			resultMap[resp.Body] = resp
+			hashed := common.Hash(resp.Body)
+			if _, exists := resultMap[hashed]; !exists {
+				resultMap[hashed] = resp
+				common.DividerP.PublishMessage(resp)
+				common.AddToCrawlMap(resp.Url, "fuzz", resp.StatusCode)
+				// logger.Warnf("found new endpoint: %s", fuzzPath)
+				msg := fmt.Sprintf("[Fuzz Path(SDomain)] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
+				if common.SendOutput {
+					common.OutputP.PublishMessage(msg)
+				}
+				notify.SendMessage(msg)
+			}
 			mu.Unlock()
 
 		}
@@ -64,20 +78,6 @@ func fuzzAllPath(urlStr string) {
 
 		return true
 	})
-
-	//this is necessary to filter out duplicate false positives
-	for _, resp := range resultMap {
-		common.DividerP.PublishMessage(resp)
-		common.AddToCrawlMap(resp.Url, "fuzz", resp.StatusCode)
-		// logger.Warnf("found new endpoint: %s", fuzzPath)
-		msg := fmt.Sprintf("[Fuzz Path(S)] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
-		if common.SendOutput {
-			common.OutputP.PublishMessage(msg)
-		}
-		notify.SendMessage(msg)
-	}
-
-	go FuzzPath(urlStr)
 
 }
 
@@ -107,6 +107,11 @@ func fuzzNewPath(domainWithPath string) {
 			common.AddToCrawlMap(resp.Url, "fuzz", resp.StatusCode)
 			common.DividerP.PublishMessage(resp)
 			// logger.Warnf("found new endpoint: %s", fuzzPath)
+			msg := fmt.Sprintf("[Fuzz Path(SPath)] Found new endpoint: %s with SC %d", resp.Url, resp.StatusCode)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
+			}
+			notify.SendMessage(msg)
 		}
 		return true
 	})

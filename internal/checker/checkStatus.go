@@ -1,10 +1,12 @@
 package checker
 
 import (
+	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 )
 
 func CheckAccess(resp *common.ServerResult) bool {
@@ -59,4 +61,23 @@ func CheckHomePage(urlStr string) bool {
 	}
 
 	return parsedURL.Path == "/" || parsedURL.Path == ""
+}
+
+func CheckHttpRedirectToHttps(urlStr string) bool {
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return false
+	}
+	resp, err := CheckServerCustom(req, clients.NoRedirectClient)
+	if err != nil {
+		return false
+	}
+	if CheckRedirect(resp.StatusCode) {
+		locationHeader := resp.Headers.Get("Location")
+		if strings.HasPrefix(locationHeader, "https://") {
+			return true
+		}
+	}
+	return false
+
 }

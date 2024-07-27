@@ -7,7 +7,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -18,10 +17,6 @@ var payloads = []string{"/graphql/v1", "/graphql", "/api", "/api/graphql", "/gra
 var introspect = `{"query": "{__schema{queryType{name}}}"}`
 
 func CheckGraphql(urlStr string) {
-
-	if !cacher.CheckCache(urlStr, "graphql") {
-		return
-	}
 
 	if !strings.Contains(urlStr, "graphql") {
 		target := strings.TrimRight(urlStr, "/")

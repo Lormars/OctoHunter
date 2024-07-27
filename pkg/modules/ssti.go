@@ -9,7 +9,6 @@ import (
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -26,11 +25,6 @@ var nonerrbased = []string{
 // }
 
 func CheckSSTI(input *common.XssInput) {
-
-	for_cache := input.Url + input.Param
-	if !cacher.CheckCache(for_cache, "ssti") {
-		return
-	}
 
 	logger.Debugf("Checking SSTI for %s for param %s\n", input.Url, input.Param)
 

@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
@@ -17,9 +16,6 @@ import (
 // The input must be a serverresult.
 func Divider(result *common.ServerResult) {
 	urlStr := result.Url
-	if !cacher.CheckCache(urlStr, "divider") {
-		return
-	}
 
 	common.AddToCrawlMap(urlStr, "divider", result.StatusCode)
 

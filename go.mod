@@ -14,7 +14,7 @@ require (
 	github.com/go-rod/stealth v0.4.9
 	github.com/golang-jwt/jwt/v5 v5.2.1
 	github.com/joho/godotenv v1.5.1
-	github.com/lormars/crawlmap v1.0.1
+	github.com/lormars/crawlmap v1.0.2
 	github.com/lormars/http2 v0.0.0-20240701015325-423fec2c7501
 	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/miekg/dns v1.1.61

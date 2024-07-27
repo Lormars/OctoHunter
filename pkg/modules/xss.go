@@ -7,7 +7,6 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -18,11 +17,6 @@ var suffix = "pqpbqza"
 
 // Xss checkes for possible xss vulnerabilities in the given url
 func Xss(xssInput *common.XssInput) {
-
-	for_cache := xssInput.Url + xssInput.Param
-	if !cacher.CheckCache(for_cache, "xss") {
-		return
-	}
 
 	common.AddToCrawlMap(xssInput.Url, "xss", 200) //TODO: can be accurate
 

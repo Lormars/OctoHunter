@@ -8,7 +8,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/getter"
 	"github.com/lormars/octohunter/internal/logger"
@@ -16,10 +15,6 @@ import (
 )
 
 func CheckCors(response *common.ServerResult) {
-
-	if !cacher.CheckCache(response.Url, "cors") {
-		return
-	}
 
 	req, err := http.NewRequest("GET", response.Url, nil)
 	if err != nil {

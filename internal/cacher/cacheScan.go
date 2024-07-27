@@ -9,7 +9,6 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 
-	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -17,10 +16,11 @@ type CacheTime int
 
 var cacheTime CacheTime
 var mu sync.Mutex
+var DB *sql.DB
 
 func init() {
 	var err error
-	common.DB, err = sql.Open("sqlite3", "./cache.db")
+	DB, err = sql.Open("sqlite3", "./cache.db")
 	if err != nil {
 		panic(err)
 	}
@@ -32,7 +32,7 @@ func init() {
 		last_scanned INTEGER,
 		PRIMARY KEY (endpoint, module)
 	);`
-	if _, err := common.DB.Exec(createTable); err != nil {
+	if _, err := DB.Exec(createTable); err != nil {
 		panic(err)
 	}
 
@@ -69,7 +69,7 @@ func CheckCache(endpoint, module string) bool {
 func UpdateScanTime(endpoint, module string) {
 	currentTime := time.Now().Unix()
 
-	tx, err := common.DB.Begin()
+	tx, err := DB.Begin()
 	if err != nil {
 		logger.Errorf("Error starting transaction: %v\n", err)
 		return
@@ -94,7 +94,7 @@ func CanScan(endpoint, module string) bool {
 	currentTime := time.Now().Unix()
 
 	query := `SELECT last_scanned FROM cache WHERE endpoint = ? AND module = ?;`
-	err := common.DB.QueryRow(query, endpoint, module).Scan(&LastScanned)
+	err := DB.QueryRow(query, endpoint, module).Scan(&LastScanned)
 	if err != nil && err != sql.ErrNoRows {
 		logger.Errorf("Error querying cache: %v\n", err)
 		return true

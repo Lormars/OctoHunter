@@ -131,9 +131,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 }
 
 func FuzzAPI(urlStr string) {
-	if !cacher.CheckCache(urlStr, "fuzzapi") {
-		return
-	}
+
 	parsedURL, err := url.Parse(urlStr)
 	if err != nil {
 		return

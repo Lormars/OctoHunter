@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"path"
 	"strings"
 
 	"math/rand"
@@ -12,14 +11,12 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/common/clients/proxyP"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
 // Two source of inputs:
 // 1. static image file like svg or png or jpg or gif from crawler
-// 2. static file from divider. (checked by cache signature)
 func CheckCl0(urlstr string) {
 
 	//Due to the nature of the check, we need to use a custom client for each goroutine
@@ -36,13 +33,7 @@ func CheckCl0(urlstr string) {
 	}
 
 	hostName := parsedURL.Hostname()
-	fullPath := parsedURL.Path
-	dir := path.Dir(fullPath)
-	cachePath := path.Join(hostName, dir)
 
-	if !cacher.CheckCache(cachePath, "cl0") {
-		return
-	}
 	if _, exists := common.NeedBrowser[hostName]; exists {
 		return //TODO: return for now as it may hang due to http1
 	}

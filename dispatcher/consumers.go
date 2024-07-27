@@ -52,6 +52,7 @@ func Init(opts *common.Opts) {
 		"ssti":          sstiConsumer,
 		"graphql":       graphqlConsumer,
 		"mime":          mimeConsumer,
+		"fuzzpath":      fuzzPathConsumer,
 	}
 
 	var maxConcurrent = map[string]int{
@@ -76,6 +77,7 @@ func Init(opts *common.Opts) {
 		"ssti":          60,
 		"graphql":       50,
 		"mime":          50,
+		"fuzzpath":      50,
 	}
 
 	go func() {
@@ -168,6 +170,11 @@ func Init(opts *common.Opts) {
 		}
 	}()
 
+}
+
+func fuzzPathConsumer(opts *common.Opts) chan struct{} {
+	closeChan := common.FuzzPathP.ConsumeMessage(fuzzer.FuzzPath, opts)
+	return closeChan
 }
 
 func mimeConsumer(opts *common.Opts) chan struct{} {

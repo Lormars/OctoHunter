@@ -11,7 +11,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/comparer"
 	"github.com/lormars/octohunter/internal/getter"
@@ -20,9 +19,7 @@ import (
 )
 
 func SingleRedirectCheck(result *common.ServerResult) {
-	if !cacher.CheckCache(result.Url, "redirect") {
-		return
-	}
+
 	logger.Debugln("SingleRedirectCheck module running")
 	finalURL, err := getFinalURL(result.Url)
 

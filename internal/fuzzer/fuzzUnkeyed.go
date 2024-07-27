@@ -56,9 +56,6 @@ func init() {
 
 // It fuzzes for parameters and headers that are reflected in the response (either in header or body) for cacheable pages.
 func FuzzUnkeyed(urlStr string) {
-	if !cacher.CheckCache(urlStr, "unkeyed") {
-		return
-	}
 
 	//check if the page is cacheable
 	//cannot do it here anymore since we are also checking for ssti

@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -70,6 +71,22 @@ func CalculateScore() {
 
 	for _, result := range results {
 		go common.WaybackP.PublishMessage(result)
+		subdomains := common.GetSubdomains(result)
+		for _, subdomain := range subdomains {
+			if subdomain != "" {
+				if !cacher.CheckCache(subdomain, "score") {
+					return
+				}
+				for _, protocol := range []string{"https", "http"} {
+					fuzzInput := &common.ServerResult{
+						Url:        protocol + "://" + subdomain,
+						StatusCode: 200, // just for notification purpose
+					}
+					common.FuzzPathP.PublishMessage(fuzzInput)
+
+				}
+			}
+		}
 	}
 
 	threshold = average - 2*stdDev

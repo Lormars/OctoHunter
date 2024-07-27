@@ -10,7 +10,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/matcher"
@@ -38,10 +37,6 @@ func CheckQuirks(res *common.ServerResult) {
 	// }
 
 	// logger.Warnf("Checking quirks for %s\n", res.Url)
-
-	if !cacher.CheckCache(res.Url, "quirks") {
-		return
-	}
 
 	result = res
 

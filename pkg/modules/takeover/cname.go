@@ -9,7 +9,6 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -23,9 +22,7 @@ func init() {
 }
 
 func Takeover(domainStr string) {
-	if !cacher.CheckCache(domainStr, "cname") {
-		return
-	}
+
 	// logger.Debugln("Takeover module running")
 	domain := domainStr
 	hasCname, cname, _ := checker.HasCname(domain)

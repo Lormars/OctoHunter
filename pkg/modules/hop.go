@@ -8,7 +8,6 @@ import (
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/comparer"
 	"github.com/lormars/octohunter/internal/logger"
@@ -16,9 +15,7 @@ import (
 )
 
 func SingleHopCheck(result *common.ServerResult) {
-	if !cacher.CheckCache(result.Url, "hop") {
-		return
-	}
+
 	logger.Debugln("SingleHopCheck module running")
 	controlReq, err := http.NewRequest("GET", result.Url, nil)
 	if err != nil {

@@ -19,9 +19,6 @@ import (
 // modified from tomnomnom's waybackurls
 
 func GetWaybackURLs(domain string) {
-	if !cacher.CheckCache(domain, "wayback") {
-		return
-	}
 
 	// logger.Warnf("Waybackurls for %s", domain)
 

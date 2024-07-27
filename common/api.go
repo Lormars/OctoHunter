@@ -2,7 +2,6 @@ package common
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"net/url"
@@ -94,7 +93,6 @@ func RunCommand(name string, args []string) error {
 	return nil
 }
 
-var DB *sql.DB
 var Paths sync.Map
 var Domains sync.Map
 var SendOutput bool

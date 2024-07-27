@@ -6,16 +6,12 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/notify"
 )
 
 // CheckPathTraversal checks for path traversal vulnerabilities in REST api endpoints.
 func CheckPathTraversal(urlStr string) {
-	if !cacher.CheckCache(urlStr, "traversal") {
-		return
-	}
 
 	urlStr = strings.TrimRight(urlStr, "/")
 	splits := strings.Split(urlStr, "/")

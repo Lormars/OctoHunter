@@ -23,3 +23,7 @@ func GetOriginMap() map[string][]string {
 	originMap := cmap.ReturnOrigin()
 	return originMap
 }
+
+func GetSubdomains(domain string) []string {
+	return cmap.ReturnSubdomains(domain)
+}
