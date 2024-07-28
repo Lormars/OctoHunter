@@ -102,7 +102,8 @@ func Init(opts *common.Opts) {
 				if stopConsumer {
 					if numChan, ok := numMap[name]; ok {
 						closeChan := numChan.chans[0]
-						close(closeChan)
+						msg := "closing " + name + " due to lack of work"
+						safeClose(closeChan, msg)
 						if borrowNum, ok := borrowMap[name]; ok && borrowNum > 0 {
 							borrowMap[name]--
 						}
@@ -120,7 +121,8 @@ func Init(opts *common.Opts) {
 								borrowMap[borrowFun]--
 								if numChan, ok := numMap[borrowFun]; ok {
 									closeChan := numChan.chans[0]
-									close(closeChan)
+									msg := "closing " + borrowFun + " due to borrowing"
+									safeClose(closeChan, msg)
 								} else {
 									logger.Errorf("Shouldn't happen. Borrowed consumer not found: %s", borrowFun)
 								}
@@ -160,6 +162,8 @@ func Init(opts *common.Opts) {
 					}(name)
 
 				}
+
+				time.Sleep(1 * time.Second)
 			}
 
 			common.GlobalMu.Unlock()
@@ -170,6 +174,17 @@ func Init(opts *common.Opts) {
 		}
 	}()
 
+}
+
+func recovery(msg string) {
+	if r := recover(); r != nil {
+		logger.Errorf("Recovered in consumer: %v (%s)", r, msg)
+	}
+}
+
+func safeClose(ch chan struct{}, msg string) {
+	defer recovery(msg)
+	close(ch)
 }
 
 func fuzzPathConsumer(opts *common.Opts) chan struct{} {
