@@ -112,7 +112,8 @@ func Init(opts *common.Opts) {
 				}
 
 				if startConsumer {
-					if numMap[name].num >= maxConcurrent[name] { //check if we are at max concurrency
+					if numMap[name].num >= maxConcurrent[name] && name != "crawl" { //check if we are at max concurrency
+						//crawl cannot borrow because it is reinforcing.
 						if len(common.ConsumerSemaphore) < cap(common.ConsumerSemaphore) { //check if we have space in the semaphore
 							borrowMap[name]++ //borrow a consumer
 						}

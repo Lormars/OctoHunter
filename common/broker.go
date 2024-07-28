@@ -241,7 +241,7 @@ func monitorChannels(producers []*Producer) {
 			GlobalMu.Lock()
 			if p.name != "dork_broker" {
 				name := strings.Split(p.name, "_")[0]
-				if len(p.messageChan) > 500 {
+				if len(p.messageChan) > 500 && p.name != "crawl_broker" {
 					logger.Infof("Queue %s has %d messages waiting", p.name, len(p.messageChan))
 					WaitingQueue[name] = 10 //if longer than 500, then just add more
 					lastWait[p.name] = len(p.messageChan)
