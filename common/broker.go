@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -137,7 +138,7 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if err != nil {
 				failOnError(err, "Failed to marshal struct to JSON")
 			}
-			hashed := Hash(string(messageBody))
+			hashed := Hash(v.Url + v.Body + strconv.Itoa(v.StatusCode))
 			if !cacher.CheckCache(hashed, p.name) {
 				return
 			}

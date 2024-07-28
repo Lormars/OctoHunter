@@ -43,22 +43,11 @@ func SetCacheTime(time int) {
 	cacheTime = CacheTime(time)
 }
 
-func cleanURL(endpoint string) string {
-	parsedURL, err := url.Parse(endpoint)
-	if err != nil {
-		return endpoint
-	}
-	parsedURL.Fragment = ""
-	cleanedURL := strings.TrimRight(parsedURL.String(), "/")
-	return cleanedURL
-}
-
 func CheckCache(endpoint, module string) bool {
-	cleaned := cleanURL(endpoint)
 	mu.Lock()
 	defer mu.Unlock()
-	if CanScan(cleaned, module) {
-		UpdateScanTime(cleaned, module)
+	if CanScan(endpoint, module) {
+		UpdateScanTime(endpoint, module)
 		return true
 	} else {
 		return false
@@ -89,7 +78,6 @@ func UpdateScanTime(endpoint, module string) {
 }
 
 func CanScan(endpoint, module string) bool {
-	endpoint = cleanURL(endpoint) //this is a bit redundant, but wayback would directly call this function
 	var LastScanned int64
 	currentTime := time.Now().Unix()
 
