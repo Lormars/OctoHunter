@@ -89,7 +89,17 @@ func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response,
 
 	go router.Run()
 
-	page.MustNavigate(req.URL.String())
+	err := page.Navigate(req.URL.String())
+	if err != nil {
+		mu.Lock()
+		if !guard {
+			guard = true
+			wg.Done()
+			close(done)
+		}
+		mu.Unlock()
+		return nil, err
+	}
 	select {
 	case <-done:
 		// Request completed normally
