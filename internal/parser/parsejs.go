@@ -22,27 +22,30 @@ func ParseJS(result *common.ServerResult) {
 		if err != nil {
 			continue
 		}
-		if url.Method == "GET" {
 
-			req, err := http.NewRequest("GET", resolvedURL, nil)
-			if err != nil {
-				logger.Debugf("Error creating request: %v", err)
-				continue
+		if strings.Contains(resolvedURL, "EXPR") {
+			msg := fmt.Sprintf("[JS DOM] %s in %s", resolvedURL, result.Url)
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg)
 			}
-			resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
-			if err != nil {
-				logger.Debugf("Error getting response from %s: %v\n", url.URL, err)
-				continue
-			}
-			common.AddToCrawlMap(resolvedURL, "jsParse", resp.StatusCode)
-			common.CrawlP.PublishMessage(resp)
-			if strings.Contains(resolvedURL, "EXPR") {
-				msg := fmt.Sprintf("[JS DOM] %s in %s", resolvedURL, result.Url)
-				if common.SendOutput {
-					common.OutputP.PublishMessage(msg)
-				}
-				notify.SendMessage(msg)
-			}
+			notify.SendMessage(msg)
+		}
+
+		req, err := http.NewRequest("GET", resolvedURL, nil)
+		if err != nil {
+			logger.Debugf("Error creating request: %v", err)
+			continue
+		}
+
+		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		if err != nil {
+			logger.Debugf("Error getting response from %s: %v\n", url.URL, err)
+			continue
+		}
+		common.AddToCrawlMap(resolvedURL, "jsParse", resp.StatusCode)
+		resp.Depth += 1
+		common.DividerP.PublishMessage(resp)
+		if url.Method == "GET" {
 
 			if strings.Contains(resolvedURL, "api") && !strings.HasSuffix(resolvedURL, ".js") && !strings.HasSuffix(resolvedURL, ".css") {
 				common.PathTraversalP.PublishMessage(resolvedURL)

@@ -73,7 +73,7 @@ func Input(opts *common.Opts) {
 					}()
 					go func() {
 						defer gwg.Done()
-						if (errhttps == nil && httpsStatus.Online) || strings.Contains(errhttps.Error(), "browser check") {
+						if (errhttps == nil && httpsStatus.Online) || (errhttps != nil && strings.Contains(errhttps.Error(), "browser check")) {
 							if httpsStatus == nil {
 								logger.Warnf("shouldnt happen: %v", errhttps)
 								return
