@@ -113,7 +113,7 @@ func CheckQuirks(res *common.ServerResult) {
 	}
 
 	//dependency confusion check
-	if strings.Contains(result.Body, "package.json") ||
+	if strings.Contains(result.Body, `"devDependencies":`) ||
 		strings.Contains(result.Body, `"dependencies":`) {
 		common.AddToCrawlMap(result.Url, "quirk", result.StatusCode)
 		msg := fmt.Sprintf("[Quirks] Dependency Confusion in %s", result.Url)

@@ -108,6 +108,7 @@ func Init(opts *common.Opts) {
 							borrowMap[name]--
 						}
 					}
+					time.Sleep(200 * time.Millisecond) //to prevent race condition on close channel
 				}
 
 				if startConsumer {
@@ -163,7 +164,6 @@ func Init(opts *common.Opts) {
 
 				}
 
-				time.Sleep(1 * time.Second)
 			}
 
 			common.GlobalMu.Unlock()

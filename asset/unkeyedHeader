@@ -31,7 +31,6 @@ expect
 expires
 forwarded
 from
-host~%s
 if-match
 if-modified-since
 if-none-match
