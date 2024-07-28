@@ -60,7 +60,7 @@ func customDialContext(ctx context.Context, network, addr string) (net.Conn, err
 		}
 	}
 	if err != nil {
-		logger.Warnf("Error dialing: %v\n", err)
+		logger.Debugf("Error dialing: %v\n", err)
 		return nil, err
 	}
 	return conn, nil

@@ -30,7 +30,7 @@ func customh2DialTLSContext(ctx context.Context, network, addr string, _ *tls.Co
 		if err == nil {
 			break
 		}
-		logger.Warnf("Error dialing IP %v: %v\n", ipAddr, err)
+		logger.Debugf("Error dialing IP %v: %v\n", ipAddr, err)
 	}
 
 	if err != nil {
