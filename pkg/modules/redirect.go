@@ -24,7 +24,7 @@ func SingleRedirectCheck(result *common.ServerResult) {
 	finalURL, err := getFinalURL(result.Url)
 
 	if err != nil {
-		logger.Warnf("Error getting final URL: %v\n", err)
+		logger.Debugf("Error getting final URL: %v\n", err)
 		return
 	}
 
