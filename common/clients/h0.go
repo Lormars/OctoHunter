@@ -3,6 +3,7 @@ package clients
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
 	"net"
 	"net/http"
 	"os"
@@ -97,7 +98,19 @@ func dial(ctx context.Context, network, addr string) (net.Conn, error) {
 	return conn, nil
 }
 
-func handshake(ctx context.Context, host, protocol string, conn net.Conn) (net.Conn, error) {
+func handshake(ctx context.Context, host, protocol string, conn net.Conn) (tlsConn net.Conn, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Debugf("Recovered from panic: %v\n", r)
+			tlsConn = nil
+			err = fmt.Errorf("panic occurred: %v", r)
+		}
+	}()
+	tlsConn, err = dohandshake(ctx, host, protocol, conn)
+	return
+}
+
+func dohandshake(ctx context.Context, host, protocol string, conn net.Conn) (net.Conn, error) {
 	_, ok := ctx.Value("browser").(bool)
 	if ok {
 		logger.Debugf("browsering")
