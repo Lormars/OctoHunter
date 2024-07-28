@@ -51,7 +51,10 @@ func Input(opts *common.Opts) {
 					//why? to make sure the statuscode is right.
 					//using the default client may be blocked due to various bot checks.
 					//So need to use our client to request again to make sure the status code is right.
+					gwg := sync.WaitGroup{}
+					gwg.Add(2)
 					go func() {
+						defer gwg.Done()
 						if errhttp == nil && httpStatus.Online {
 							req, err := http.NewRequest("GET", httpStatus.Url, nil)
 							if err == nil {
@@ -69,6 +72,7 @@ func Input(opts *common.Opts) {
 						}
 					}()
 					go func() {
+						defer gwg.Done()
 						if (errhttps == nil && httpsStatus.Online) || strings.Contains(errhttps.Error(), "browser check") {
 							if httpsStatus == nil {
 								logger.Warnf("shouldnt happen: %v", errhttps)
@@ -91,6 +95,7 @@ func Input(opts *common.Opts) {
 							logger.Debugf("Error checking https server: %v", errhttps)
 						}
 					}()
+					gwg.Wait()
 				}
 				wg.Done()
 			}()

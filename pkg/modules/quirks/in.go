@@ -331,11 +331,17 @@ func isdynamic() {
 	same := resp1.Body == resp2.Body
 	//then pass to path confusion if there is no cache header or no cache hit
 	if !same && (!matcher.HeaderKeyContainsSignature(resp2, "cache") || !matcher.HeaderValueContainsSignature(resp2, "hit")) {
-		msg := fmt.Sprintf("[Quirks] Dynamically generated content in %s", result.Url)
-		if common.SendOutput {
-			common.OutputP.PublishMessage(msg)
+		if resp1.StatusCode != resp2.StatusCode {
+			return
 		}
-		notify.SendMessage(msg)
+		// msg := fmt.Sprintf("[Quirks] Dynamically generated content in %s", result.Url)
+		// if common.SendOutput {
+		// 	common.OutputP.PublishMessage(msg)
+		// }
+		// notify.SendMessage(msg)
+		// dmp := diffmatchpatch.New()
+		// diffs := dmp.DiffMain(resp1.Body, resp2.Body, false)
+		// logger.Warnln(dmp.DiffPrettyText(diffs))
 		common.PathConfuseP.PublishMessage(result.Url)
 	}
 
