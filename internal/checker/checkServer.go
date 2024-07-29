@@ -91,12 +91,14 @@ func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerRe
 
 	// Check if the request is in the lowscoredomain
 	currentHostName := req.URL.Hostname()
+	score.ScoreMu.Lock()
 	for _, lowscore := range score.LowScoreDomains {
 		if strings.Contains(currentHostName, lowscore) {
 			logger.Warnf("Low score domain filtered: %s\n", currentHostName)
 			return nil, fmt.Errorf("low score domain")
 		}
 	}
+	score.ScoreMu.Unlock()
 
 	respCh := common.AddToQueue(req.URL.Hostname(), []*http.Request{req}, client)
 	resps := <-respCh

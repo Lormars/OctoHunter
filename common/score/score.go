@@ -2,6 +2,7 @@ package score
 
 import (
 	"math"
+	"sync"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/cacher"
@@ -25,6 +26,7 @@ const (
 )
 
 var LowScoreDomains []string
+var ScoreMu = &sync.Mutex{}
 
 func CalculateScore() {
 	originMap := common.GetOriginMap()
@@ -93,7 +95,9 @@ func CalculateScore() {
 	for domain, s := range score {
 		if float64(s) < threshold {
 			logger.Warnf("Low score domain added: %s, score: %d", domain, s)
+			ScoreMu.Lock()
 			LowScoreDomains = append(LowScoreDomains, domain)
+			ScoreMu.Unlock()
 		}
 	}
 
