@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -46,7 +45,7 @@ func CalculateScore() {
 		totalScore += score[domain]
 		count++
 	}
-
+	// logger.Warnf("Total score: %d, count: %d, len: %d", totalScore, count, len(score))
 	if len(score) < 20 {
 		return
 	}
@@ -69,31 +68,27 @@ func CalculateScore() {
 	}
 	// logger.Infof("all origins: %v", originMap)
 	// logger.Infof("all domains: %v", score)
-	// logger.Infof("High score domains: %v", result)
-
 	for _, result := range results {
 		go common.WaybackP.PublishMessage(result)
 		subdomains := common.GetSubdomains(result)
 		for _, subdomain := range subdomains {
 			if subdomain != "" {
-				if !cacher.CheckCache(subdomain, "score") {
-					return
-				}
+
 				for _, protocol := range []string{"https", "http"} {
 					fuzzInput := &common.ServerResult{
 						Url:        protocol + "://" + subdomain,
 						StatusCode: 200, // just for notification purpose
 					}
-					common.FuzzPathP.PublishMessage(fuzzInput)
+					go common.FuzzPathP.PublishMessage(fuzzInput)
 
 				}
 			}
 		}
 	}
-
 	threshold = average - stdDev
+	logger.Warnf("Threshold: %f", threshold)
 	for domain, s := range score {
-		if float64(s) < threshold {
+		if float64(s) < threshold || s == 0 {
 			logger.Warnf("Low score domain added: %s, score: %d", domain, s)
 			ScoreMu.Lock()
 			LowScoreDomains = append(LowScoreDomains, domain)

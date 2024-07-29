@@ -93,7 +93,7 @@ func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerRe
 	currentHostName := req.URL.Hostname()
 	score.ScoreMu.Lock()
 	for _, lowscore := range score.LowScoreDomains {
-		if strings.Contains(currentHostName, lowscore) {
+		if currentHostName == lowscore {
 			logger.Warnf("Low score domain filtered: %s\n", currentHostName)
 			return nil, fmt.Errorf("low score domain")
 		}

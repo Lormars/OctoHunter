@@ -202,7 +202,7 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				time.Sleep(retryDelay)
 				continue
 			}
-			logger.Warnf("Request failed after %d attempts: %s %s %v (%v)\n", maxRetries, req.Method, req.URL.String(), err, duration)
+			logger.Debugf("Request failed after %d attempts: %s %s %v (%v)\n", maxRetries, req.Method, req.URL.String(), err, duration)
 
 			mu.Lock()
 			health.ProxyHealthInstance.AddBad(proxy)
