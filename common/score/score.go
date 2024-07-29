@@ -86,7 +86,7 @@ func CalculateScore() {
 		}
 	}
 	threshold = average - stdDev
-	logger.Warnf("Threshold: %f", threshold)
+	logger.Debugf("Threshold: %f", threshold)
 	for domain, s := range score {
 		if float64(s) < threshold || s == 0 {
 			logger.Warnf("Low score domain added: %s, score: %d", domain, s)
