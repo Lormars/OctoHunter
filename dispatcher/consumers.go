@@ -168,9 +168,6 @@ func Init(opts *common.Opts) {
 			}
 
 			common.GlobalMu.Unlock()
-			if len(common.ConsumerSemaphore) > 1100 {
-				logger.Warnf("sepamore running: %d", len(common.ConsumerSemaphore))
-			}
 			time.Sleep(1 * time.Second)
 		}
 	}()

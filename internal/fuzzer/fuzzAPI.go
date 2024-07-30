@@ -105,7 +105,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 		if err != nil {
 			continue
 		}
-		if resp.StatusCode == 404 || resp.StatusCode == 401 {
+		if resp.StatusCode == 404 || resp.StatusCode == 401 || resp.StatusCode == 403 {
 			continue
 		}
 		//check content type to make sure we find new API endpoints

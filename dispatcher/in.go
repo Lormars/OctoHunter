@@ -42,7 +42,9 @@ func Input(opts *common.Opts) {
 			wg.Add(1)
 			go func() {
 				for domainString := range lineCh {
+					logger.Debugf("Processing domain: %s", domainString)
 					if !strings.HasPrefix(domainString, "http") {
+						logger.Debugf("Domain does not have http/https prefix: %s", domainString)
 						go common.CnameP.PublishMessage(domainString)
 					}
 					domainString = strings.TrimPrefix(domainString, "http://")

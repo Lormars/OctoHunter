@@ -50,7 +50,6 @@ var WaybackP = NewProducer("wayback_broker")
 var GraphqlP = NewProducer("graphql_broker")
 var MimeP = NewProducer("mime_broker")
 
-var mu sync.Mutex
 var GlobalMu sync.Mutex
 
 var (
@@ -128,10 +127,11 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if !cacher.CheckCache(hashed, p.name) {
 				return
 			}
-			hostname := GetHostname(v)
-			mu.Lock()
-			BrokerSliding.AddRequest(hostname)
-			mu.Unlock()
+			//TODO: doesn't matter much, can delete after testing
+			// hostname := GetHostname(v)
+			// mu.Lock()
+			// BrokerSliding.AddRequest(hostname)
+			// mu.Unlock()
 			// waitCh = AddToBrokerQueue(hostname)
 		case *ServerResult:
 			messageBody, err = json.Marshal(v)
@@ -142,10 +142,10 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if !cacher.CheckCache(hashed, p.name) {
 				return
 			}
-			hostname := GetHostname(v.Url)
-			mu.Lock()
-			BrokerSliding.AddRequest(hostname)
-			mu.Unlock()
+			// hostname := GetHostname(v.Url)
+			// mu.Lock()
+			// BrokerSliding.AddRequest(hostname)
+			// mu.Unlock()
 			// waitCh = AddToBrokerQueue(hostname)
 		case *XssInput:
 			messageBody, err = json.Marshal(v)
@@ -156,20 +156,19 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if !cacher.CheckCache(hashed, p.name) {
 				return
 			}
-			hostname := GetHostname(v.Url)
-			mu.Lock()
-			BrokerSliding.AddRequest(hostname)
-			mu.Unlock()
+			// hostname := GetHostname(v.Url)
+			// mu.Lock()
+			// BrokerSliding.AddRequest(hostname)
+			// mu.Unlock()
 			// waitCh = AddToBrokerQueue(hostname)
 		default:
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
 		// <-waitCh
-		mu.Lock()
 		if !p.closed {
+
 			p.messageChan <- messageBody
 		}
-		mu.Unlock()
 	} else {
 		messageBody = []byte(body.(string))
 		err = p.pubCh.Publish(
@@ -265,7 +264,7 @@ func monitorChannels(producers []*Producer) {
 			if p.name != "dork_broker" {
 				name := strings.Split(p.name, "_")[0]
 				if len(p.messageChan) > 500 && p.name != "crawl_broker" {
-					logger.Infof("Queue %s has %d messages waiting", p.name, len(p.messageChan))
+					logger.Debugf("Queue %s has %d messages waiting", p.name, len(p.messageChan))
 					WaitingQueue[name] = 10 //if longer than 500, then just add more
 					lastWait[p.name] = len(p.messageChan)
 				} else {
