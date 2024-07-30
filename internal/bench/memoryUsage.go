@@ -18,6 +18,15 @@ var notified = false
 func PrintMemUsage(opts *common.Opts) {
 	start := time.Now()
 	time.Sleep(5 * time.Second)
+	go func() {
+		for {
+			msg2 := getProducerBench()
+			if common.SendOutput {
+				common.OutputP.PublishMessage(msg2)
+			}
+			time.Sleep(10 * time.Second)
+		}
+	}()
 	for {
 		var m runtime.MemStats
 		runtime.ReadMemStats(&m)
@@ -63,4 +72,18 @@ func PrintMemUsage(opts *common.Opts) {
 
 func bToMb(b uint64) string {
 	return strconv.FormatUint(b/1024/1024, 10)
+}
+
+func getProducerBench() string {
+	var msg string
+	outputs := common.GetOutput()
+	msg = "[PB]<br>"
+	for producer, benchOutput := range outputs {
+		msg += fmt.Sprintf("<b>%s (%d):</b> ", producer, benchOutput.ProducerNumber)
+		for host, count := range benchOutput.Hosts {
+			msg += fmt.Sprintf("%s (%d), ", host, count)
+		}
+		msg += "<br>"
+	}
+	return msg
 }

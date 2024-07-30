@@ -205,6 +205,13 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 				switch handler := handlerFunc.(type) {
 				case func(string):
 					logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.([]byte))
+					GlobalMu.Lock()
+					ProducerBenches = append(ProducerBenches, ProducerBench{
+						Producer: p.name,
+						Time:     time.Now(),
+						Hostname: GetHostname(string(d.([]byte))),
+					})
+					GlobalMu.Unlock()
 					handler(string(d.([]byte)))
 				case func(*ServerResult):
 					var serverResult ServerResult
@@ -214,6 +221,13 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 						continue
 					}
 					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
+					GlobalMu.Lock()
+					ProducerBenches = append(ProducerBenches, ProducerBench{
+						Producer: p.name,
+						Time:     time.Now(),
+						Hostname: GetHostname(serverResult.Url),
+					})
+					GlobalMu.Unlock()
 					handler(&serverResult)
 				case func(*XssInput):
 					var xssInput XssInput
@@ -223,6 +237,13 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 						continue
 					}
 					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, xssInput.Url)
+					GlobalMu.Lock()
+					ProducerBenches = append(ProducerBenches, ProducerBench{
+						Producer: p.name,
+						Time:     time.Now(),
+						Hostname: GetHostname(xssInput.Url),
+					})
+					GlobalMu.Unlock()
 					handler(&xssInput)
 				default:
 					failOnError(fmt.Errorf("unknown type %T", handler), "Failed to consume a message")
