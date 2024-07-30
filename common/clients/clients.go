@@ -28,7 +28,7 @@ var (
 	cleanupInterval        = 60 * time.Second
 	maxIdleTime            = 120 * time.Second
 	totalData        int64 = 0
-	concurrentReq          = make(chan struct{}, 160)
+	concurrentReq          = make(chan struct{}, 800)
 	mu               sync.Mutex
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
