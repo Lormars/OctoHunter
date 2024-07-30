@@ -40,7 +40,7 @@ func CheckQuirks(res *common.ServerResult) {
 
 	result = res
 
-	if strings.Contains(result.Url, "/_next/image") {
+	if strings.Contains(result.Url, "/_next/image") && result.StatusCode < 300 {
 		msg := fmt.Sprintf("[Quirks] Next.js Image URL in %s", result.Url)
 		if common.SendOutput {
 			common.OutputP.PublishMessage(msg)
