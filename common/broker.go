@@ -200,6 +200,7 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 			default:
 				d, ok := <-p.messageChan
 				if !ok {
+					logger.Warnf("Channel %s is closed", p.name)
 					return
 				}
 				switch handler := handlerFunc.(type) {
