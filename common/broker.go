@@ -61,7 +61,7 @@ var (
 
 func failOnError(err error, msg string) {
 	if err != nil {
-		log.Fatalf("%s: %s", msg, err)
+		log.Panicf("%s: %s", msg, err)
 	}
 }
 
@@ -120,7 +120,7 @@ func (p *Producer) PublishMessage(body interface{}) {
 	var err error
 
 	if p.name != "dork_broker" {
-		var waitCh chan bool
+		// var waitCh chan bool
 		switch v := body.(type) {
 		case string:
 			messageBody = []byte(v)
@@ -132,7 +132,7 @@ func (p *Producer) PublishMessage(body interface{}) {
 			mu.Lock()
 			BrokerSliding.AddRequest(hostname)
 			mu.Unlock()
-			waitCh = AddToBrokerQueue(hostname)
+			// waitCh = AddToBrokerQueue(hostname)
 		case *ServerResult:
 			messageBody, err = json.Marshal(v)
 			if err != nil {
@@ -146,7 +146,7 @@ func (p *Producer) PublishMessage(body interface{}) {
 			mu.Lock()
 			BrokerSliding.AddRequest(hostname)
 			mu.Unlock()
-			waitCh = AddToBrokerQueue(hostname)
+			// waitCh = AddToBrokerQueue(hostname)
 		case *XssInput:
 			messageBody, err = json.Marshal(v)
 			if err != nil {
@@ -160,11 +160,11 @@ func (p *Producer) PublishMessage(body interface{}) {
 			mu.Lock()
 			BrokerSliding.AddRequest(hostname)
 			mu.Unlock()
-			waitCh = AddToBrokerQueue(hostname)
+			// waitCh = AddToBrokerQueue(hostname)
 		default:
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
-		<-waitCh
+		// <-waitCh
 		mu.Lock()
 		if !p.closed {
 			p.messageChan <- messageBody
