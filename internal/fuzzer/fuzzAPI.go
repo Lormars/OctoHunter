@@ -34,6 +34,14 @@ func apifuzzerinit() {
 	collectedPrexies := make(map[string]bool)
 	collectedSuffixes := make(map[string]bool)
 	collectedSubdomains := make(map[string]bool)
+	documentationPath := []string{
+		"api", "index.html", "openapi.json", "swagger", "v1", "v2", "v3", "v4", "v5",
+	}
+	for _, path := range documentationPath {
+		collectedSuffixes[path] = true
+	}
+
+	collectedPrexies["swagger"] = true
 
 	var mu sync.Mutex
 

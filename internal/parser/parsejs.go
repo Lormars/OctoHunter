@@ -45,9 +45,11 @@ func ParseJS(result *common.ServerResult) {
 		common.AddToCrawlMap(resolvedURL, "jsParse", resp.StatusCode)
 		resp.Depth += 1
 		common.DividerP.PublishMessage(resp)
+		contentType := resp.Headers.Get("Content-Type")
+		jsonOrXML := checker.CheckMimeType(contentType, "application/json") || checker.CheckMimeType(contentType, "application/xml") || checker.CheckMimeType(contentType, "text/xml")
 		if url.Method == "GET" {
 
-			if strings.Contains(resolvedURL, "api") && !strings.HasSuffix(resolvedURL, ".js") && !strings.HasSuffix(resolvedURL, ".css") {
+			if jsonOrXML || (strings.Contains(resolvedURL, "api") && !strings.HasSuffix(resolvedURL, ".js") && !strings.HasSuffix(resolvedURL, ".css")) {
 				common.PathTraversalP.PublishMessage(resolvedURL)
 				common.FuzzAPIP.PublishMessage(resolvedURL)
 			}
