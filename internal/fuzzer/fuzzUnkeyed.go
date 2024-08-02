@@ -12,7 +12,6 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
-	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/logger"
@@ -228,30 +227,31 @@ func FuzzUnkeyed(urlStr string) {
 						}
 					}
 				}
-				mu.Lock()
-				notfound := found == 0
-				mu.Unlock()
-				if notfound {
-					//this is interesting, as it means that the exact signature is not found, but the prefix is found,
-					//which means that the a signature from previous requests is cached
-					if strings.Contains(resp.Body, prefix) {
-						hostname := parsed.Hostname()
-						if !cacher.CheckCache(hostname, "unkeyedPrefix") {
-							mu.Lock()
-							found = -1
-							mu.Unlock()
-							continue
-						}
-						msg := fmt.Sprintf("[Fuzz Unkeyed] Prefix %s found on %s", prefix, urlStr)
-						if common.SendOutput {
-							common.OutputP.PublishMessage(msg)
-						}
-						notify.SendMessage(msg)
-						mu.Lock()
-						found = -1 //just disable it in current url to prevent information flood
-						mu.Unlock()
-					}
-				}
+				//TODO: Temporarily disable as it is not related to the bug i wanna test for now.
+				// mu.Lock()
+				// notfound := found == 0
+				// mu.Unlock()
+				// if notfound {
+				// 	//this is interesting, as it means that the exact signature is not found, but the prefix is found,
+				// 	//which means that the a signature from previous requests is cached
+				// 	if strings.Contains(resp.Body, prefix) {
+				// 		hostname := parsed.Hostname()
+				// 		if !cacher.CheckCache(hostname, "unkeyedPrefix") {
+				// 			mu.Lock()
+				// 			found = -1
+				// 			mu.Unlock()
+				// 			continue
+				// 		}
+				// 		msg := fmt.Sprintf("[Fuzz Unkeyed] Prefix %s found on %s", prefix, urlStr)
+				// 		if common.SendOutput {
+				// 			common.OutputP.PublishMessage(msg)
+				// 		}
+				// 		notify.SendMessage(msg)
+				// 		mu.Lock()
+				// 		found = -1 //just disable it in current url to prevent information flood
+				// 		mu.Unlock()
+				// 	}
+				// }
 				time.Sleep(100 * time.Millisecond)
 			}
 		}()
