@@ -57,7 +57,7 @@ func fuzzAllPath(urlStr string) {
 		if err != nil {
 			return true
 		}
-		if resp.StatusCode != 404 && resp.StatusCode != 403 && resp.StatusCode != 429 {
+		if resp.StatusCode != 404 && resp.StatusCode != 403 && resp.StatusCode != 429 && resp.StatusCode != 500 {
 			mu.Lock()
 			hashed := common.Hash(resp.Body)
 			if _, exists := resultMap[hashed]; !exists {
@@ -103,7 +103,7 @@ func fuzzNewPath(domainWithPath string) {
 		if err != nil {
 			return true
 		}
-		if resp.StatusCode != 404 && resp.StatusCode != 403 {
+		if resp.StatusCode != 404 && resp.StatusCode != 403 && resp.StatusCode != 429 && resp.StatusCode != 500 {
 			common.AddToCrawlMap(resp.Url, "fuzz", resp.StatusCode)
 			common.DividerP.PublishMessage(resp)
 			// logger.Warnf("found new endpoint: %s", fuzzPath)
