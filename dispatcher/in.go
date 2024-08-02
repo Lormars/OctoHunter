@@ -17,6 +17,7 @@ import (
 )
 
 var scanned int
+var allerred int
 
 func Input(opts *common.Opts) {
 	Init(opts)
@@ -53,6 +54,9 @@ func Input(opts *common.Opts) {
 					//why? to make sure the statuscode is right.
 					//using the default client may be blocked due to various bot checks.
 					//So need to use our client to request again to make sure the status code is right.
+					if errhttp != nil && errhttps != nil {
+						allerred++
+					}
 					go func() {
 						if errhttp == nil && httpStatus.Online {
 							req, err := http.NewRequest("GET", httpStatus.Url, nil)
@@ -120,8 +124,11 @@ func Input(opts *common.Opts) {
 }
 
 func GetScanned() int {
-	common.GlobalMu.Lock()
-	defer common.GlobalMu.Unlock()
 	totalScanned := scanned
 	return totalScanned
+}
+
+func GetAllerred() int {
+	totalAllerred := allerred
+	return totalAllerred
 }

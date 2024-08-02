@@ -27,8 +27,10 @@ func PrintMemUsage(opts *common.Opts) {
 			time.Sleep(10 * time.Second)
 		}
 	}()
+	var lastScanned, lasterred = 0, 0
 	for {
 		var m runtime.MemStats
+
 		runtime.ReadMemStats(&m)
 
 		// For more info, see: https://golang.org/pkg/runtime/#MemStats
@@ -45,7 +47,11 @@ func PrintMemUsage(opts *common.Opts) {
 			msg += fmt.Sprintf(" Div: %.2f. ", diversity)
 			msg += fmt.Sprintf(" Rate: %.2f. ", rate)
 			scanned := dispatcher.GetScanned()
-			msg += fmt.Sprintf(" Scanned: %d. ", scanned)
+			msg += fmt.Sprintf(" Scanned: %d (%d). ", scanned, scanned-lastScanned)
+			lastScanned = scanned
+			allerred := dispatcher.GetAllerred()
+			msg += fmt.Sprintf(" Allerred: %d (%d). ", allerred, allerred-lasterred)
+			lasterred = allerred
 			all429 := clients.Get429Count()
 			msg += fmt.Sprintf(" Slowed: %d. ", all429)
 			consumerUsage := len(common.ConsumerSemaphore)

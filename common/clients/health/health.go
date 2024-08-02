@@ -207,7 +207,7 @@ func (ph *ProxyHealth) Monitor() {
 		sumOfSquares += (healthRatio - average) * (healthRatio - average)
 	}
 	stdDev := math.Sqrt(sumOfSquares / float64(count))
-	logger.Debugln(stdDev)
+	// logger.Debugln(stdDev)
 	// Print proxies with health lower than (average - 2*stdDev)
 	for proxy, health := range ph.Proxies {
 		total := health.GoodCount() + health.BadCount()
