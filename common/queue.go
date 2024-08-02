@@ -67,7 +67,9 @@ func (pq PriorityQueue[T]) Swap(i, j int) {
 
 func (pq *PriorityQueue[T]) Push(x interface{}) {
 	item := x.(T)
+	mu.Lock()
 	pq.items = append(pq.items, item)
+	mu.Unlock()
 }
 
 func (pq *PriorityQueue[T]) Pop() interface{} {
@@ -176,8 +178,11 @@ func dispatch() {
 				close(req.RespChan)
 			}(req)
 		}
+		mu.Lock()
+		currentLen := pq.Len()
+		mu.Unlock()
+		time.Sleep(time.Duration(1/(currentLen+1)) * 1 * time.Second)
 
-		time.Sleep(time.Duration(1/(pq.Len()+1)) * 1 * time.Second)
 	}
 }
 

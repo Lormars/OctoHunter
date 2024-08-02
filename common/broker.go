@@ -51,7 +51,7 @@ var GraphqlP = NewProducer("graphql_broker")
 var MimeP = NewProducer("mime_broker")
 
 var GlobalMu sync.Mutex
-
+var mu sync.Mutex
 var (
 	queueProducers []*Producer
 	WaitingQueue   = make(map[string]int)
@@ -110,8 +110,9 @@ func rabbitMQSetup() {
 		nil,
 	)
 	failOnError(err, "Failed to declare a queue")
+	mu.Lock()
 	OutputP.pubCh = pubCh
-
+	mu.Unlock()
 }
 
 func (p *Producer) PublishMessage(body interface{}) {
@@ -165,12 +166,15 @@ func (p *Producer) PublishMessage(body interface{}) {
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
 		// <-waitCh
-		if !p.closed {
-
+		p.mu.Lock()
+		isClosed := p.closed
+		p.mu.Unlock()
+		if !isClosed {
 			p.messageChan <- messageBody
 		}
 	} else {
 		messageBody = []byte(body.(string))
+		mu.Lock()
 		err = p.pubCh.Publish(
 			"",            // exchange
 			"dork_broker", // routing key
@@ -180,6 +184,7 @@ func (p *Producer) PublishMessage(body interface{}) {
 				ContentType: "text/plain",
 				Body:        messageBody,
 			})
+		mu.Unlock()
 		if err != nil {
 			logger.Warnf("Failed to publish a message: %s", err)
 		}
