@@ -64,7 +64,7 @@ func FuzzPath(result *common.ServerResult) {
 			if err != nil {
 				return
 			}
-			if resp.StatusCode != 404 && resp.StatusCode != 403 && resp.StatusCode != 429 {
+			if resp.StatusCode != 404 && resp.StatusCode != 403 && resp.StatusCode != 429 && resp.StatusCode != 500 {
 				mu.Lock()
 				hashed := common.Hash(resp.Body)
 				if _, exists := resultMap[hashed]; !exists {
