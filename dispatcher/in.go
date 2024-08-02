@@ -102,9 +102,7 @@ func Input(opts *common.Opts) {
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			lineCh <- line
-			common.GlobalMu.Lock()
 			scanned++
-			common.GlobalMu.Unlock()
 		}
 
 		if err := scanner.Err(); err != nil {
