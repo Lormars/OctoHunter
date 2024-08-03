@@ -2,6 +2,7 @@ package score
 
 import (
 	"math"
+	"strings"
 	"sync"
 
 	"github.com/lormars/octohunter/common"
@@ -34,13 +35,14 @@ func CalculateScore() {
 	var totalScore int
 	var count int
 	for domain, origins := range originMap {
-		if len(origins) < 50 {
+		if len(origins) < 50 || len(strings.Split(domain, ".")) == 2 { //disregard top level domain
 			continue
 		}
 		score[domain] = 0
 		for _, origin := range origins {
 			score[domain] += getScore(origin)
 		}
+
 		score[domain] /= len(origins)
 		totalScore += score[domain]
 		count++
