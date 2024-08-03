@@ -131,7 +131,7 @@ func FuzzUnkeyed(urlStr string) {
 						parts := strings.Split(header, "~")
 						value := fmt.Sprintf(parts[1], prefix+signature+".com")
 						req.Header.Set(parts[0], value)
-						sigMap[prefix+signature+".com"] = []string{header, "header"}
+						sigMap[prefix+signature+".com"] = []string{parts[0], "header"}
 						// logger.Warnf("[DEBUG] Special header: %s with value %s", parts[0], value)
 					} else {
 						req.Header.Set(header, prefix+signature)
@@ -166,7 +166,7 @@ func FuzzUnkeyed(urlStr string) {
 						mu.Unlock()
 						if param[1] == "header" {
 							//check if this header is unkeyed
-							req.Header.Del(header)
+							req.Header.Del(param[0])
 							resp, err = checker.CheckServerCustom(req, clients.NoRedirectClient)
 							if err != nil {
 								continue
