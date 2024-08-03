@@ -48,6 +48,12 @@ func Input(opts *common.Opts) {
 						logger.Debugf("Domain does not have http/https prefix: %s", domainString)
 						go common.CnameP.PublishMessage(domainString)
 					}
+
+					_, err := clients.DnsCache.LookupIP(domainString)
+					if err != nil {
+						continue
+					}
+
 					domainString = strings.TrimPrefix(domainString, "http://")
 					domainString = strings.TrimPrefix(domainString, "https://")
 					httpStatus, httpsStatus, errhttp, errhttps := checker.CheckHTTPAndHTTPSServers(domainString)
