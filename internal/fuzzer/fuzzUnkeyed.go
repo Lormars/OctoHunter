@@ -124,10 +124,10 @@ func FuzzUnkeyed(urlStr string) {
 					return
 				}
 
-				specialHeader := false
+				// specialHeader := false
 				if header != "" {
 					if strings.Contains(header, "~") {
-						specialHeader = true
+						// specialHeader = true
 						parts := strings.Split(header, "~")
 						value := fmt.Sprintf(parts[1], prefix+signature+".com")
 						req.Header.Set(parts[0], value)
@@ -148,15 +148,15 @@ func FuzzUnkeyed(urlStr string) {
 					continue
 				}
 
-				if specialHeader {
-					if resp.StatusCode >= 300 && resp.StatusCode != 429 && resp.StatusCode != 403 && resp.StatusCode != 400 && resp.StatusCode != 401 && resp.StatusCode != 503 {
-						msg := fmt.Sprintf("[Fuzz Unkeyed] Special header found: %s on %s with sc %d", header, urlStr, resp.StatusCode)
-						if common.SendOutput {
-							common.OutputP.PublishMessage(msg)
-						}
-						notify.SendMessage(msg)
-					}
-				}
+				// if specialHeader { //TODO: too many false positive
+				// 	if resp.StatusCode >= 300 && resp.StatusCode != 429 && resp.StatusCode != 403 && resp.StatusCode != 400 && resp.StatusCode != 401 && resp.StatusCode != 503 {
+				// 		msg := fmt.Sprintf("[Fuzz Unkeyed] Special header found: %s on %s with sc %d", header, urlStr, resp.StatusCode)
+				// 		if common.SendOutput {
+				// 			common.OutputP.PublishMessage(msg)
+				// 		}
+				// 		notify.SendMessage(msg)
+				// 	}
+				// }
 
 				for sig, param := range sigMap {
 					//if value is reflected in response body
