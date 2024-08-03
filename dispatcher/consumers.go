@@ -152,11 +152,16 @@ func Init(opts *common.Opts) {
 						mu.Unlock()
 						<-closeChan
 						mu.Lock()
-						newNum := numMap[name].num - 1
-						if newNum == 0 {
-							delete(numMap, name)
-						} else {
-							numMap[name] = numChan{num: newNum, chans: numMap[name].chans[1:]}
+						numChanEntry, exists := numMap[name]
+						if exists {
+							newNum := numChanEntry.num - 1
+							if newNum == 0 {
+								delete(numMap, name)
+							} else {
+								numChanEntry.num = newNum
+								numChanEntry.chans = numChanEntry.chans[1:] // Shift channels
+								numMap[name] = numChanEntry
+							}
 						}
 						// logger.Infof("Stopping %s, have %d running", name, newNum+1)
 						mu.Unlock()

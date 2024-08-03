@@ -1,28 +1,16 @@
 package checker
 
 import (
-	"context"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/miekg/dns"
 )
 
-var resolver = &net.Resolver{
-	PreferGo: true,
-	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-		d := net.Dialer{
-			Timeout: 30 * time.Second,
-		}
-		return d.DialContext(ctx, network, "1.1.1.1:53")
-	},
-}
-
 func ResolveDNS(domain string) bool {
-	_, err := resolver.LookupHost(context.Background(), domain)
+	_, err := net.LookupHost(domain)
 	return err == nil
 }
 

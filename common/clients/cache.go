@@ -1,10 +1,8 @@
 package clients
 
 import (
-	"context"
 	"net"
 	"sync"
-	"time"
 )
 
 type DNSCache struct {
@@ -18,16 +16,6 @@ func NewDNSCache() *DNSCache {
 	}
 }
 
-var resolver = &net.Resolver{
-	PreferGo: true,
-	Dial: func(ctx context.Context, network, address string) (net.Conn, error) {
-		d := net.Dialer{
-			Timeout: 30 * time.Second,
-		}
-		return d.DialContext(ctx, network, "1.1.1.1:53")
-	},
-}
-
 func (c *DNSCache) LookupIP(host string) ([]net.IP, error) {
 	c.mu.RLock()
 	if ips, found := c.cache[host]; found {
@@ -37,7 +25,7 @@ func (c *DNSCache) LookupIP(host string) ([]net.IP, error) {
 	}
 	c.mu.RUnlock()
 
-	allIPs, err := resolver.LookupIP(context.Background(), "ip", host)
+	allIPs, err := net.LookupIP(host)
 	if err != nil {
 		return nil, err
 	}
