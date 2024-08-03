@@ -32,7 +32,7 @@ func Divider(result *common.ServerResult) {
 	} else if checker.CheckRequestError(result.StatusCode) {
 		// logger.Warnf("Request error for %s (%d)", result.Url, result.StatusCode)
 		go common.MethodP.PublishMessage(result)
-		go common.HopP.PublishMessage(result)
+		// go common.HopP.PublishMessage(result) //TODO: too many false positive
 		//if the homepage itself is 403 or 404, fuzz for directories
 		if (result.StatusCode == 403 || result.StatusCode == 404) && checker.CheckHomePage(result.Url) {
 			saveDomainToMap(result.Url)
