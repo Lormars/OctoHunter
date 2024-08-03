@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/lormars/octohunter/common"
@@ -16,7 +17,7 @@ import (
 	"github.com/lormars/octohunter/internal/notify"
 )
 
-var scanned int
+var scanned int64
 var allerred int
 
 func Input(opts *common.Opts) {
@@ -36,7 +37,7 @@ func Input(opts *common.Opts) {
 			logger.Errorln("Error opening file: ", err)
 			return
 		}
-
+		scanned = 0
 		lineCh := make(chan string, opts.Concurrency)
 		var wg sync.WaitGroup
 		for i := 0; i < 100; i++ {
@@ -53,7 +54,7 @@ func Input(opts *common.Opts) {
 					if err != nil {
 						continue
 					}
-
+					atomic.AddInt64(&scanned, 1)
 					domainString = strings.TrimPrefix(domainString, "http://")
 					domainString = strings.TrimPrefix(domainString, "https://")
 					httpStatus, httpsStatus, errhttp, errhttps := checker.CheckHTTPAndHTTPSServers(domainString)
@@ -107,12 +108,10 @@ func Input(opts *common.Opts) {
 				wg.Done()
 			}()
 		}
-		scanned = 0
 		scanner := bufio.NewScanner(file)
 		for scanner.Scan() {
 			line := strings.TrimSpace(scanner.Text())
 			lineCh <- line
-			scanned++
 		}
 
 		if err := scanner.Err(); err != nil {
@@ -129,7 +128,7 @@ func Input(opts *common.Opts) {
 	}
 }
 
-func GetScanned() int {
+func GetScanned() int64 {
 	totalScanned := scanned
 	return totalScanned
 }

@@ -27,7 +27,8 @@ func PrintMemUsage(opts *common.Opts) {
 			time.Sleep(10 * time.Second)
 		}
 	}()
-	var lastScanned, lasterred = 0, 0
+	var lasterred = 0
+	var lastScanned int64 = 0
 	for {
 		var m runtime.MemStats
 
