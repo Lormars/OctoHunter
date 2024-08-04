@@ -72,7 +72,7 @@ func GetWaybackURLs(domain string) {
 				logger.Warnf("Error creating request: %v", err)
 				return
 			}
-			resp, err := checker.CheckServerCustom(req, clients.NormalClient)
+			resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", true, true))
 			if err != nil {
 				logger.Warnf("Error getting response from %s: %v", u, err)
 				return

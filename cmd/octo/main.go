@@ -49,7 +49,7 @@ func main() {
 	common.InitBrowser(config.Headless)
 	logger.SetLogLevel(logger.ParseLogLevel(config.Loglevel))
 	cacher.SetCacheTime(config.CacheTime)
-	clients.SetRateLimiter(config.RateLimit)
+	// clients.SetRateLimiter(config.RateLimit)
 	clients.SetUseProxy(config.UseProxy)
 	err := godotenv.Load()
 

@@ -68,7 +68,7 @@ func CheckHttpRedirectToHttps(urlStr string) bool {
 	if err != nil {
 		return false
 	}
-	resp, err := CheckServerCustom(req, clients.NoRedirectClient)
+	resp, err := CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		return false
 	}

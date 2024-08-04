@@ -109,7 +109,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 		if err != nil {
 			continue
 		}
-		resp, err := checker.CheckServerCustom(req, clients.NormalClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", true, true))
 		if err != nil {
 			continue
 		}

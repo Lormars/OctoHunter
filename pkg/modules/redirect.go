@@ -32,7 +32,7 @@ func SingleRedirectCheck(result *common.ServerResult) {
 
 	req, err := http.NewRequest("GET", finalURL.String(), nil)
 	if err == nil {
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err == nil {
 			common.DividerP.PublishMessage(resp) //send new-found finalURL to divider
 		}
@@ -110,7 +110,7 @@ func checkOpenRedirect(finalURL *url.URL, result *common.ServerResult) {
 					logger.Warnf("Error creating request: %v\n", err)
 					continue
 				}
-				resp, err := checker.CheckServerCustom(req, clients.NormalClient)
+				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", true, true))
 				if err != nil {
 					logger.Warnf("Error getting response from %s: %v\n", parsedOriginalURL.String(), err)
 					continue
@@ -149,7 +149,7 @@ func getFinalURL(initialURL string) (*url.URL, error) {
 		logger.Warnf("Error creating request: %v", err)
 		return nil, err
 	}
-	resp, err := checker.CheckServerCustom(req, clients.NormalClient)
+	resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", true, true))
 	if err != nil {
 		logger.Warnf("Error getting response from %s: %v\n", initialURL, err)
 		return nil, err

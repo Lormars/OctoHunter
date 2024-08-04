@@ -50,7 +50,7 @@ func Crawl(response *common.ServerResult) {
 					logger.Debugf("Error creating request: %v", err)
 					return
 				}
-				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error getting response from %s: %v\n", url, err)
 					return

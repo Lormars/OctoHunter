@@ -37,7 +37,7 @@ func CheckCacheable(payload string) bool {
 			logger.Debugf("Error creating request: %v", err)
 			return false
 		}
-		elapse, resp, err := MeasureElapse(req, clients.NoRedirectClient)
+		elapse, resp, err := MeasureElapse(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err == nil {
 			elapses = append(elapses, elapse)
 			responses = append(responses, resp)

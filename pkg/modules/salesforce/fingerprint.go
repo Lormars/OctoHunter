@@ -25,7 +25,7 @@ func Fingerprint(target string) (bool, string) {
 		}
 
 		req.Header.Set("Content-Type", "application/json")
-		resp, err := checker.CheckServerCustom(req, clients.NormalClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", true, true))
 		if err != nil {
 			logger.Debugf("Error getting response from %s: %v\n", newUrl, err)
 			continue

@@ -54,7 +54,7 @@ func testAccessControl(urlStr, verb string) (bool, int, error) {
 		return false, 0, err
 	}
 
-	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirectClient)
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.Clients.GetRandomClient("h0", false, true))
 	if errTreat != nil {
 		logger.Debugf("Error getting response: treament - %v\n", errTreat)
 		return false, 0, errTreat
@@ -84,7 +84,7 @@ func checkHeaderOverwrite(urlStr, header string) (bool, string, int) {
 
 	for _, payload := range payloads {
 		treatmentReq.Header.Set(header, payload)
-		treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirectClient)
+		treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.Clients.GetRandomClient("h0", false, true))
 		if errTreat != nil {
 			logger.Debugf("Error getting response: treament - %v\n", errTreat)
 			continue

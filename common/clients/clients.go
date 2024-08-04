@@ -2,11 +2,11 @@ package clients
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,11 +24,9 @@ import (
 //All of these clients use utls to mimic browser fingerprints.
 
 var (
-	rl                     = 4
 	cleanupInterval        = 60 * time.Second
 	maxIdleTime            = 120 * time.Second
 	totalData        int64 = 0
-	concurrentReq          = make(chan struct{}, 200)
 	mu               sync.Mutex
 	resStats         = make(map[string][]*responseStats)
 	allRequestsCount = 0
@@ -36,6 +34,9 @@ var (
 	all429Count      = 0
 	UseProxy         = false
 	DnsCache         = NewDNSCache()
+	Clients          *OctoClients
+
+	rl = 4
 )
 
 type responseStats struct {
@@ -43,124 +44,102 @@ type responseStats struct {
 	duration   time.Duration
 }
 
-type rateLimiterEntry struct {
-	ratelimiter *common.DynamicRateLimiter
-	lastUsed    time.Time
-	successes   int
-	failures    int
-	max         int
-	hit         bool
-}
-
 type LoggingRoundTripper struct {
 	Proxied http.RoundTripper
 }
 
-func SetRateLimiter(r int) {
-	rl = r
+type OctoClients struct {
+	clients map[string]*OctoClient
 }
 
-var AllClients = map[string]*http.Client{
-	"Normalh1Client":     Normalh1Client,
-	"NoRedirecth1Client": NoRedirecth1Client,
-	"Normalh2Client":     Normalh2Client,
-	"NoRedirecth2Client": NoRedirecth2Client,
-	"NormalClient":       NormalClient,
-	"NoRedirectClient":   NoRedirectClient,
-	"NormalRCClient":     NormalRCClient,
-	"NoRedirectRCClient": NoRedirectRCClient,
+type OctoClient struct {
+	client    *http.Client
+	name      string
+	rateLimit map[string]*common.RateLimiterEntry
+	mu        sync.Mutex
+	proxy     string
 }
 
-var ratelimiters = make(map[string]map[string]*rateLimiterEntry)
+func init() {
+	initClients()
+}
 
-// A custom Roundtrip that can log, rate limit and cleanup rate limiters.
-// The ratelimiter works host-wise, so each host has its own rate limiter.
-// The rate limiting depends on the option rl, which is the rate limit per second.
-// The cleanup interval is 60 seconds and the max idle time is 120 seconds.
-func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	var proxy string
-	var ok bool
+func initClients() {
+	Clients = &OctoClients{}
+	proxies := [3]string{"", proxyP.Proxies.Proxies[0], proxyP.Proxies.Proxies[1]} //HACK: hard coded
+	var client *OctoClient
+	//generate clients
+	for _, proxy := range proxies {
+		client = NewClient("h1", proxy, true, WrapTransport(CreateCustomh1Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("h1", proxy, true, WrapTransport(KeepAliveh1Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("h1", proxy, false, WrapTransport(KeepAliveh1Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("h1", proxy, false, WrapTransport(CreateCustomh1Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("h2", proxy, true, WrapTransport(CreateCustomh2Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("h2", proxy, false, WrapTransport(CreateCustomh2Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("h0", proxy, true, WrapTransport(CreateH0Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("h0", proxy, false, WrapTransport(CreateH0Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("rc", proxy, true, WrapTransport(CreateRCh2Transport(proxy)))
+		Clients.clients[client.name] = client
+		client = NewClient("rc", proxy, false, WrapTransport(CreateRCh2Transport(proxy)))
+		Clients.clients[client.name] = client
+	}
+
+}
+
+func NewClient(cType, proxy string, redirect bool, transport http.RoundTripper) *OctoClient {
+	var client *http.Client
+	var name string
+	if redirect {
+		name = "Normal"
+		client = &http.Client{
+			Transport: transport,
+		}
+	} else {
+		name = "NoRedirect"
+		client = &http.Client{
+			Transport: transport,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+		}
+	}
+
+	if proxy != "" {
+		return &OctoClient{
+			client: client,
+			name:   name + fmt.Sprintf("%sProxy%s", cType, proxy),
+			proxy:  proxy,
+		}
+	} else {
+		return &OctoClient{
+			client: client,
+			name:   name + cType + "NoProxy",
+			proxy:  proxy,
+		}
+	}
+}
+
+func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 	maxRetries := 3
 	retryDelay := 1 * time.Second
-	acquireSemaphore := func() {
-		concurrentReq <- struct{}{}
-		logger.Debugf("acquired")
-	}
-
-	releaseSemaphore := func() {
-		<-concurrentReq
-		logger.Debugf("released")
-	}
-
-	// Retry loop
+	var resp *http.Response
+	var err error
+	currentHost := req.URL.Hostname()
 	for attempt := 0; attempt < maxRetries; attempt++ {
-		//first check if the request has a proxy set
-		proxy, ok = req.Context().Value("proxy").(string)
-		if ok {
-			//fmt.Println("Using proxy: ", proxy)
-		} else {
-			//if not, randomly select a proxy from the list
-			proxyP.Proxies.Mu.Lock()
-			proxy = proxyP.Proxies.Proxies[rand.Intn(len(proxyP.Proxies.Proxies))]
-			proxyP.Proxies.Mu.Unlock()
-			ctx := context.WithValue(req.Context(), "proxy", proxy)
-			req = req.WithContext(ctx)
-		}
-
-		currentHost := req.URL.Hostname()
-		var entry *rateLimiterEntry
-		var proxyExists bool
-		//does not apply rate limit when testing for race condition
-		_, okrace := req.Context().Value("race").(string)
-		if !okrace {
-			mu.Lock()
-			//the rate limiter is host & proxy specific
-			proxyentry, exists := ratelimiters[currentHost]
-			if !exists {
-				proxyentry = make(map[string]*rateLimiterEntry)
-				ratelimiters[currentHost] = proxyentry
-			}
-			entry, proxyExists = proxyentry[proxy]
-			if !proxyExists {
-				entry = &rateLimiterEntry{
-					ratelimiter: common.NewDynamicRateLimiter(float64(2), rl),
-					lastUsed:    time.Now(),
-					max:         12,
-					hit:         false,
-				}
-				proxyentry[proxy] = entry
-
-			} else {
-				entry.lastUsed = time.Now()
-			}
-
-			logger.Debugf("Rate limit for %s at %f\n", currentHost, entry.ratelimiter.GetRPS())
-
-			mu.Unlock()
-
-			err := entry.ratelimiter.Wait(req.Context())
-			if err != nil {
-				logger.Debugf("Rate limit Error for %s: %v\n", currentHost, err)
-				//mostly it is because exceeding context deadline
-				mu.Lock()
-				if entry.max > int(entry.ratelimiter.GetRPS()) {
-					newrl := entry.ratelimiter.GetRPS() + 1
-					newbt := entry.ratelimiter.GetBurst() + 1
-					entry.ratelimiter.Update(newrl, newbt)
-					logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
-				}
-				mu.Unlock()
-				return nil, err
-			}
-		}
-
 		logger.Debugf("Making request: at %s\n", req.URL.String())
 
 		randomIndex := rand.Intn(len(asset.Useragent))
 		randomAgent := asset.Useragent[randomIndex]
 		req.Header.Add("User-Agent", randomAgent) //use ADD as RC would set the user agent
 		req.Header.Add("Accept-Charset", "utf-8")
-
 		// Measure request size
 		requestSize := int64(0)
 		if req.Body != nil {
@@ -175,41 +154,13 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				requestSize += int64(len(name) + len(value) + 4) // header field size
 			}
 		}
-
-		acquireSemaphore()
-		// Measure concurrent requests
-
-		// proxiedCtx, cancel := context.WithTimeout(req.Context(), 60*time.Second)
-		// req = req.WithContext(proxiedCtx)
-
 		mu.Lock()
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
 		mu.Unlock()
 		start := time.Now()
-		resp, err := lrt.Proxied.RoundTrip(req)
+		resp, err = oc.Do(req)
 		duration := time.Since(start)
-		// cancel()
-		releaseSemaphore()
-
-		if err != nil {
-			logger.Debugf("Request failed: %s %s %v (%v)\n", req.Method, req.URL.String(), err, duration)
-			// If this was not the last attempt, wait before retrying
-			if attempt < maxRetries-1 {
-				mu.Lock()
-				allRequestsCount--
-				mu.Unlock()
-				time.Sleep(retryDelay)
-				continue
-			}
-			logger.Debugf("Request failed after %d attempts: %s %s %v (%v)\n", maxRetries, req.Method, req.URL.String(), err, duration)
-
-			mu.Lock()
-			health.ProxyHealthInstance.AddBad(proxy)
-			errRequestsCount++
-			mu.Unlock()
-			return nil, err
-		}
 
 		// Measure response size
 		responseSize := int64(0)
@@ -225,7 +176,6 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 				responseSize += int64(len(name) + len(value) + 4) // header field size
 			}
 		}
-
 		mu.Lock()
 		totalData += requestSize + responseSize
 		respStats := &responseStats{
@@ -233,77 +183,155 @@ func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, er
 			duration:   duration,
 		}
 		resStats[currentHost] = append(resStats[currentHost], respStats)
-		if !okrace {
-			if entry != nil {
-				if resp.StatusCode == 429 {
-					entry.successes = 0
-					entry.failures++
-					currentRPS := entry.ratelimiter.GetRPS()
-					if currentRPS > 2 && !entry.hit && entry.failures > 10 {
-						all429Count++
-						entry.failures = 0
-						entry.hit = true
-						newrl := currentRPS - 10
-						newbt := entry.ratelimiter.GetBurst() - 10
-						entry.max = int(currentRPS - 10)
-						entry.ratelimiter.Update(newrl, newbt)
-						logger.Debugf("Decrease Rate limit for %s to %f and set max to %d\n", currentHost, newrl, entry.max)
+
+		mu.Unlock()
+		if err != nil {
+			logger.Debugf("Request failed: %s %s %v\n", req.Method, req.URL.String(), err)
+			// If this was not the last attempt, wait before retrying
+			if attempt < maxRetries-1 {
+				mu.Lock()
+				allRequestsCount--
+				mu.Unlock()
+				time.Sleep(retryDelay)
+				continue
+			}
+			logger.Debugf("Request failed after %d attempts: %s %s %v\n", maxRetries, req.Method, req.URL.String(), err)
+
+			mu.Lock()
+			if oc.proxy != "" {
+				health.ProxyHealthInstance.AddBad(oc.proxy)
+			}
+			errRequestsCount++
+			mu.Unlock()
+			return nil, err
+		}
+		break
+	}
+
+	if !strings.Contains(oc.name, "rc") {
+		entry, exists := oc.rateLimit[req.URL.Hostname()]
+		if exists {
+			if resp.StatusCode == 429 {
+				entry.Successes = 0
+				entry.Failures++
+				currentRPS := entry.Ratelimiter.GetRPS()
+				if currentRPS > 2 && !entry.Hit && entry.Failures > 10 {
+					all429Count++
+					entry.Failures = 0
+					entry.Hit = true
+					newrl := currentRPS - 10
+					newbt := entry.Ratelimiter.GetBurst() - 10
+					entry.Max = int(currentRPS - 10)
+					entry.Ratelimiter.Update(newrl, newbt)
+					logger.Debugf("Decrease Rate limit for %s to %f and set max to %d\n", req.URL.Hostname(), newrl, entry.Max)
+				}
+			} else if resp.StatusCode == 403 {
+				health.ProxyHealthInstance.AddBad(oc.proxy)
+			} else {
+				entry.Successes++
+				health.ProxyHealthInstance.AddGood(oc.proxy)
+				if entry.Successes > 300 && !entry.Hit { //to make sure the current rate is not too high
+					entry.Successes = 0
+					if entry.Max > int(entry.Ratelimiter.GetRPS()) {
+						newrl := entry.Ratelimiter.GetRPS() + 1
+						newbt := entry.Ratelimiter.GetBurst() + 1
+						entry.Ratelimiter.Update(newrl, newbt)
+						logger.Debugf("Increase Rate limit for %s to %f\n", req.URL.Hostname(), newrl)
+					} else {
+						entry.Max += 5
 					}
-				} else if resp.StatusCode == 403 {
-					health.ProxyHealthInstance.AddBad(proxy)
-				} else {
-					entry.successes++
-					health.ProxyHealthInstance.AddGood(proxy)
-					if entry.successes > 300 && !entry.hit { //to make sure the current rate is not too high
-						entry.successes = 0
-						if entry.max > int(entry.ratelimiter.GetRPS()) {
-							newrl := entry.ratelimiter.GetRPS() + 1
-							newbt := entry.ratelimiter.GetBurst() + 1
-							entry.ratelimiter.Update(newrl, newbt)
-							logger.Debugf("Increase Rate limit for %s to %f\n", currentHost, newrl)
-						} else {
-							entry.max += 5
-						}
-					} else if entry.successes > 1000 {
-						entry.hit = false
-					}
+				} else if entry.Successes > 1000 {
+					entry.Hit = false
 				}
 			}
 		}
-		logger.Debugf("Current ratelimit for %s: %d with max %d\n", currentHost, int(entry.ratelimiter.GetRPS()), entry.max)
-		mu.Unlock()
-
-		logger.Debugf("Response: %s %s %d (%v)\n", req.Method, req.URL.String(), resp.StatusCode, duration)
-
-		return resp, nil
 	}
 
-	// If we exit the loop, it means all retries failed
-	return nil, fmt.Errorf("request failed after %d attempts", maxRetries)
+	return resp, nil
 }
 
-func cleanupRateLimiters() {
-	for {
-		time.Sleep(cleanupInterval)
-		now := time.Now()
-		mu.Lock()
-		for host, proxyentry := range ratelimiters {
-			for _, entry := range proxyentry {
-				if now.Sub(entry.lastUsed) > maxIdleTime {
-					logger.Debugf("Cleaning up rate limiter for %s\n", host)
-					delete(ratelimiters, host)
-				}
+func (oc *OctoClient) Do(req *http.Request) (*http.Response, error) {
+
+	if strings.Contains(oc.name, "rc") {
+		return oc.client.Do(req)
+	} else {
+		oc.mu.Lock()
+		ratelimiter, exists := oc.rateLimit[req.URL.Hostname()]
+		if !exists {
+			ratelimiter = &common.RateLimiterEntry{
+				Ratelimiter: common.NewDynamicRateLimiter(float64(2), rl),
+				LastUsed:    time.Now(),
+				Max:         12,
+				Hit:         false,
 			}
+			oc.rateLimit[req.URL.Hostname()] = ratelimiter
 		}
-		mu.Unlock()
+		oc.mu.Unlock()
+		err := ratelimiter.Ratelimiter.Wait(req.Context())
+		if err != nil {
+			oc.mu.Lock()
+			if ratelimiter.Max > int(ratelimiter.Ratelimiter.GetRPS()) {
+				newrl := ratelimiter.Ratelimiter.GetRPS() + 1
+				newbt := ratelimiter.Ratelimiter.GetBurst() + 1
+				ratelimiter.Ratelimiter.Update(newrl, newbt)
+				logger.Debugf("Increase Rate limit for %s to %f\n", req.URL.Hostname(), newrl)
+			}
+			oc.mu.Unlock()
+		}
+		return oc.client.Do(req)
 	}
+}
+
+func (ocs *OctoClients) GetRandomClient(ctype string, redirect, proxy bool) *OctoClient {
+	var prefix string
+	if redirect {
+		prefix = "Normal" + ctype
+		if proxy {
+			prefix += "Proxy"
+		} else {
+			prefix += "NoProxy"
+		}
+	} else {
+		prefix = "NoRedirect" + ctype
+		if proxy {
+			prefix += "Proxy"
+		} else {
+			prefix += "NoProxy"
+		}
+	}
+	// Collect keys that start with the prefix
+	var keys []string
+	for k := range ocs.clients {
+		if len(k) >= len(prefix) && k[:len(prefix)] == prefix {
+			keys = append(keys, k)
+		}
+	}
+
+	// Check if there are any matching keys
+	if len(keys) == 0 {
+		return nil // No keys found with the given prefix
+	}
+
+	// Select a random key
+	randomKey := keys[rand.Intn(len(keys))]
+
+	// Retrieve and return the value
+	return ocs.clients[randomKey]
+}
+
+// A custom Roundtrip that can log, rate limit and cleanup rate limiters.
+// The ratelimiter works host-wise, so each host has its own rate limiter.
+// The rate limiting depends on the option rl, which is the rate limit per second.
+// The cleanup interval is 60 seconds and the max idle time is 120 seconds.
+func (lrt *LoggingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	resp, err := lrt.Proxied.RoundTrip(req)
+	return resp, err
 }
 
 func WrapTransport(transport http.RoundTripper) http.RoundTripper {
 	lrt := &LoggingRoundTripper{
 		Proxied: transport,
 	}
-	go cleanupRateLimiters()
 	return lrt
 }
 
@@ -317,12 +345,6 @@ func GetTotalDataTransferred() float64 {
 	mu.Lock()
 	defer mu.Unlock()
 	return float64(totalData) / (1024 * 1024 * 1024) // Convert bytes to GB
-}
-
-func GetConcurrentRequests() int {
-	mu.Lock()
-	defer mu.Unlock()
-	return len(concurrentReq)
 }
 
 func Get429Count() int {

@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"sync"
+	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -18,6 +19,15 @@ type DynamicRateLimiter struct {
 type rateParams struct {
 	rps   float64
 	burst int
+}
+
+type RateLimiterEntry struct {
+	Ratelimiter *DynamicRateLimiter
+	LastUsed    time.Time
+	Successes   int
+	Failures    int
+	Max         int
+	Hit         bool
 }
 
 func NewDynamicRateLimiter(rps float64, burst int) *DynamicRateLimiter {

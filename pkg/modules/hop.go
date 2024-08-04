@@ -30,8 +30,8 @@ func SingleHopCheck(result *common.ServerResult) {
 
 	controlReq.Header.Set("Connection", "close")
 	treatmentReq.Header.Set("Connection", "close, X-Forwarded-For")
-	controlResp, errCtrl := checker.CheckServerCustom(controlReq, clients.NoRedirecth1Client)
-	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.NoRedirecth1Client)
+	controlResp, errCtrl := checker.CheckServerCustom(controlReq, clients.Clients.GetRandomClient("h1", false, true))
+	treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.Clients.GetRandomClient("h1", false, true))
 	if errCtrl != nil || errTreat != nil {
 		logger.Debugf("Error getting response: control - %v | treament - %v\n", errCtrl, errTreat)
 		return

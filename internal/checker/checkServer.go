@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/common/score"
 	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
@@ -87,7 +88,7 @@ func checkServer(url string) (*common.ServerResult, error) {
 }
 
 // The ultra-important requester for (nearly) all request...
-func CheckServerCustom(req *http.Request, client *http.Client) (*common.ServerResult, error) {
+func CheckServerCustom(req *http.Request, client *clients.OctoClient) (*common.ServerResult, error) {
 
 	// Check if the request is in the lowscoredomain
 	currentHostName := req.URL.Hostname()

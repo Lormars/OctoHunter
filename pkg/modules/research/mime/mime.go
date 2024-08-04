@@ -50,7 +50,7 @@ func tryManipulate404Mime(urlStr, path string) {
 		if err != nil {
 			continue
 		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err != nil {
 			continue
 		}

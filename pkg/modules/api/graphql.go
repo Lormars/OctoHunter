@@ -27,7 +27,7 @@ func CheckGraphql(urlStr string) {
 				logger.Warnf("Error creating request: %v", err)
 				continue
 			}
-			_, err = checker.CheckServerCustom(req, clients.NoRedirectClient)
+			_, err = checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 			if err != nil {
 				logger.Debugf("Error checking server: %v", err)
 				continue
@@ -46,7 +46,7 @@ func checkIntrospect(urlStr string) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+	resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		logger.Debugf("Error checking server: %v", err)
 		return
@@ -65,7 +65,7 @@ func checkIntrospect(urlStr string) {
 					continue
 				}
 				req.Header.Set("Content-Type", "application/json")
-				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error checking server: %v", err)
 					continue
@@ -76,7 +76,7 @@ func checkIntrospect(urlStr string) {
 					break
 				}
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				resp, err = checker.CheckServerCustom(req, clients.NoRedirectClient)
+				resp, err = checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error checking server: %v", err)
 					continue
@@ -95,7 +95,7 @@ func checkIntrospect(urlStr string) {
 					logger.Warnf("Error creating request: %v", err)
 					return
 				}
-				resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error checking server: %v", err)
 					return

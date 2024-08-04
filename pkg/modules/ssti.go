@@ -43,7 +43,7 @@ func CheckSSTI(input *common.XssInput) {
 		logger.Warnf("Error creating request: %v", err)
 	}
 
-	resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+	resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		return
 	}
@@ -64,7 +64,7 @@ func CheckSSTI(input *common.XssInput) {
 			if err != nil {
 				logger.Warnf("Error creating request: %v", err)
 			}
-			resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+			resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 			if err != nil {
 				continue
 			}

@@ -53,7 +53,7 @@ func fuzzAllPath(urlStr string) {
 		if err != nil {
 			return true
 		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err != nil {
 			return true
 		}
@@ -99,7 +99,7 @@ func fuzzNewPath(domainWithPath string) {
 		if err != nil {
 			return true
 		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err != nil {
 			return true
 		}

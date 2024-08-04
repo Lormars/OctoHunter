@@ -1,10 +1,16 @@
-package common
+package queue
 
 import (
 	"container/heap"
+	"fmt"
+	"math"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 )
 
 type Queue struct {
@@ -20,7 +26,7 @@ type Response struct {
 
 type Request struct {
 	Host   string
-	Client *http.Client
+	Client *clients.OctoClient
 	Reqs   []*http.Request
 }
 
@@ -81,16 +87,18 @@ func (pq *PriorityQueue[T]) Pop() interface{} {
 }
 
 var (
-	queueLock sync.Mutex
-	pq        *PriorityQueue[*Queue]       //for request queue
-	bq        *PriorityQueue[*BrokerQueue] //for broker queue
+	queueLock   sync.Mutex
+	pq          *PriorityQueue[*Queue]       //for request queue
+	bq          *PriorityQueue[*BrokerQueue] //for broker queue
+	workerCount int32
+	mu          sync.Mutex
 )
 
 func NewQueuePriorityQueue() *PriorityQueue[*Queue] {
 	return &PriorityQueue[*Queue]{
 		items: []*Queue{},
 		less: func(i, j int) bool {
-			return Sliding.GetRequestCount(pq.items[i].Request.Host) < Sliding.GetRequestCount(pq.items[j].Request.Host)
+			return common.Sliding.GetRequestCount(pq.items[i].Request.Host) < common.Sliding.GetRequestCount(pq.items[j].Request.Host)
 		},
 	}
 }
@@ -99,12 +107,12 @@ func NewQueueBrokerQueue() *PriorityQueue[*BrokerQueue] {
 	return &PriorityQueue[*BrokerQueue]{
 		items: []*BrokerQueue{},
 		less: func(i, j int) bool {
-			return BrokerSliding.GetRequestCount(bq.items[i].Host) < BrokerSliding.GetRequestCount(bq.items[j].Host)
+			return common.BrokerSliding.GetRequestCount(bq.items[i].Host) < common.BrokerSliding.GetRequestCount(bq.items[j].Host)
 		},
 	}
 }
 
-func AddToQueue(host string, reqs []*http.Request, client *http.Client) chan []Response {
+func AddToQueue(host string, reqs []*http.Request, client *clients.OctoClient) chan []Response {
 	queueLock.Lock()
 	defer queueLock.Unlock()
 	respChan := make(chan []Response)
@@ -154,35 +162,67 @@ func init() {
 // This function is used to dispatch the request queue.
 // The sleep time must be greater than the dispatchBroker function.
 func dispatch() {
-	for {
 
-		req := getNextRequest()
-		if req != nil {
-			go func(req *Queue) {
+	wg := sync.WaitGroup{}
+
+	reqChannel := make(chan *Queue, 200)
+	for i := 0; i < 200; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for req := range reqChannel {
 				var responses []Response
-				for _, r := range req.Request.Reqs {
-					if r.Header.Get("Connection") == "" {
-						r.Close = true
-					}
-					currentHostName := r.URL.Hostname()
-					if _, exists := NeedBrowser[currentHostName]; exists {
-						// logger.Warnf("Need browser for %s", currentHostName)
-						resp, err := RequestWithBrowser(r, req.Request.Client)
+				if req != nil && req.Request.Client != nil {
+					atomic.AddInt32(&workerCount, 1)
+					for _, r := range req.Request.Reqs {
+
+						// currentHostName := r.URL.Hostname()
+
+						if r.Header.Get("Connection") == "" {
+							r.Close = true
+						}
+						// if _, exists := common.NeedBrowser[currentHostName]; exists {
+						// 	// logger.Warnf("Need browser for %s", currentHostName)
+						// 	resp, err := common.RequestWithBrowser(r, req.Request.Client)
+						// 	responses = append(responses, Response{Resp: resp, Err: err})
+						// 	continue
+						// }
+						resp, err := req.Request.Client.RetryableDo(r)
 						responses = append(responses, Response{Resp: resp, Err: err})
-						continue
 					}
-					resp, err := req.Request.Client.Do(r)
-					responses = append(responses, Response{Resp: resp, Err: err})
+				} else {
+					responses = []Response{Response{Resp: nil, Err: fmt.Errorf("Client or Req is nil")}}
 				}
 				req.RespChan <- responses
 				close(req.RespChan)
-			}(req)
+				atomic.AddInt32(&workerCount, -1)
+			}
+			wg.Done()
+		}()
+	}
+
+	for {
+		req := getNextRequest()
+		if req == nil {
+			time.Sleep(time.Second) // Sleep briefly if no requests are available
+			continue
 		}
+
+		select {
+		case reqChannel <- req:
+			// Request successfully sent to the channel
+		default:
+			// Channel is full, wait for a short period before trying again
+			time.Sleep(time.Millisecond * 100)
+		}
+
 		mu.Lock()
 		currentLen := pq.Len()
 		mu.Unlock()
-		time.Sleep(time.Duration(1/(currentLen+1)) * 1 * time.Second)
 
+		// Use float division to avoid integer truncation
+		sleepDuration := time.Duration(math.Max(1.0/(float64(currentLen)+1), 0.1)) * time.Second
+		time.Sleep(sleepDuration)
 	}
 }
 
@@ -198,4 +238,8 @@ func dispatchBroker() {
 		}
 		time.Sleep(time.Duration(1/(bq.Len()+1)) * 500 * time.Millisecond)
 	}
+}
+func GetConcurrentRequests() int32 {
+	activeWorkers := atomic.LoadInt32(&workerCount)
+	return activeWorkers
 }

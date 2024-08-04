@@ -26,7 +26,7 @@ func PullCustomObjects(urlString string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := checker.CheckServerCustom(req, clients.NormalClient)
+	resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", true, true))
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", urlString, err)
 		return err

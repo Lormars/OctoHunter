@@ -68,7 +68,7 @@ func Input(opts *common.Opts) {
 						if errhttp == nil && httpStatus.Online {
 							req, err := http.NewRequest("GET", httpStatus.Url, nil)
 							if err == nil {
-								resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+								resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 								if err == nil {
 									go common.DividerP.PublishMessage(resp)
 								} else {
@@ -89,7 +89,7 @@ func Input(opts *common.Opts) {
 							}
 							req, err := http.NewRequest("GET", httpsStatus.Url, nil)
 							if err == nil {
-								resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+								resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 
 								// resp, err := checker.CheckServerCustom(req, http.DefaultClient)
 								if err == nil {

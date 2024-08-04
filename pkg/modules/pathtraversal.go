@@ -34,7 +34,7 @@ func CheckPathTraversal(urlStr string) {
 		return
 	}
 
-	controlResp, err := checker.CheckServerCustom(controlReq, clients.NoRedirectClient)
+	controlResp, err := checker.CheckServerCustom(controlReq, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		return
 	}
@@ -51,13 +51,13 @@ func CheckPathTraversal(urlStr string) {
 		return
 	}
 
-	fuzzResp, err := checker.CheckServerCustom(fuzzReq, clients.NoRedirectClient)
+	fuzzResp, err := checker.CheckServerCustom(fuzzReq, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		return
 	}
 
 	if controlResp.StatusCode == fuzzResp.StatusCode && controlResp.Body == fuzzResp.Body {
-		falsePositiveResp, err := checker.CheckServerCustom(falsePositiveReq, clients.NoRedirectClient)
+		falsePositiveResp, err := checker.CheckServerCustom(falsePositiveReq, clients.Clients.GetRandomClient("h0", false, true))
 		if err != nil {
 			return
 		}

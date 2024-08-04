@@ -82,7 +82,7 @@ func paramSplitTest(result *common.ServerResult) {
 				logger.Warnf("Error creating request: %v", err)
 				return
 			}
-			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+			resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h1", false, true))
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
 				return
@@ -136,7 +136,7 @@ func paramSplitTest(result *common.ServerResult) {
 					logger.Warnf("Error creating request: %v", err)
 					return
 				}
-				resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h1", false, true))
 				if err != nil {
 					logger.Debugf("Error getting response from %s: %v\n", parsedURL.String(), err)
 					return
@@ -198,7 +198,7 @@ func pathSplitTest(result *common.ServerResult) {
 				return
 			}
 			req.URL.Opaque = "//" + parsedUrl.Host + payloadUrl
-			resp, err := checker.CheckServerCustom(req, clients.NoRedirecth1Client)
+			resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h1", false, true))
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", payloadUrl, err)
 				return

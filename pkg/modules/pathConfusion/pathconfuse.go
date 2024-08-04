@@ -61,7 +61,7 @@ func CheckPathConfusion(urlStr string) {
 				logger.Debugf("Error creating request: %v", err)
 				return
 			}
-			elapse1, resp1, err := checker.MeasureElapse(req1, clients.NoRedirectClient)
+			elapse1, resp1, err := checker.MeasureElapse(req1, clients.Clients.GetRandomClient("h0", false, true))
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", payload1, err)
 				return
@@ -81,7 +81,7 @@ func CheckPathConfusion(urlStr string) {
 				return
 			}
 
-			resp2, err := checker.CheckServerCustom(req2, clients.NoRedirectClient)
+			resp2, err := checker.CheckServerCustom(req2, clients.Clients.GetRandomClient("h0", false, true))
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", payload2, err)
 				return
@@ -92,7 +92,7 @@ func CheckPathConfusion(urlStr string) {
 			//Cache is checked either in the header (it has cache and miss) or if there is nothing in the header.
 			if !same && ((matcher.HeaderKeyContainsSignature(resp1, "cache") && matcher.HeaderValueContainsSignature(resp1, "miss")) || !matcher.HeaderKeyContainsSignature(resp1, "cache")) {
 
-				elapse2, resp2, err := checker.MeasureElapse(req1, clients.NoRedirectClient)
+				elapse2, resp2, err := checker.MeasureElapse(req1, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error getting response from %s: %v\n", payload2, err)
 					return

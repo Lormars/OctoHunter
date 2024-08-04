@@ -312,11 +312,11 @@ func isdynamic() {
 	if err != nil {
 		return
 	}
-	resp1, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+	resp1, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		return
 	}
-	resp2, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+	resp2, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		return
 	}

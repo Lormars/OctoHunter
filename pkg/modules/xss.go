@@ -56,7 +56,7 @@ func checkXssInAttribute(urlStr string, param string) {
 			logger.Warnf("Error creating request: %v", err)
 			continue
 		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err != nil {
 			logger.Debugf("Error getting response: %v", err)
 			continue
@@ -94,7 +94,7 @@ func checkXssInTag(urlStr string, param string) {
 			logger.Warnf("Error creating request: %v", err)
 			continue
 		}
-		resp, err := checker.CheckServerCustom(req, clients.NoRedirectClient)
+		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err != nil {
 			logger.Debugf("Error getting response: %v", err)
 			continue
