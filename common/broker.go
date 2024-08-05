@@ -23,33 +23,37 @@ type Producer struct {
 	closed       bool
 	closeOnce    sync.Once
 	mu           sync.Mutex
+	semaphore    chan struct{}
 }
 
-var OutputP = NewProducer("dork_broker")
-var CnameP = NewProducer("cname_broker")
-var RedirectP = NewProducer("redirect_broker")
-var MethodP = NewProducer("method_broker")
-var HopP = NewProducer("hopper_broker")
-var DividerP = NewProducer("divider_broker")
-var CrawlP = NewProducer("crawl_broker")
-var SalesforceP = NewProducer("salesforce_broker")
-var SplittingP = NewProducer("splitting_broker")
-var Cl0P = NewProducer("cl0_broker")
-var QuirksP = NewProducer("quirks_broker")
-var RCP = NewProducer("rc_broker")
-var CorsP = NewProducer("cors_broker")
-var PathConfuseP = NewProducer("pathconfuse_broker")
-var Fuzz4034P = NewProducer("fuzz4034_broker")
-var PathTraversalP = NewProducer("pathtraversal_broker")
-var FuzzAPIP = NewProducer("fuzzapi_broker")
-var FuzzUnkeyedP = NewProducer("fuzzunkeyed_broker")
-var FuzzPathP = NewProducer("fuzzpath_broker")
-var XssP = NewProducer("xss_broker")
-var SstiP = NewProducer("ssti_broker")
-var WaybackP = NewProducer("wayback_broker")
-var GraphqlP = NewProducer("graphql_broker")
-var MimeP = NewProducer("mime_broker")
+var OutputP = NewProducer("dork_broker", "gen")
+var CnameP = NewProducer("cname_broker", "gen")
+var RedirectP = NewProducer("redirect_broker", "gen")
+var MethodP = NewProducer("method_broker", "gen")
+var HopP = NewProducer("hopper_broker", "gen")
+var DividerP = NewProducer("divider_broker", "gen")
+var CrawlP = NewProducer("crawl_broker", "gen")
+var SalesforceP = NewProducer("salesforce_broker", "gen")
+var SplittingP = NewProducer("splitting_broker", "gen")
+var Cl0P = NewProducer("cl0_broker", "gen")
+var QuirksP = NewProducer("quirks_broker", "gen")
+var RCP = NewProducer("rc_broker", "gen")
+var CorsP = NewProducer("cors_broker", "gen")
+var PathConfuseP = NewProducer("pathconfuse_broker", "gen")
+var Fuzz4034P = NewProducer("fuzz4034_broker", "fuzz")
+var PathTraversalP = NewProducer("pathtraversal_broker", "gen")
+var FuzzAPIP = NewProducer("fuzzapi_broker", "fuzz")
+var FuzzUnkeyedP = NewProducer("fuzzunkeyed_broker", "fuzz")
+var FuzzPathP = NewProducer("fuzzpath_broker", "fuzz")
+var XssP = NewProducer("xss_broker", "gen")
+var SstiP = NewProducer("ssti_broker", "gen")
+var WaybackP = NewProducer("wayback_broker", "wayback")
+var GraphqlP = NewProducer("graphql_broker", "gen")
+var MimeP = NewProducer("mime_broker", "gen")
 
+var FuzzSemaphore = make(chan struct{}, 200)
+var GenSemaphore = make(chan struct{}, 900)
+var WaybackSemaphore = make(chan struct{}, 1)
 var GlobalMu sync.Mutex
 var mu sync.Mutex
 var (
@@ -64,8 +68,14 @@ func failOnError(err error, msg string) {
 	}
 }
 
-func NewProducer(name string) *Producer {
-	return &Producer{name: name, messageChan: make(chan interface{}, 1000), ShutdownChan: make(chan struct{}), closed: false}
+func NewProducer(name, ptype string) *Producer {
+	if ptype == "fuzz" {
+		return &Producer{name: name, messageChan: make(chan interface{}, 1000), ShutdownChan: make(chan struct{}), semaphore: FuzzSemaphore, closed: false}
+	} else if ptype == "wayback" {
+		return &Producer{name: name, messageChan: make(chan interface{}, 1000), ShutdownChan: make(chan struct{}), semaphore: WaybackSemaphore, closed: false}
+	} else {
+		return &Producer{name: name, messageChan: make(chan interface{}, 1000), ShutdownChan: make(chan struct{}), semaphore: GenSemaphore, closed: false}
+	}
 }
 
 func Init(options *Opts, purgebroker bool) []*Producer {
@@ -128,12 +138,6 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if !cacher.CheckCache(hashed, p.name) {
 				return
 			}
-			//TODO: doesn't matter much, can delete after testing
-			// hostname := GetHostname(v)
-			// mu.Lock()
-			// BrokerSliding.AddRequest(hostname)
-			// mu.Unlock()
-			// waitCh = AddToBrokerQueue(hostname)
 		case *ServerResult:
 			messageBody, err = json.Marshal(v)
 			if err != nil {
@@ -143,11 +147,6 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if !cacher.CheckCache(hashed, p.name) {
 				return
 			}
-			// hostname := GetHostname(v.Url)
-			// mu.Lock()
-			// BrokerSliding.AddRequest(hostname)
-			// mu.Unlock()
-			// waitCh = AddToBrokerQueue(hostname)
 		case *XssInput:
 			messageBody, err = json.Marshal(v)
 			if err != nil {
@@ -157,15 +156,9 @@ func (p *Producer) PublishMessage(body interface{}) {
 			if !cacher.CheckCache(hashed, p.name) {
 				return
 			}
-			// hostname := GetHostname(v.Url)
-			// mu.Lock()
-			// BrokerSliding.AddRequest(hostname)
-			// mu.Unlock()
-			// waitCh = AddToBrokerQueue(hostname)
 		default:
 			failOnError(fmt.Errorf("unknown type %T", v), "Failed to publish a message")
 		}
-		// <-waitCh
 		p.mu.Lock()
 		isClosed := p.closed
 		p.mu.Unlock()
@@ -192,13 +185,10 @@ func (p *Producer) PublishMessage(body interface{}) {
 	// logger.Debugf(" [x] Sent to %s", p.name)
 }
 
-func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan struct{} {
-	closeChan := make(chan struct{})
+func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 	go func() {
 		for {
 			select {
-			case <-closeChan:
-				return
 			case <-p.ShutdownChan:
 				return
 			default:
@@ -207,6 +197,7 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 					logger.Debugf("Channel %s is closed", p.name)
 					return
 				}
+				p.semaphore <- struct{}{}
 				switch handler := handlerFunc.(type) {
 				case func(string):
 					logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.([]byte))
@@ -217,7 +208,10 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 						Hostname: GetHostname(string(d.([]byte))),
 					})
 					GlobalMu.Unlock()
-					handler(string(d.([]byte)))
+					go func() {
+						handler(string(d.([]byte)))
+						<-p.semaphore
+					}()
 				case func(*ServerResult):
 					var serverResult ServerResult
 					err := json.Unmarshal(d.([]byte), &serverResult)
@@ -233,7 +227,10 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 						Hostname: GetHostname(serverResult.Url),
 					})
 					GlobalMu.Unlock()
-					handler(&serverResult)
+					go func() {
+						handler(&serverResult)
+						<-p.semaphore
+					}()
 				case func(*XssInput):
 					var xssInput XssInput
 					err := json.Unmarshal(d.([]byte), &xssInput)
@@ -249,14 +246,16 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}, opts *Opts) chan stru
 						Hostname: GetHostname(xssInput.Url),
 					})
 					GlobalMu.Unlock()
-					handler(&xssInput)
+					go func() {
+						handler(&xssInput)
+						<-p.semaphore
+					}()
 				default:
 					failOnError(fmt.Errorf("unknown type %T", handler), "Failed to consume a message")
 				}
 			}
 		}
 	}()
-	return closeChan
 }
 
 func monitorChannels(producers []*Producer) {
@@ -295,4 +294,8 @@ func Close() {
 	for _, p := range queueProducers {
 		p.Close()
 	}
+}
+
+func ConsumerUsage() int {
+	return len(GenSemaphore) + len(FuzzSemaphore) + len(WaybackSemaphore)
 }

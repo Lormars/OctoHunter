@@ -56,7 +56,7 @@ func PrintMemUsage(opts *common.Opts) {
 			lasterred = allerred
 			all429 := clients.Get429Count()
 			msg += fmt.Sprintf(" Slowed: %d. ", all429)
-			consumerUsage := len(common.ConsumerSemaphore)
+			consumerUsage := common.ConsumerUsage()
 			msg += fmt.Sprintf(" CUsage: %d. ", consumerUsage)
 			elapsed := time.Since(start)
 			msg += fmt.Sprintf(" Elapsed: %.2f. ", elapsed.Minutes())

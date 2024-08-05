@@ -95,7 +95,6 @@ func RunCommand(name string, args []string) error {
 var Paths sync.Map
 var Domains sync.Map
 var SendOutput bool
-var ConsumerSemaphore = make(chan struct{}, 1130)
 
 type ServerResult struct {
 	Url        string      `json:"url"`

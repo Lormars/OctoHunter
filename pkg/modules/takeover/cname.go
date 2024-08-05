@@ -7,11 +7,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
-	"github.com/lormars/octohunter/internal/notify"
 )
 
 var records []common.TakeoverRecord
@@ -80,8 +78,6 @@ func checkSig(domain string) bool {
 			for _, sig := range record.Cname {
 				if strings.Contains(temp_cname, sig) {
 					msg := "[CNAME Confirmed] " + domain + " | Cname: " + temp_cname + " | Service: " + record.Service
-					color.Red(msg)
-					notify.SendMessage(msg)
 					if common.SendOutput {
 						common.OutputP.PublishMessage(msg)
 					}

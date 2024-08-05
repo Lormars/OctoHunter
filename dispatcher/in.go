@@ -21,7 +21,7 @@ var scanned int64
 var allerred int
 
 func Input(opts *common.Opts) {
-	Init(opts)
+	Init()
 
 	go func() {
 		for {
