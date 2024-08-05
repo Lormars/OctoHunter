@@ -10,6 +10,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
+	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/checker"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -28,9 +29,6 @@ type ParseResponse struct {
 	Message string  `json:"message,omitempty"`
 }
 
-// since just local request to local server, just use a default client
-var client = &http.Client{}
-
 func CheckJSQuirks(result *common.ServerResult) {
 	//skip common libraries
 	if strings.Contains(result.Url, "jquery") || strings.Contains(result.Url, "bootstrap") || strings.Contains(result.Url, "angular") || strings.Contains(result.Url, "react") || strings.Contains(result.Url, "vue") {
@@ -45,7 +43,7 @@ func CheckJSQuirks(result *common.ServerResult) {
 		return
 	}
 	parseReq.Header.Set("Content-Type", "text/plain")
-	resp, err := checker.CheckServerCustom(parseReq, client)
+	resp, err := checker.CheckServerCustom(parseReq, clients.Clients.GetRandomClient("h1NA", false, false))
 	if err != nil {
 		logger.Warnf("Error getting response from %s: %v\n", parseServerURL, err)
 		return

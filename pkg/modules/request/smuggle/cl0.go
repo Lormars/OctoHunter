@@ -3,7 +3,6 @@ package smuggle
 import (
 	"context"
 	"net/http"
-	"net/url"
 	"strings"
 
 	"math/rand"
@@ -11,6 +10,7 @@ import (
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/common/clients/proxyP"
+	"github.com/lormars/octohunter/common/queue"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
 )
@@ -19,24 +19,7 @@ import (
 // 1. static image file like svg or png or jpg or gif from crawler
 func CheckCl0(urlstr string) {
 
-	//Due to the nature of the check, we need to use a custom client for each goroutine
-	client := &http.Client{
-		Transport: clients.WrapTransport(clients.KeepAliveh1Transport()),
-	}
-	defer client.CloseIdleConnections()
-
 	logger.Debugf("Checking for CL0 on %s\n", urlstr)
-	parsedURL, err := url.Parse(urlstr)
-	if err != nil {
-		logger.Warnf("Error parsing URL: %v\n", err)
-		return
-	}
-
-	hostName := parsedURL.Hostname()
-
-	if _, exists := common.NeedBrowser[hostName]; exists {
-		return //TODO: return for now as it may hang due to http1
-	}
 
 	common.AddToCrawlMap(urlstr, "cl0", 200) //TODO: can be accurate
 
@@ -58,7 +41,7 @@ func CheckCl0(urlstr string) {
 		return
 	}
 	getRequest.Header.Set("Connection", "close")
-	respChan := common.AddToQueue(getRequest.Host, []*http.Request{postRequest, getRequest}, client)
+	respChan := queue.AddToQueue(getRequest.Host, []*http.Request{postRequest, getRequest}, clients.Clients.GetRandomClient("h1KA", false, true))
 	responses := <-respChan
 	postResponse := responses[0]
 	getResponse := responses[1]

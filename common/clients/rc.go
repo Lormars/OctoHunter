@@ -27,7 +27,7 @@ func createRcH2DialTLSContext(proxy string) func(context.Context, string, string
 		for _, ip := range ips {
 			ipAddr := net.JoinHostPort(ip.String(), port)
 			if proxy != "" {
-				conn, err = dialProxy(ctx, network, ipAddr, proxy)
+				conn, err = dialProxy(network, ipAddr, proxy)
 			} else {
 				conn, err = dial(ctx, network, ipAddr)
 			}
@@ -46,7 +46,7 @@ func createRcH2DialTLSContext(proxy string) func(context.Context, string, string
 			return nil, err
 		}
 
-		return handshake(ctx, host, "h2", conn)
+		return handshake(host, "h2", conn)
 	}
 }
 

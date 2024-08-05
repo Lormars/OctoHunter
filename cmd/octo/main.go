@@ -46,7 +46,6 @@ func main() {
 		go bench.PrintMemUsage(options)
 		common.SendOutput = true
 	}
-	common.InitBrowser(config.Headless)
 	logger.SetLogLevel(logger.ParseLogLevel(config.Loglevel))
 	cacher.SetCacheTime(config.CacheTime)
 	// clients.SetRateLimiter(config.RateLimit)
@@ -86,7 +85,6 @@ func main() {
 	logger.Infof("All producers shut down. Exiting...\n")
 
 	common.Close()
-	common.CloseBrowser()
 	logger.Infof("All connections closed. Exiting...\n")
 
 	if err := cmd.Process.Kill(); err != nil {

@@ -42,13 +42,6 @@ func RaceCondition(urlStr string) {
 		logger.Warnf("Failed to parse URL: %v", err)
 		return
 	}
-	currentHostName := parsedURL.Hostname()
-
-	var requester func(*http.Request, *http.Client) (*http.Response, error)
-	if _, exists := common.NeedBrowser[currentHostName]; exists {
-		requester = common.RequestWithBrowser
-		return //TODO: return for now as it may crash the program
-	}
 
 	pattern := `wxoyvz\d{1,2}`
 	re, err := regexp.Compile(pattern)
@@ -62,6 +55,8 @@ func RaceCondition(urlStr string) {
 
 	ctx := context.WithValue(context.Background(), "race", true)
 	ctx = context.WithValue(ctx, "proxy", proxy)
+
+	client := clients.Clients.GetRandomClient("rc", false, true)
 	// Function to send a request
 	sendRequest := func(id int) {
 		defer wg.Done()
@@ -79,11 +74,8 @@ func RaceCondition(urlStr string) {
 
 		// Send the request
 		var resp *http.Response
-		if requester != nil {
-			resp, err = requester(req, clients.NoRedirectRCClient)
-		} else {
-			resp, err = clients.NoRedirectRCClient.Do(req)
-		}
+
+		resp, err = client.Do(req)
 		if err != nil {
 			logger.Debugf("Goroutine %d: Failed to send request: %v", id, err)
 			return
@@ -118,28 +110,12 @@ func RaceCondition(urlStr string) {
 
 	}
 
-	//control group
-	// for i := 1; i <= 20; i++ {
-	// 	req, err := http.NewRequest("GET", urlStr, nil)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to create request: %v", i, err)
-	// 		return
-	// 	}
-	// 	resp, err := checker.CheckServerCustom(req, clients.NoRedirecth2Client)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to send request: %v", i, err)
-	// 		return
-	// 	}
-	// 	controlResponses = append(controlResponses, resp)
-
-	// }
-
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
 		logger.Warnf("Failed to create request: %v", err)
 		return
 	}
-	resp, err := checker.CheckServerCustom(req, clients.NoRedirecth2Client)
+	resp, err := checker.CheckServerCustom(req, client)
 	if err != nil { //first check with a normal http2 request to see if the server accepts HTTP2 protocol
 		logger.Debugf("Failed to send request: %v", err)
 		return

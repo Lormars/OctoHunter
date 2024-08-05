@@ -54,7 +54,7 @@ func dial(ctx context.Context, network, addr string) (net.Conn, error) {
 	return conn, nil
 }
 
-func dialProxy(ctx context.Context, network, addr, proxyStr string) (net.Conn, error) {
+func dialProxy(network, addr, proxyStr string) (net.Conn, error) {
 	auth := &proxy.Auth{
 		User:     os.Getenv("PROXY_USER"),
 		Password: os.Getenv("PROXY_PASS"),
@@ -74,7 +74,7 @@ func dialProxy(ctx context.Context, network, addr, proxyStr string) (net.Conn, e
 	return conn, nil
 }
 
-func handshake(ctx context.Context, host, protocol string, conn net.Conn) (tlsConn net.Conn, err error) {
+func handshake(host, protocol string, conn net.Conn) (tlsConn net.Conn, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Debugf("Recovered from panic: %v\n", r)
@@ -82,48 +82,26 @@ func handshake(ctx context.Context, host, protocol string, conn net.Conn) (tlsCo
 			err = fmt.Errorf("panic occurred: %v", r)
 		}
 	}()
-	tlsConn, err = dohandshake(ctx, host, protocol, conn)
+	tlsConn, err = dohandshake(host, protocol, conn)
 	return
 }
 
-func dohandshake(ctx context.Context, host, protocol string, conn net.Conn) (net.Conn, error) {
-	_, ok := ctx.Value("browser").(bool)
-	if ok {
-		logger.Debugf("browsering")
-		config := &tls.Config{
-			ServerName: host,
-			MinVersion: tls.VersionTLS12,
-			MaxVersion: tls.VersionTLS13,
-			NextProtos: []string{protocol},
-		}
-		tlsConn := tls.Client(conn, config)
-		err := tlsConn.Handshake()
-		logger.Debugf("Handshake done\n")
-		if err != nil {
-			logger.Debugf("Error handshaking: %v\n", err)
-			return nil, err
-		}
-		state := tlsConn.ConnectionState()
-		logger.Debugf("Negotiated Protocol: %s", state.NegotiatedProtocol) // Log the negotiated protocol
-
-		return tlsConn, nil
-	} else {
-		config := &utls.Config{
-			ServerName: host,
-			MinVersion: tls.VersionTLS12,
-			MaxVersion: tls.VersionTLS13,
-			NextProtos: []string{protocol},
-		}
-		tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
-		err := tlsConn.Handshake()
-		// logger.Infof("Handshake done\n")
-		if err != nil {
-			logger.Debugf("Error handshaking: %v\n", err)
-			return nil, err
-		}
-		state := tlsConn.ConnectionState()
-		logger.Debugf("Negotiated Protocol: %s", state.NegotiatedProtocol) // Log the negotiated protocol
-
-		return tlsConn, nil
+func dohandshake(host, protocol string, conn net.Conn) (net.Conn, error) {
+	config := &utls.Config{
+		ServerName: host,
+		MinVersion: tls.VersionTLS12,
+		MaxVersion: tls.VersionTLS13,
+		NextProtos: []string{protocol},
 	}
+	tlsConn := utls.UClient(conn, config, utls.HelloRandomizedALPN)
+	err := tlsConn.Handshake()
+	// logger.Infof("Handshake done\n")
+	if err != nil {
+		logger.Debugf("Error handshaking: %v\n", err)
+		return nil, err
+	}
+	state := tlsConn.ConnectionState()
+	logger.Debugf("Negotiated Protocol: %s", state.NegotiatedProtocol) // Log the negotiated protocol
+
+	return tlsConn, nil
 }

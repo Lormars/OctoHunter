@@ -12,7 +12,6 @@ import (
 
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
-	"github.com/lormars/octohunter/common/clients/health"
 	"github.com/lormars/octohunter/common/clients/proxyP"
 	"github.com/lormars/octohunter/internal/logger"
 )
@@ -24,8 +23,6 @@ import (
 //All of these clients use utls to mimic browser fingerprints.
 
 var (
-	cleanupInterval        = 60 * time.Second
-	maxIdleTime            = 120 * time.Second
 	totalData        int64 = 0
 	mu               sync.Mutex
 	resStats         = make(map[string][]*responseStats)
@@ -65,18 +62,20 @@ func init() {
 }
 
 func initClients() {
-	Clients = &OctoClients{}
+	Clients = &OctoClients{
+		clients: make(map[string]*OctoClient),
+	}
 	proxies := [3]string{"", proxyP.Proxies.Proxies[0], proxyP.Proxies.Proxies[1]} //HACK: hard coded
 	var client *OctoClient
 	//generate clients
 	for _, proxy := range proxies {
-		client = NewClient("h1", proxy, true, WrapTransport(CreateCustomh1Transport(proxy)))
+		client = NewClient("h1NA", proxy, true, WrapTransport(CreateCustomh1Transport(proxy)))
 		Clients.clients[client.name] = client
-		client = NewClient("h1", proxy, true, WrapTransport(KeepAliveh1Transport(proxy)))
+		client = NewClient("h1KA", proxy, true, WrapTransport(KeepAliveh1Transport(proxy)))
 		Clients.clients[client.name] = client
-		client = NewClient("h1", proxy, false, WrapTransport(KeepAliveh1Transport(proxy)))
+		client = NewClient("h1KA", proxy, false, WrapTransport(KeepAliveh1Transport(proxy)))
 		Clients.clients[client.name] = client
-		client = NewClient("h1", proxy, false, WrapTransport(CreateCustomh1Transport(proxy)))
+		client = NewClient("h1NA", proxy, false, WrapTransport(CreateCustomh1Transport(proxy)))
 		Clients.clients[client.name] = client
 		client = NewClient("h2", proxy, true, WrapTransport(CreateCustomh2Transport(proxy)))
 		Clients.clients[client.name] = client
@@ -101,6 +100,7 @@ func NewClient(cType, proxy string, redirect bool, transport http.RoundTripper) 
 		name = "Normal"
 		client = &http.Client{
 			Transport: transport,
+			Timeout:   60 * time.Second,
 		}
 	} else {
 		name = "NoRedirect"
@@ -109,20 +109,23 @@ func NewClient(cType, proxy string, redirect bool, transport http.RoundTripper) 
 			CheckRedirect: func(req *http.Request, via []*http.Request) error {
 				return http.ErrUseLastResponse
 			},
+			Timeout: 60 * time.Second,
 		}
 	}
 
 	if proxy != "" {
 		return &OctoClient{
-			client: client,
-			name:   name + fmt.Sprintf("%sProxy%s", cType, proxy),
-			proxy:  proxy,
+			client:    client,
+			name:      name + fmt.Sprintf("%sProxy%s", cType, proxy),
+			proxy:     proxy,
+			rateLimit: make(map[string]*common.RateLimiterEntry),
 		}
 	} else {
 		return &OctoClient{
-			client: client,
-			name:   name + cType + "NoProxy",
-			proxy:  proxy,
+			client:    client,
+			name:      name + cType + "NoProxy",
+			proxy:     proxy,
+			rateLimit: make(map[string]*common.RateLimiterEntry),
 		}
 	}
 }
@@ -154,6 +157,7 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 				requestSize += int64(len(name) + len(value) + 4) // header field size
 			}
 		}
+		logger.Debugf("Request size: %d\n", requestSize)
 		mu.Lock()
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
@@ -162,6 +166,23 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 		resp, err = oc.Do(req)
 		duration := time.Since(start)
 
+		if err != nil {
+			logger.Debugf("Request failed: %s %s %v\n", req.Method, req.URL.String(), err)
+			// If this was not the last attempt, wait before retrying
+			if attempt < maxRetries-1 {
+				mu.Lock()
+				allRequestsCount--
+				mu.Unlock()
+				time.Sleep(retryDelay)
+				continue
+			}
+			logger.Debugf("Request failed after %d attempts: %s %s %v\n", maxRetries, req.Method, req.URL.String(), err)
+
+			mu.Lock()
+			errRequestsCount++
+			mu.Unlock()
+			return nil, err
+		}
 		// Measure response size
 		responseSize := int64(0)
 		if resp.Body != nil {
@@ -176,6 +197,7 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 				responseSize += int64(len(name) + len(value) + 4) // header field size
 			}
 		}
+		logger.Debugf("Response size: %d\n", responseSize)
 		mu.Lock()
 		totalData += requestSize + responseSize
 		respStats := &responseStats{
@@ -183,28 +205,7 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 			duration:   duration,
 		}
 		resStats[currentHost] = append(resStats[currentHost], respStats)
-
 		mu.Unlock()
-		if err != nil {
-			logger.Debugf("Request failed: %s %s %v\n", req.Method, req.URL.String(), err)
-			// If this was not the last attempt, wait before retrying
-			if attempt < maxRetries-1 {
-				mu.Lock()
-				allRequestsCount--
-				mu.Unlock()
-				time.Sleep(retryDelay)
-				continue
-			}
-			logger.Debugf("Request failed after %d attempts: %s %s %v\n", maxRetries, req.Method, req.URL.String(), err)
-
-			mu.Lock()
-			if oc.proxy != "" {
-				health.ProxyHealthInstance.AddBad(oc.proxy)
-			}
-			errRequestsCount++
-			mu.Unlock()
-			return nil, err
-		}
 		break
 	}
 
@@ -225,11 +226,8 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 					entry.Ratelimiter.Update(newrl, newbt)
 					logger.Debugf("Decrease Rate limit for %s to %f and set max to %d\n", req.URL.Hostname(), newrl, entry.Max)
 				}
-			} else if resp.StatusCode == 403 {
-				health.ProxyHealthInstance.AddBad(oc.proxy)
 			} else {
 				entry.Successes++
-				health.ProxyHealthInstance.AddGood(oc.proxy)
 				if entry.Successes > 300 && !entry.Hit { //to make sure the current rate is not too high
 					entry.Successes = 0
 					if entry.Max > int(entry.Ratelimiter.GetRPS()) {
@@ -286,14 +284,14 @@ func (ocs *OctoClients) GetRandomClient(ctype string, redirect, proxy bool) *Oct
 	var prefix string
 	if redirect {
 		prefix = "Normal" + ctype
-		if proxy {
+		if proxy && UseProxy {
 			prefix += "Proxy"
 		} else {
 			prefix += "NoProxy"
 		}
 	} else {
 		prefix = "NoRedirect" + ctype
-		if proxy {
+		if proxy && UseProxy {
 			prefix += "Proxy"
 		} else {
 			prefix += "NoProxy"
@@ -309,6 +307,7 @@ func (ocs *OctoClients) GetRandomClient(ctype string, redirect, proxy bool) *Oct
 
 	// Check if there are any matching keys
 	if len(keys) == 0 {
+		logger.Warnf("No client found with the prefix %s\n", prefix)
 		return nil // No keys found with the given prefix
 	}
 

@@ -181,17 +181,11 @@ func dispatch() {
 						if r.Header.Get("Connection") == "" {
 							r.Close = true
 						}
-						// if _, exists := common.NeedBrowser[currentHostName]; exists {
-						// 	// logger.Warnf("Need browser for %s", currentHostName)
-						// 	resp, err := common.RequestWithBrowser(r, req.Request.Client)
-						// 	responses = append(responses, Response{Resp: resp, Err: err})
-						// 	continue
-						// }
 						resp, err := req.Request.Client.RetryableDo(r)
 						responses = append(responses, Response{Resp: resp, Err: err})
 					}
 				} else {
-					responses = []Response{Response{Resp: nil, Err: fmt.Errorf("Client or Req is nil")}}
+					responses = []Response{{Resp: nil, Err: fmt.Errorf("client or Req is nil")}}
 				}
 				req.RespChan <- responses
 				close(req.RespChan)

@@ -158,12 +158,8 @@ func CheckQuirks(res *common.ServerResult) {
 	if checker.CheckAccess(result) {
 		if result.Body != "" {
 			go bodyreflected() //check if any parameter value in url is reflected in body
-			parsedURL, err := url.Parse(result.Url)
 			if err != nil {
 				return
-			}
-			if _, exists := common.NeedBrowser[parsedURL.Hostname()]; exists {
-				return //TODO: return for now as fuzz takes too many requests
 			}
 			go common.FuzzUnkeyedP.PublishMessage(result.Url) //find more unkeyed headers and params that are reflected in body
 		}

@@ -56,7 +56,7 @@ func CheckCacheable(payload string) bool {
 	return false
 }
 
-func MeasureElapse(req *http.Request, client *http.Client) (time.Duration, *common.ServerResult, error) {
+func MeasureElapse(req *http.Request, client *clients.OctoClient) (time.Duration, *common.ServerResult, error) {
 	var start time.Time
 	var elapse time.Duration
 	trace := &httptrace.ClientTrace{

@@ -82,7 +82,7 @@ func Input(opts *common.Opts) {
 						}
 					}()
 					go func() {
-						if (errhttps == nil && httpsStatus.Online) || (errhttps != nil && strings.Contains(errhttps.Error(), "browser check")) {
+						if errhttps == nil && httpsStatus.Online {
 							if httpsStatus == nil {
 								logger.Warnf("shouldnt happen: %v", errhttps)
 								return

@@ -8,6 +8,7 @@ import (
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
+	"github.com/lormars/octohunter/common/queue"
 	dispatcher "github.com/lormars/octohunter/dispatcher"
 	"github.com/lormars/octohunter/internal/logger"
 	"github.com/lormars/octohunter/internal/notify"
@@ -42,7 +43,7 @@ func PrintMemUsage(opts *common.Opts) {
 		if opts.Module.Contains("broker") {
 			msg := "[MU] Alloc = " + bToMb(m.Alloc) + " MiB." + "\tSys = " + bToMb(m.Sys) + " MiB. "
 			msg += fmt.Sprintf("Data: %.6f GB. ", clients.GetTotalDataTransferred())
-			msg += fmt.Sprintf("Con: %d. ", common.GetConcurrentRequests())
+			msg += fmt.Sprintf("Con: %d. ", queue.GetConcurrentRequests())
 			msg += clients.PrintResStats()
 			diversity, rate := common.Sliding.GetHostDiversityScore()
 			msg += fmt.Sprintf(" Div: %.2f. ", diversity)
@@ -57,8 +58,6 @@ func PrintMemUsage(opts *common.Opts) {
 			msg += fmt.Sprintf(" Slowed: %d. ", all429)
 			consumerUsage := len(common.ConsumerSemaphore)
 			msg += fmt.Sprintf(" CUsage: %d. ", consumerUsage)
-			browserUsage := len(common.NeedBrowser)
-			msg += fmt.Sprintf(" Browser: %d. ", browserUsage)
 			elapsed := time.Since(start)
 			msg += fmt.Sprintf(" Elapsed: %.2f. ", elapsed.Minutes())
 			if common.SendOutput {
