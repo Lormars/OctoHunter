@@ -191,7 +191,6 @@ func dispatch() {
 				close(req.RespChan)
 				atomic.AddInt32(&workerCount, -1)
 			}
-			wg.Done()
 		}()
 	}
 

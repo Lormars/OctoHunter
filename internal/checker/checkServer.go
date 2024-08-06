@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/lormars/octohunter/common"
@@ -72,7 +73,7 @@ func CheckServerCustom(req *http.Request, client *clients.OctoClient) (*common.S
 	currentHostName := req.URL.Hostname()
 	score.ScoreMu.Lock()
 	for _, lowscore := range score.LowScoreDomains {
-		if currentHostName == lowscore {
+		if strings.Contains(currentHostName, lowscore) {
 			logger.Warnf("Low score domain filtered: %s\n", currentHostName)
 			return nil, fmt.Errorf("low score domain")
 		}
