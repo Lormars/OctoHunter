@@ -190,7 +190,13 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 		for {
 			select {
 			case <-p.ShutdownChan:
-				return
+				for {
+					select {
+					case <-p.messageChan: // drain the channel
+					default:
+						return
+					}
+				}
 			default:
 				d, ok := <-p.messageChan
 				if !ok {
