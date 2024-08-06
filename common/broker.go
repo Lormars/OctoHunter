@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/lormars/octohunter/internal/cacher"
+	"github.com/lormars/octohunter/internal/generator"
 	"github.com/lormars/octohunter/internal/logger"
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -204,18 +205,22 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 					return
 				}
 				p.semaphore <- struct{}{}
+				sig, _ := generator.GenerateSignature()
 				switch handler := handlerFunc.(type) {
 				case func(string):
 					logger.Debugf("Consumer %s Received a message: %s\n", p.name, d.([]byte))
 					GlobalMu.Lock()
-					ProducerBenches = append(ProducerBenches, ProducerBench{
+					ProducerBenches[sig] = &ProducerBench{
 						Producer: p.name,
 						Time:     time.Now(),
 						Hostname: GetHostname(string(d.([]byte))),
-					})
+					}
 					GlobalMu.Unlock()
 					go func() {
 						handler(string(d.([]byte)))
+						GlobalMu.Lock()
+						delete(ProducerBenches, sig)
+						GlobalMu.Unlock()
 						<-p.semaphore
 					}()
 				case func(*ServerResult):
@@ -227,14 +232,17 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 					}
 					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, serverResult.Url)
 					GlobalMu.Lock()
-					ProducerBenches = append(ProducerBenches, ProducerBench{
+					ProducerBenches[sig] = &ProducerBench{
 						Producer: p.name,
 						Time:     time.Now(),
 						Hostname: GetHostname(serverResult.Url),
-					})
+					}
 					GlobalMu.Unlock()
 					go func() {
 						handler(&serverResult)
+						GlobalMu.Lock()
+						delete(ProducerBenches, sig)
+						GlobalMu.Unlock()
 						<-p.semaphore
 					}()
 				case func(*XssInput):
@@ -246,14 +254,17 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 					}
 					logger.Debugf("Consumer %s Received a message on URL: %v\n", p.name, xssInput.Url)
 					GlobalMu.Lock()
-					ProducerBenches = append(ProducerBenches, ProducerBench{
+					ProducerBenches[sig] = &ProducerBench{
 						Producer: p.name,
 						Time:     time.Now(),
 						Hostname: GetHostname(xssInput.Url),
-					})
+					}
 					GlobalMu.Unlock()
 					go func() {
 						handler(&xssInput)
+						GlobalMu.Lock()
+						delete(ProducerBenches, sig)
+						GlobalMu.Unlock()
 						<-p.semaphore
 					}()
 				default:

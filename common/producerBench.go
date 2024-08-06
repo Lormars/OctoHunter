@@ -12,33 +12,42 @@ type ProducerBench struct {
 
 type BenchOutput struct {
 	ProducerNumber int
-	Hosts          map[string]int
+	Hosts          map[string]HostDetail
 }
 
-var ProducerBenches = []ProducerBench{}
+type HostDetail struct {
+	Number  int
+	Runtime []time.Duration
+}
+
+var ProducerBenches = map[string]*ProducerBench{}
 
 func GetOutput() map[string]BenchOutput {
-	now := time.Now()
-	SecondsAgo := now.Add(-10 * time.Second)
 	outputs := make(map[string]BenchOutput)
-	var filtered []ProducerBench
 	GlobalMu.Lock()
 	for _, pb := range ProducerBenches {
-		if pb.Time.After(SecondsAgo) {
-			bo, exists := outputs[pb.Producer]
-			if !exists {
-				bo = BenchOutput{
-					ProducerNumber: 0,
-					Hosts:          make(map[string]int),
-				}
+		bo, exists := outputs[pb.Producer]
+		if !exists {
+			bo = BenchOutput{
+				ProducerNumber: 0,
+				Hosts:          make(map[string]HostDetail),
 			}
-			bo.ProducerNumber++
-			bo.Hosts[pb.Hostname]++
-			outputs[pb.Producer] = bo
-			filtered = append(filtered, pb)
 		}
+		bo.ProducerNumber++
+		hostDetail := bo.Hosts[pb.Hostname]
+		hostDetail.Number++
+		hostDetail.Runtime = append(hostDetail.Runtime, time.Since(pb.Time))
+		bo.Hosts[pb.Hostname] = hostDetail
+		outputs[pb.Producer] = bo
 	}
-	ProducerBenches = filtered
 	GlobalMu.Unlock()
 	return outputs
+}
+
+func (hd HostDetail) Average() time.Duration {
+	var total time.Duration
+	for _, t := range hd.Runtime {
+		total += t
+	}
+	return total / time.Duration(len(hd.Runtime))
 }

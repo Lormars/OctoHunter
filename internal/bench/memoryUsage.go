@@ -86,8 +86,10 @@ func getProducerBench() string {
 	msg = "[PB]<br>"
 	for producer, benchOutput := range outputs {
 		msg += fmt.Sprintf("<b>%s (%d):</b> ", producer, benchOutput.ProducerNumber)
-		for host, count := range benchOutput.Hosts {
-			msg += fmt.Sprintf("%s (%d), ", host, count)
+
+		for host, hostDetail := range benchOutput.Hosts {
+			averageTime := hostDetail.Average()
+			msg += fmt.Sprintf("%s (%d - %.2f), ", host, hostDetail.Number, averageTime.Seconds())
 		}
 		msg += "<br>"
 	}
