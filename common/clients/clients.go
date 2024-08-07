@@ -142,28 +142,27 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 	var resp *http.Response
 	var err error
 	currentHost := req.URL.Hostname()
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		logger.Debugf("Making request: at %s\n", req.URL.String())
 
-		randomIndex := rand.Intn(len(asset.Useragent))
-		randomAgent := asset.Useragent[randomIndex]
-		req.Header.Add("User-Agent", randomAgent) //use ADD as RC would set the user agent
-		req.Header.Add("Accept-Charset", "utf-8")
-		// Measure request size
-		requestSize := int64(0)
-		if req.Body != nil {
-			var b bytes.Buffer
-			req.Body = io.NopCloser(io.TeeReader(req.Body, &b))
-			requestSize = int64(len(b.String()))
+	randomIndex := rand.Intn(len(asset.Useragent))
+	randomAgent := asset.Useragent[randomIndex]
+	req.Header.Add("User-Agent", randomAgent) //use ADD as RC would set the user agent
+	req.Header.Add("Accept-Charset", "utf-8")
+	// Measure request size
+	requestSize := int64(0)
+	if req.Body != nil {
+		body, _ := io.ReadAll(req.Body)
+		requestSize = int64(len(body))
+		req.Body = io.NopCloser(bytes.NewBuffer(body))
+	}
+	// Add the size of request headers
+	requestSize += int64(len(req.Method) + len(req.URL.String()) + len(req.Proto) + 4) // request line size
+	for name, values := range req.Header {
+		for _, value := range values {
+			requestSize += int64(len(name) + len(value) + 4) // header field size
 		}
-		// Add the size of request headers
-		requestSize += int64(len(req.Method) + len(req.URL.String()) + len(req.Proto) + 4) // request line size
-		for name, values := range req.Header {
-			for _, value := range values {
-				requestSize += int64(len(name) + len(value) + 4) // header field size
-			}
-		}
-		logger.Debugf("Request size: %d\n", requestSize)
+	}
+	for attempt := 0; attempt < maxRetries; attempt++ {
+
 		mu.Lock()
 		allRequestsCount++
 		common.Sliding.AddRequest(currentHost)
@@ -192,9 +191,10 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 		// Measure response size
 		responseSize := int64(0)
 		if resp.Body != nil {
-			var rb bytes.Buffer
-			resp.Body = io.NopCloser(io.TeeReader(resp.Body, &rb))
-			responseSize += int64(len(rb.String()))
+			body, _ := io.ReadAll(resp.Body)
+			resp.Body.Close()
+			responseSize += int64(len(body))
+			resp.Body = io.NopCloser(bytes.NewBuffer(body))
 		}
 		// Add the size of response headers
 		responseSize += int64(len(resp.Proto) + 3 + 3 + 2) // status line size
@@ -421,9 +421,9 @@ func serializeRequest(req *http.Request) string {
 
 	if req.Body != nil {
 		// Reset the request body so it can be read again
-		var b bytes.Buffer
-		req.Body = io.NopCloser(io.TeeReader(req.Body, &b))
-		buffer.WriteString(b.String())
+		body, _ := io.ReadAll(req.Body)
+		buffer.WriteString(string(body))
+		req.Body = io.NopCloser(bytes.NewBuffer(body))
 	}
 
 	return buffer.String()
