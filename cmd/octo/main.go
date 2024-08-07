@@ -40,6 +40,17 @@ func main() {
 
 	//disable default logger to get rid of unwanted warning
 	// log.SetOutput(io.Discard)
+	file, err := os.OpenFile("logs/error.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Error opening file: %v", err)
+	}
+	defer file.Close()
+	log.SetOutput(file)
+
+	err = syscall.Dup2(int(file.Fd()), int(os.Stderr.Fd()))
+	if err != nil {
+		log.Fatalf("Error redirecting stderr: %v", err)
+	}
 
 	options, config := parser.Parse_Options()
 	if config.MemoryUsage {
@@ -50,7 +61,7 @@ func main() {
 	cacher.SetCacheTime(config.CacheTime)
 	// clients.SetRateLimiter(config.RateLimit)
 	clients.SetUseProxy(config.UseProxy)
-	err := godotenv.Load()
+	err = godotenv.Load()
 
 	cmd := exec.Command("node", "externals/nodejs/server.js")
 	if err := cmd.Start(); err != nil {

@@ -22,7 +22,7 @@ var Logger *log.Logger
 var logLevel LogLevel
 
 func init() {
-	logFile, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+	logFile, err := os.OpenFile("logs/app.log", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
 	if err != nil {
 		log.Fatalln("Failed to open log file")
 	}

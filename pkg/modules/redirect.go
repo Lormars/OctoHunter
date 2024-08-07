@@ -40,8 +40,8 @@ func SingleRedirectCheck(result *common.ServerResult) {
 
 	common.AddToCrawlMap(result.Url, "redirect", result.StatusCode)
 
-	checkUnusualLength(finalURL, result)
-	checkOpenRedirect(finalURL, result)
+	go checkUnusualLength(finalURL, result)
+	go checkOpenRedirect(finalURL, result)
 
 }
 

@@ -219,7 +219,7 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 					go func() {
 						handler(string(d.([]byte)))
 						GlobalMu.Lock()
-						delete(ProducerBenches, sig)
+						DeleteFrom(ProducerBenches, sig)
 						GlobalMu.Unlock()
 						<-p.semaphore
 					}()
@@ -241,7 +241,7 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 					go func() {
 						handler(&serverResult)
 						GlobalMu.Lock()
-						delete(ProducerBenches, sig)
+						DeleteFrom(ProducerBenches, sig)
 						GlobalMu.Unlock()
 						<-p.semaphore
 					}()
@@ -263,7 +263,7 @@ func (p *Producer) ConsumeMessage(handlerFunc interface{}) {
 					go func() {
 						handler(&xssInput)
 						GlobalMu.Lock()
-						delete(ProducerBenches, sig)
+						DeleteFrom(ProducerBenches, sig)
 						GlobalMu.Unlock()
 						<-p.semaphore
 					}()

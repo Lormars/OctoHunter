@@ -13,6 +13,7 @@ import (
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients/proxyP"
+	"github.com/lormars/octohunter/internal/cacher"
 	"github.com/lormars/octohunter/internal/logger"
 )
 
@@ -131,6 +132,11 @@ func NewClient(cType, proxy string, redirect bool, transport http.RoundTripper) 
 }
 
 func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
+	serializedReq := serializeRequest(req)
+	hashed := common.Hash(serializedReq)
+	if !cacher.CheckCache(hashed, oc.name) {
+		return nil, fmt.Errorf("request already made")
+	}
 	maxRetries := 3
 	retryDelay := 1 * time.Second
 	var resp *http.Response
@@ -146,9 +152,9 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 		// Measure request size
 		requestSize := int64(0)
 		if req.Body != nil {
-			body, _ := io.ReadAll(req.Body)
-			requestSize = int64(len(body))
-			req.Body = io.NopCloser(io.MultiReader(bytes.NewReader(body)))
+			var b bytes.Buffer
+			req.Body = io.NopCloser(io.TeeReader(req.Body, &b))
+			requestSize = int64(len(b.String()))
 		}
 		// Add the size of request headers
 		requestSize += int64(len(req.Method) + len(req.URL.String()) + len(req.Proto) + 4) // request line size
@@ -186,9 +192,9 @@ func (oc *OctoClient) RetryableDo(req *http.Request) (*http.Response, error) {
 		// Measure response size
 		responseSize := int64(0)
 		if resp.Body != nil {
-			body, _ := io.ReadAll(resp.Body)
-			responseSize += int64(len(body))
-			resp.Body = io.NopCloser(io.MultiReader(bytes.NewReader(body)))
+			var rb bytes.Buffer
+			resp.Body = io.NopCloser(io.TeeReader(resp.Body, &rb))
+			responseSize += int64(len(rb.String()))
 		}
 		// Add the size of response headers
 		responseSize += int64(len(resp.Proto) + 3 + 3 + 2) // status line size
@@ -399,4 +405,26 @@ func PrintResStats() string {
 	percentageBad := float64(count) / float64(all) * 100
 	percentageErr := float64(errRequestsCount) / float64(allRequestsCount) * 100
 	return fmt.Sprintf("Bad: %.2f. Err: %.2f", percentageBad, percentageErr)
+}
+
+func serializeRequest(req *http.Request) string {
+	var buffer bytes.Buffer
+	buffer.WriteString(req.Method)
+	buffer.WriteString(req.URL.String())
+	buffer.WriteString(req.Proto)
+	for name, values := range req.Header {
+		buffer.WriteString(name)
+		for _, value := range values {
+			buffer.WriteString(value)
+		}
+	}
+
+	if req.Body != nil {
+		// Reset the request body so it can be read again
+		var b bytes.Buffer
+		req.Body = io.NopCloser(io.TeeReader(req.Body, &b))
+		buffer.WriteString(b.String())
+	}
+
+	return buffer.String()
 }

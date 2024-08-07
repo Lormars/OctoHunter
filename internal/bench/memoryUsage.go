@@ -84,8 +84,10 @@ func getProducerBench() string {
 	var msg string
 	outputs := common.GetOutput()
 	msg = "[PB]<br>"
+	common.GlobalMu.Lock()
+	defer common.GlobalMu.Unlock()
 	for producer, benchOutput := range outputs {
-		msg += fmt.Sprintf("<b>%s (%d):</b> ", producer, benchOutput.ProducerNumber)
+		msg += fmt.Sprintf("<b>%s (%d-%.2f):</b> ", producer, benchOutput.ProducerNumber, benchOutput.Average)
 
 		for host, hostDetail := range benchOutput.Hosts {
 			averageTime := hostDetail.Average()

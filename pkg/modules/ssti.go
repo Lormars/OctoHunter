@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 
 	"github.com/lormars/octohunter/asset"
 	"github.com/lormars/octohunter/common"
@@ -54,11 +55,36 @@ func CheckSSTI(input *common.XssInput) {
 			common.OutputP.PublishMessage(msg)
 		}
 		notify.SendMessage(msg)
-	} else {
-		sstiSuspect := make(map[string][]string)
-		for index, nonerr := range nonerrbased {
-			queries.Set(input.Param, nonerr)
-			parsedURL.RawQuery = queries.Encode()
+		return
+	}
+
+	type result struct {
+		index int
+		body  string
+		err   error
+	}
+
+	results := make(chan result, len(nonerrbased))
+	var wg sync.WaitGroup
+
+	copyQueries := func(original url.Values) url.Values {
+		copy := make(url.Values)
+		for k, vs := range original {
+			for _, v := range vs {
+				copy.Add(k, v)
+			}
+		}
+		return copy
+	}
+
+	sstiSuspect := make(map[string][]string)
+	for index, nonerr := range nonerrbased {
+		wg.Add(1)
+		go func(index int, nonerr string) {
+			defer wg.Done()
+			localQueries := copyQueries(queries)
+			localQueries.Set(input.Param, nonerr)
+			parsedURL.RawQuery = localQueries.Encode()
 
 			req, err := http.NewRequest("GET", parsedURL.String(), nil)
 			if err != nil {
@@ -66,56 +92,63 @@ func CheckSSTI(input *common.XssInput) {
 			}
 			resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 			if err != nil {
-				continue
+				results <- result{index, "", err}
 			}
+			results <- result{index: index, body: resp.Body, err: nil}
 
-			if len(sstiSuspect) == 0 {
-				if index != 0 {
-					return
-				}
-				for key, values := range asset.SSTIPoly {
-					var toCheck string
-					if values[index] == "Unmodified" {
-						toCheck = nonerr
-					} else if values[index] != "Error" {
-						toCheck = values[index]
-					} else {
-						continue
-					}
-					if strings.Contains(resp.Body, toCheck) {
-						sstiSuspect[key] = values
-					}
-				}
-			} else {
-				for key, values := range sstiSuspect {
-					var toCheck string
-					if values[index] == "Unmodified" {
-						toCheck = nonerr
-					} else if values[index] != "Error" {
-						toCheck = values[index]
-					} else {
-						delete(sstiSuspect, key)
-						continue
-					}
-					if !strings.Contains(resp.Body, toCheck) {
-						delete(sstiSuspect, key)
-					}
-				}
-			}
-
-		}
-		if len(sstiSuspect) > 0 {
-			var allSuspects string
-			for key := range sstiSuspect {
-				allSuspects += key + " or "
-			}
-			msg := fmt.Sprintf("[SSTI NonErrbased] %s in %s possibly using %s", input.Param, input.Url, allSuspects)
-			if common.SendOutput {
-				common.OutputP.PublishMessage(msg)
-			}
-			notify.SendMessage(msg)
-			return
-		}
+		}(index, nonerr)
 	}
 
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+	for res := range results {
+		if res.err != nil {
+			return
+		}
+		if len(sstiSuspect) == 0 {
+			for key, values := range asset.SSTIPoly {
+				var toCheck string
+				if values[res.index] == "Unmodified" {
+					toCheck = nonerrbased[res.index]
+				} else if values[res.index] != "Error" {
+					toCheck = values[res.index]
+				} else {
+					continue
+				}
+				if strings.Contains(res.body, toCheck) {
+					sstiSuspect[key] = values
+				}
+			}
+		} else {
+			for key, values := range sstiSuspect {
+				var toCheck string
+				if values[res.index] == "Unmodified" {
+					toCheck = nonerrbased[res.index]
+				} else if values[res.index] != "Error" {
+					toCheck = values[res.index]
+				} else {
+					delete(sstiSuspect, key)
+					continue
+				}
+				if !strings.Contains(res.body, toCheck) {
+					delete(sstiSuspect, key)
+				}
+			}
+		}
+
+	}
+	if len(sstiSuspect) > 0 {
+		var allSuspects string
+		for key := range sstiSuspect {
+			allSuspects += key + " or "
+		}
+		msg := fmt.Sprintf("[SSTI NonErrbased] %s in %s possibly using %s", input.Param, input.Url, allSuspects)
+		if common.SendOutput {
+			common.OutputP.PublishMessage(msg)
+		}
+		notify.SendMessage(msg)
+		return
+	}
 }

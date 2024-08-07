@@ -73,7 +73,7 @@ func RequestWithBrowser(req *http.Request, client *http.Client) (*http.Response,
 			result = &http.Response{
 				Status:     ctx.Response.RawResponse.Status,
 				StatusCode: ctx.Response.RawResponse.StatusCode,
-				Body:       io.NopCloser(strings.NewReader(ctx.Response.Body())),
+				Body:       io.NopCloser(strings.NewReader(ctx.Response.Body())), //wrong
 				Header:     ctx.Response.RawResponse.Header,
 				Request:    req,
 			}

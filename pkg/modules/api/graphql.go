@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -18,24 +19,29 @@ var introspect = `{"query": "{__schema{queryType{name}}}"}`
 
 func CheckGraphql(urlStr string) {
 
-	if !strings.Contains(urlStr, "graphql") {
-		target := strings.TrimRight(urlStr, "/")
-		for _, payload := range payloads {
+	if strings.Contains(urlStr, "graphql") { // if the URL already contains "graphql" (sent from parsejs.go)
+		checkIntrospect(urlStr)
+		return
+	}
+
+	var wg sync.WaitGroup
+	target := strings.TrimRight(urlStr, "/")
+	for _, payload := range payloads {
+		wg.Add(1)
+		go func(payload string) {
 			testURL := target + payload
 			req, err := http.NewRequest("GET", testURL, nil)
 			if err != nil {
 				logger.Warnf("Error creating request: %v", err)
-				continue
+				return
 			}
 			_, err = checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 			if err != nil {
 				logger.Debugf("Error checking server: %v", err)
-				continue
+				return
 			}
 			go checkIntrospect(testURL)
-		}
-	} else { // if the URL already contains "graphql" (sent from parsejs.go)
-		checkIntrospect(urlStr)
+		}(payload)
 	}
 }
 

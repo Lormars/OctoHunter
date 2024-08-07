@@ -24,15 +24,6 @@ func CheckPathTraversal(urlStr string) {
 	if err != nil {
 		return
 	}
-	fuzzReq, err := http.NewRequest("GET", fuzzURL, nil)
-	if err != nil {
-		return
-	}
-
-	falsePositiveReq, err := http.NewRequest("GET", falsePositiveURL, nil)
-	if err != nil {
-		return
-	}
 
 	controlResp, err := checker.CheckServerCustom(controlReq, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
@@ -47,7 +38,11 @@ func CheckPathTraversal(urlStr string) {
 
 	//only care about api endpoitns for now
 	contentType := controlResp.Headers.Get("Content-Type")
-	if !strings.Contains(contentType, "application/json") {
+	if !strings.Contains(contentType, "application/json") && !strings.Contains(contentType, "application/xml") {
+		return
+	}
+	fuzzReq, err := http.NewRequest("GET", fuzzURL, nil)
+	if err != nil {
 		return
 	}
 
@@ -57,6 +52,10 @@ func CheckPathTraversal(urlStr string) {
 	}
 
 	if controlResp.StatusCode == fuzzResp.StatusCode && controlResp.Body == fuzzResp.Body {
+		falsePositiveReq, err := http.NewRequest("GET", falsePositiveURL, nil)
+		if err != nil {
+			return
+		}
 		falsePositiveResp, err := checker.CheckServerCustom(falsePositiveReq, clients.Clients.GetRandomClient("h0", false, true))
 		if err != nil {
 			return

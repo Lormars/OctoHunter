@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 
 	"github.com/fatih/color"
 	"github.com/lormars/octohunter/common"
@@ -18,32 +19,64 @@ func SingleMethodCheck(result *common.ServerResult) {
 	logger.Debugln("SingleMethodCheck module running")
 	methods := []string{"POST", "FOO"}
 	headers := []string{"X-Forwarded-For", "X-Forward-For", "X-Remote-IP", "X-Originating-IP", "X-Remote-Addr", "X-Client-IP"}
+
+	var wg sync.WaitGroup
+	methodResults := make(chan string, len(methods))
+	headerResults := make(chan string, len(headers))
+
+	// Method checks
 	for _, method := range methods {
-		if ok, tcode, errTreat := testAccessControl(result.Url, method); ok {
-			msg := fmt.Sprintf("[Method] Access control Bypassed for target %s using method %s: %d vs. %d \n", result.Url, method, result.StatusCode, tcode)
+		wg.Add(1)
+		go func(method string) {
+			defer wg.Done()
+
+			if ok, tcode, errTreat := testAccessControl(result.Url, method); ok {
+				msg := fmt.Sprintf("[Method] Access control bypassed for target %s using method %s: %d vs. %d\n", result.Url, method, result.StatusCode, tcode)
+				methodResults <- msg
+			} else if errTreat != nil {
+				logger.Debugf("Error testing access control: treatment - %v\n", errTreat)
+			}
+		}(method)
+	}
+
+	// Header checks
+	for _, header := range headers {
+		wg.Add(1)
+		go func(header string) {
+			defer wg.Done()
+
+			if ok, payload, sc := checkHeaderOverwrite(result.Url, header); ok {
+				msg := fmt.Sprintf("[Method] Access control bypassed for target %s using header %s and payload %s (%d vs. %d)\n", result.Url, header, payload, result.StatusCode, sc)
+				headerResults <- msg
+			}
+		}(header)
+	}
+
+	// Process method results
+	go func() {
+		for msg := range methodResults {
 			color.Red(msg)
 			notify.SendMessage(msg)
 			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}
 			common.AddToCrawlMap(result.Url, "method", result.StatusCode)
-		} else if errTreat != nil {
-			logger.Debugf("Error testing access control: treament - %v\n", errTreat)
-			continue
 		}
-	}
-	for _, header := range headers {
-		if ok, payload, sc := checkHeaderOverwrite(result.Url, header); ok {
-			msg := fmt.Sprintf("[Method] Access Control Bypassed for target %s using header %s and payload %s (%d vs. %d)\n", result.Url, header, payload, result.StatusCode, sc)
+	}()
+	// Process header results
+	go func() {
+		for msg := range headerResults {
 			color.Red(msg)
 			if common.SendOutput {
 				common.OutputP.PublishMessage(msg)
 			}
 			notify.SendMessage(msg)
-			break //to avoid flood
+			break // to avoid flood
 		}
-	}
-
+	}()
+	wg.Wait()
+	close(methodResults)
+	close(headerResults)
 }
 
 func testAccessControl(urlStr, verb string) (bool, int, error) {
