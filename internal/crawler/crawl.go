@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/lormars/octohunter/common"
 	"github.com/lormars/octohunter/common/clients"
@@ -25,22 +24,18 @@ func Crawl(response *common.ServerResult) {
 	urls := filter.GroupAndFilterURLs(rawUrls)
 	logger.Debugf("Urls reduced from %d to %d\n", len(rawUrls), len(urls))
 	var wg sync.WaitGroup
+	var semaphore = make(chan struct{}, 10)
 
-	//too much false positive, need another way
-	// pattern := `window\.location\.href\s*=\s*|window\.location\s*=\s*|location\s*=\s*|location\.href\s*=\s*`
-	// re, err := regexp.Compile(pattern)
-	// if err != nil {
-	// 	logger.Warnf("Error compiling regex: %v\n", err)
-	// }
-
-	for _, url := range urls {
-		if !cacher.CheckCache(url, "crawl") {
+	for structure, url := range urls {
+		if !cacher.CheckCache(structure, "crawl") { //check using structure to prevent crawling too much
 			continue
 		}
 
 		wg.Add(1)
 		go func(url string) {
 			defer wg.Done()
+			semaphore <- struct{}{}
+			defer func() { <-semaphore }()
 
 			if strings.HasSuffix(url, ".svg") || strings.HasSuffix(url, ".png") || strings.HasSuffix(url, ".jpg") || strings.HasSuffix(url, ".gif") || strings.HasSuffix(url, ".jpeg") {
 				common.Cl0P.PublishMessage(url)
@@ -56,24 +51,15 @@ func Crawl(response *common.ServerResult) {
 					return
 				}
 
+				resp.Depth = response.Depth + 1
 				if strings.HasSuffix(resp.Url, ".js") {
 					parser.ParseJS(resp)
 				}
-
-				// match := re.MatchString(resp.Body)
-				// if match && strings.Contains(resp.Body, "URLSearchParams") {
-				// 	msg := fmt.Sprintf("[OR Suspect] %s might have a DOM-OR (window.location match) on %s", response.Url, url)
-				// 	common.OutputP.PublishMessage(msg)
-				// 	notify.SendMessage(msg)
-				// }
-
-				resp.Depth = response.Depth + 1
 
 				common.AddToCrawlMap(resp.Url, "crawl", resp.StatusCode)
 				common.DividerP.PublishMessage(resp)
 			}
 		}(url)
-		time.Sleep(200 * time.Millisecond)
 	}
 
 	wg.Wait()

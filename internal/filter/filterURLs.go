@@ -8,11 +8,10 @@ import (
 )
 
 type urlGroup struct {
-	structure string
-	urls      []string
+	urls []string
 }
 
-func GroupAndFilterURLs(urls []string) []string {
+func GroupAndFilterURLs(urls []string) map[string]string {
 	groups := groupURLS(urls)
 	filteredURLs := filterURLs(groups)
 	return filteredURLs
@@ -31,8 +30,7 @@ func groupURLS(urls []string) map[string]*urlGroup {
 			group.urls = append(group.urls, rawURL)
 		} else {
 			groups[structure] = &urlGroup{
-				structure: structure,
-				urls:      []string{rawURL},
+				urls: []string{rawURL},
 			}
 		}
 	}
@@ -59,11 +57,11 @@ func replaceNumericSegments(path string) string {
 	return re.ReplaceAllString(path, "{num}")
 }
 
-func filterURLs(groups map[string]*urlGroup) []string {
-	filteredURLs := make([]string, 0, len(groups))
-	for _, group := range groups {
+func filterURLs(groups map[string]*urlGroup) map[string]string {
+	filteredURLs := make(map[string]string)
+	for structure, group := range groups {
 		randomIndex := rand.Intn(len(group.urls))
-		filteredURLs = append(filteredURLs, group.urls[randomIndex])
+		filteredURLs[structure] = group.urls[randomIndex]
 	}
 	return filteredURLs
 }
