@@ -14,9 +14,6 @@ func init() {
 	SSTIPoly["chameleon"] = []string{
 		`p ">[[{1}]]`, `Unmodified`, `Unmodified`,
 	}
-	SSTIPoly["cheetah3"] = []string{
-		`p ">[[{1}]]`, `1@*#{1}`, `{`,
-	}
 	SSTIPoly["django"] = []string{
 		`Error`, `Unmodified`, `/**/`,
 	}

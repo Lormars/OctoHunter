@@ -129,7 +129,6 @@ func CheckSSTI(input *common.XssInput) {
 				} else if values[res.index] != "Error" {
 					toCheck = values[res.index]
 				} else {
-					delete(sstiSuspect, key)
 					continue
 				}
 				if !strings.Contains(res.body, toCheck) {
