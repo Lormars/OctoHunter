@@ -44,7 +44,9 @@ type PriorityQueue[T PriorityQueueItem] struct {
 	less  func(i, j int) bool
 }
 
-func (pq PriorityQueue[T]) Len() int {
+func (pq PriorityQueue[T]) UniqueLen() int {
+	mu.Lock()
+	defer mu.Unlock()
 	uniqueHosts := make(map[string]struct{})
 	for _, item := range pq.items {
 		var host string
@@ -61,6 +63,12 @@ func (pq PriorityQueue[T]) Len() int {
 		}
 	}
 	return len(uniqueHosts)
+}
+
+func (pq PriorityQueue[T]) Len() int {
+	mu.Lock()
+	defer mu.Unlock()
+	return len(pq.items)
 }
 
 func (pq PriorityQueue[T]) Less(i, j int) bool {
@@ -166,7 +174,7 @@ func dispatch() {
 	wg := sync.WaitGroup{}
 
 	reqChannel := make(chan *Queue, 200)
-	for i := 0; i < 200; i++ {
+	for i := 0; i < 2000; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -209,9 +217,7 @@ func dispatch() {
 			time.Sleep(time.Millisecond * 100)
 		}
 
-		mu.Lock()
-		currentLen := pq.Len()
-		mu.Unlock()
+		currentLen := pq.UniqueLen()
 
 		// Use float division to avoid integer truncation
 		sleepDuration := time.Duration(math.Max(1.0/(float64(currentLen)+1), 0.1)) * time.Second
@@ -235,4 +241,8 @@ func dispatchBroker() {
 func GetConcurrentRequests() int32 {
 	activeWorkers := atomic.LoadInt32(&workerCount)
 	return activeWorkers
+}
+
+func GetAllWaiting() int {
+	return pq.Len()
 }

@@ -43,7 +43,8 @@ func PrintMemUsage(opts *common.Opts) {
 		if opts.Module.Contains("broker") {
 			msg := "[MU] Alloc = " + bToMb(m.Alloc) + " MiB." + "\tSys = " + bToMb(m.Sys) + " MiB. "
 			msg += fmt.Sprintf("Data: %.6f GB. ", clients.GetTotalDataTransferred())
-			msg += fmt.Sprintf("Con: %d. ", queue.GetConcurrentRequests())
+			waiting := queue.GetAllWaiting()
+			msg += fmt.Sprintf("Con: %d (%d). ", queue.GetConcurrentRequests(), waiting)
 			msg += clients.PrintResStats()
 			diversity, rate := common.Sliding.GetHostDiversityScore()
 			msg += fmt.Sprintf(" Div: %.2f. ", diversity)
