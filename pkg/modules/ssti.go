@@ -2,7 +2,6 @@ package modules
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -39,7 +38,7 @@ func CheckSSTI(input *common.XssInput) {
 	parsedURL.RawQuery = queries.Encode()
 
 	common.AddToCrawlMap(parsedURL.String(), "ssti", 200) //TODO: can be accurate
-	req, err := http.NewRequest("GET", parsedURL.String(), nil)
+	req, err := clients.NewRequest("GET", parsedURL.String(), nil, clients.Ssti)
 	if err != nil {
 		logger.Warnf("Error creating request: %v", err)
 	}
@@ -86,7 +85,7 @@ func CheckSSTI(input *common.XssInput) {
 			localQueries.Set(input.Param, nonerr)
 			parsedURL.RawQuery = localQueries.Encode()
 
-			req, err := http.NewRequest("GET", parsedURL.String(), nil)
+			req, err := clients.NewRequest("GET", parsedURL.String(), nil, clients.Ssti)
 			if err != nil {
 				logger.Warnf("Error creating request: %v", err)
 			}

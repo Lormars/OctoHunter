@@ -27,7 +27,7 @@ type Response struct {
 type Request struct {
 	Host   string
 	Client *clients.OctoClient
-	Reqs   []*http.Request
+	Reqs   []*clients.OctoRequest
 }
 
 type BrokerQueue struct {
@@ -120,7 +120,7 @@ func NewQueueBrokerQueue() *PriorityQueue[*BrokerQueue] {
 	}
 }
 
-func AddToQueue(host string, reqs []*http.Request, client *clients.OctoClient) chan []Response {
+func AddToQueue(host string, reqs []*clients.OctoRequest, client *clients.OctoClient) chan []Response {
 	queueLock.Lock()
 	defer queueLock.Unlock()
 	respChan := make(chan []Response)
@@ -173,31 +173,13 @@ func dispatch() {
 
 	wg := sync.WaitGroup{}
 
-	reqChannel := make(chan *Queue, 200)
-	for i := 0; i < 2000; i++ {
+	reqChannel := make(chan *Queue, 20000)
+	for i := 0; i < 200; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			for req := range reqChannel {
-				var responses []Response
-				if req != nil && req.Request.Client != nil {
-					atomic.AddInt32(&workerCount, 1)
-					for _, r := range req.Request.Reqs {
-
-						// currentHostName := r.URL.Hostname()
-
-						if r.Header.Get("Connection") == "" {
-							r.Close = true
-						}
-						resp, err := req.Request.Client.RetryableDo(r)
-						responses = append(responses, Response{Resp: resp, Err: err})
-					}
-				} else {
-					responses = []Response{{Resp: nil, Err: fmt.Errorf("client or Req is nil")}}
-				}
-				req.RespChan <- responses
-				close(req.RespChan)
-				atomic.AddInt32(&workerCount, -1)
+				processRequests(req)
 			}
 		}()
 	}
@@ -208,13 +190,18 @@ func dispatch() {
 			time.Sleep(time.Second) // Sleep briefly if no requests are available
 			continue
 		}
-
-		select {
-		case reqChannel <- req:
-			// Request successfully sent to the channel
-		default:
-			// Channel is full, wait for a short period before trying again
-			time.Sleep(time.Millisecond * 100)
+		producer := req.Request.Reqs[0].Producer
+		willExplode := clients.ProducerWillExplode[producer]
+		if willExplode {
+			select {
+			case reqChannel <- req:
+				// Request successfully sent to the channel
+			default:
+				// Channel is full, wait for a short period before trying again
+				time.Sleep(time.Millisecond * 100)
+			}
+		} else {
+			go processRequests(req)
 		}
 
 		currentLen := pq.UniqueLen()
@@ -223,6 +210,28 @@ func dispatch() {
 		sleepDuration := time.Duration(math.Max(1.0/(float64(currentLen)+1), 0.1)) * time.Second
 		time.Sleep(sleepDuration)
 	}
+}
+
+func processRequests(req *Queue) {
+	var responses []Response
+	if req != nil && req.Request.Client != nil {
+		atomic.AddInt32(&workerCount, 1)
+		for _, or := range req.Request.Reqs {
+
+			// currentHostName := r.URL.Hostname()
+			r := or.Request
+			if r.Header.Get("Connection") == "" {
+				r.Close = true
+			}
+			resp, err := req.Request.Client.RetryableDo(r)
+			responses = append(responses, Response{Resp: resp, Err: err})
+		}
+	} else {
+		responses = []Response{{Resp: nil, Err: fmt.Errorf("client or Req is nil")}}
+	}
+	req.RespChan <- responses
+	close(req.RespChan)
+	atomic.AddInt32(&workerCount, -1)
 }
 
 // This function is used to dispatch the broker queue.

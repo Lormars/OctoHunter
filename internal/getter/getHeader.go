@@ -2,7 +2,6 @@ package getter
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/lormars/octohunter/common/clients"
 	"github.com/lormars/octohunter/internal/checker"
@@ -10,7 +9,7 @@ import (
 )
 
 func GetHeader(urlStr, header string) (string, error) {
-	req, err := http.NewRequest("GET", urlStr, nil)
+	req, err := clients.NewRequest("GET", urlStr, nil, clients.Misc)
 	if err != nil {
 		logger.Debugf("Error creating request: %v", err)
 		return "", err
@@ -24,7 +23,7 @@ func GetHeader(urlStr, header string) (string, error) {
 	headerValue := resp.Headers.Get(header)
 	if headerValue == "" {
 		logger.Debugf("Header %s not found\n", header)
-		return "", fmt.Errorf("Header not found")
+		return "", fmt.Errorf("header not found")
 	}
 	return headerValue, nil
 }

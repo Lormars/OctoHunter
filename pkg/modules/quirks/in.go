@@ -2,7 +2,6 @@ package quirks
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -304,7 +303,7 @@ func isdynamic() {
 	queries.Set("cachebuster", cacheBuster)
 	parsedURL.RawQuery = queries.Encode()
 
-	req, err := http.NewRequest("GET", parsedURL.String(), nil)
+	req, err := clients.NewRequest("GET", parsedURL.String(), nil, clients.Quirks)
 	if err != nil {
 		return
 	}

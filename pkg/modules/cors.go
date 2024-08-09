@@ -33,7 +33,11 @@ func CheckCors(response *common.ServerResult) {
 	payload := fmt.Sprintf("https://%s.example%s", baseDomain, baseDomain)
 
 	req.Header.Set("Origin", payload)
-	resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
+	octoReq := &clients.OctoRequest{
+		Request:  req,
+		Producer: clients.Cors,
+	}
+	resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		logger.Debugf("Error getting response: %v", err)
 		return

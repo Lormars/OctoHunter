@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"net/http"
 	"strings"
 
 	"github.com/lormars/octohunter/common"
@@ -20,7 +19,7 @@ func CheckPathTraversal(urlStr string) {
 	fuzzURL := urlStr + "/%2e%2e%2f" + fileName
 	falsePositiveURL := urlStr + "/%2e%2e%2f" + "xubwozi"
 
-	controlReq, err := http.NewRequest("GET", urlStr, nil)
+	controlReq, err := clients.NewRequest("GET", urlStr, nil, clients.Pathtraversal)
 	if err != nil {
 		return
 	}
@@ -41,7 +40,7 @@ func CheckPathTraversal(urlStr string) {
 	if !strings.Contains(contentType, "application/json") && !strings.Contains(contentType, "application/xml") {
 		return
 	}
-	fuzzReq, err := http.NewRequest("GET", fuzzURL, nil)
+	fuzzReq, err := clients.NewRequest("GET", fuzzURL, nil, clients.Pathtraversal)
 	if err != nil {
 		return
 	}
@@ -52,7 +51,7 @@ func CheckPathTraversal(urlStr string) {
 	}
 
 	if controlResp.StatusCode == fuzzResp.StatusCode && controlResp.Body == fuzzResp.Body {
-		falsePositiveReq, err := http.NewRequest("GET", falsePositiveURL, nil)
+		falsePositiveReq, err := clients.NewRequest("GET", falsePositiveURL, nil, clients.Pathtraversal)
 		if err != nil {
 			return
 		}

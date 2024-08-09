@@ -41,7 +41,15 @@ func CheckCl0(urlstr string) {
 		return
 	}
 	getRequest.Header.Set("Connection", "close")
-	respChan := queue.AddToQueue(getRequest.Host, []*http.Request{postRequest, getRequest}, clients.Clients.GetRandomClient("h1KA", false, true))
+	octoPostReq := &clients.OctoRequest{
+		Request:  postRequest,
+		Producer: clients.Cl0,
+	}
+	octoGetReq := &clients.OctoRequest{
+		Request:  getRequest,
+		Producer: clients.Cl0,
+	}
+	respChan := queue.AddToQueue(getRequest.Host, []*clients.OctoRequest{octoPostReq, octoGetReq}, clients.Clients.GetRandomClient("h1KA", false, true))
 	responses := <-respChan
 	postResponse := responses[0]
 	getResponse := responses[1]

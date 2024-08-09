@@ -67,7 +67,7 @@ func GetWaybackURLs(domain string) {
 			defer func() {
 				<-semaphore
 			}()
-			req, err := http.NewRequest("GET", u, nil)
+			req, err := clients.NewRequest("GET", u, nil, clients.Wayback)
 			if err != nil {
 				logger.Warnf("Error creating request: %v", err)
 				return

@@ -77,7 +77,7 @@ func paramSplitTest(result *common.ServerResult) {
 			}
 			queryParams.Set(param, signature)
 			parsedURL.RawQuery = queryParams.Encode()
-			req, err := http.NewRequest("GET", parsedURL.String(), nil)
+			req, err := clients.NewRequest("GET", parsedURL.String(), nil, clients.Splitting)
 			if err != nil {
 				logger.Warnf("Error creating request: %v", err)
 				return
@@ -131,7 +131,7 @@ func paramSplitTest(result *common.ServerResult) {
 					}
 				}
 				parsedURL.RawQuery = rawQuery
-				req, err := http.NewRequest("GET", parsedURL.String(), nil)
+				req, err := clients.NewRequest("GET", parsedURL.String(), nil, clients.Splitting)
 				if err != nil {
 					logger.Warnf("Error creating request: %v", err)
 					return
@@ -198,7 +198,11 @@ func pathSplitTest(result *common.ServerResult) {
 				return
 			}
 			req.URL.Opaque = "//" + parsedUrl.Host + payloadUrl
-			resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h1NA", false, true))
+			octoReq := &clients.OctoRequest{
+				Request:  req,
+				Producer: clients.Splitting,
+			}
+			resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h1NA", false, true))
 			if err != nil {
 				logger.Debugf("Error getting response from %s: %v\n", payloadUrl, err)
 				return

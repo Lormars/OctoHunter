@@ -81,7 +81,7 @@ func SingleMethodCheck(result *common.ServerResult) {
 
 func testAccessControl(urlStr, verb string) (bool, int, error) {
 
-	treatmentReq, err := http.NewRequest(verb, urlStr, nil)
+	treatmentReq, err := clients.NewRequest(verb, urlStr, nil, clients.Method)
 	if err != nil {
 		logger.Debugf("Error creating request: %v\n", err)
 		return false, 0, err
@@ -117,7 +117,11 @@ func checkHeaderOverwrite(urlStr, header string) (bool, string, int) {
 
 	for _, payload := range payloads {
 		treatmentReq.Header.Set(header, payload)
-		treatmentResp, errTreat := checker.CheckServerCustom(treatmentReq, clients.Clients.GetRandomClient("h0", false, true))
+		octoTreatmentReq := &clients.OctoRequest{
+			Request:  treatmentReq,
+			Producer: clients.Method,
+		}
+		treatmentResp, errTreat := checker.CheckServerCustom(octoTreatmentReq, clients.Clients.GetRandomClient("h0", false, true))
 		if errTreat != nil {
 			logger.Debugf("Error getting response: treament - %v\n", errTreat)
 			continue

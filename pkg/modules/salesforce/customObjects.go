@@ -26,7 +26,11 @@ func PullCustomObjects(urlString string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", true, true))
+	octoReq := &clients.OctoRequest{
+		Request:  req,
+		Producer: clients.Salesforce,
+	}
+	resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", true, true))
 	if err != nil {
 		logger.Debugf("Error getting response from %s: %v\n", urlString, err)
 		return err

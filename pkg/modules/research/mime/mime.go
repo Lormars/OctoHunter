@@ -1,7 +1,6 @@
 package mime
 
 import (
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -46,7 +45,7 @@ func tryManipulate404Mime(urlStr, path string) {
 
 	for _, payload := range payloads {
 		fuzzURL := strings.TrimRight(urlStr, "/") + payload
-		req, err := http.NewRequest("GET", fuzzURL, nil)
+		req, err := clients.NewRequest("GET", fuzzURL, nil, clients.Mime)
 		if err != nil {
 			continue
 		}

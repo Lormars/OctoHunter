@@ -2,7 +2,6 @@ package pathconfusion
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 	"sync"
@@ -56,7 +55,7 @@ func CheckPathConfusion(urlStr string) {
 			}
 
 			payload1 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature1 + ".css"
-			req1, err := http.NewRequest("GET", payload1, nil)
+			req1, err := clients.NewRequest("GET", payload1, nil, clients.Pathconfuse)
 			if err != nil {
 				logger.Debugf("Error creating request: %v", err)
 				return
@@ -75,7 +74,7 @@ func CheckPathConfusion(urlStr string) {
 
 			payload2 := parsedURL.Scheme + "://" + parsedURL.Host + parsedURL.Path + encoding + signature2 + ".css"
 
-			req2, err := http.NewRequest("GET", payload2, nil)
+			req2, err := clients.NewRequest("GET", payload2, nil, clients.Pathconfuse)
 			if err != nil {
 				logger.Debugf("Error creating request: %v", err)
 				return

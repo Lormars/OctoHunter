@@ -2,7 +2,6 @@ package fuzzer
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -105,7 +104,7 @@ func apiWorker(tasks chan Fuzz3Part) {
 			continue
 		}
 		// logger.Warnf("[Fuzz API Debug] reconstructed is: %s", reconstructed)
-		req, err := http.NewRequest("GET", reconstructed, nil)
+		req, err := clients.NewRequest("GET", reconstructed, nil, clients.Fuzzapi)
 		if err != nil {
 			continue
 		}

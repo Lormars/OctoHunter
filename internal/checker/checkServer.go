@@ -67,9 +67,10 @@ func checkServer(url string) (*common.ServerResult, error) {
 }
 
 // The ultra-important requester for (nearly) all request...
-func CheckServerCustom(req *http.Request, client *clients.OctoClient) (*common.ServerResult, error) {
+func CheckServerCustom(request *clients.OctoRequest, client *clients.OctoClient) (*common.ServerResult, error) {
 
 	// Check if the request is in the lowscoredomain
+	req := request.Request
 	currentHostName := req.URL.Hostname()
 	score.ScoreMu.Lock()
 	for _, lowscore := range score.LowScoreDomains {
@@ -80,7 +81,7 @@ func CheckServerCustom(req *http.Request, client *clients.OctoClient) (*common.S
 	}
 	score.ScoreMu.Unlock()
 
-	respCh := queue.AddToQueue(req.URL.Hostname(), []*http.Request{req}, client)
+	respCh := queue.AddToQueue(req.URL.Hostname(), []*clients.OctoRequest{request}, client)
 	resps := <-respCh
 	resp := resps[0].Resp
 	err := resps[0].Err

@@ -2,7 +2,6 @@ package fuzzer
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -49,7 +48,7 @@ func fuzzAllPath(urlStr string) {
 		originalStr := original.(string)
 		fuzzPath := strings.TrimRight(urlStr, "/") + originalStr
 		// logger.Warnf("Debug AllPath: %s", fuzzPath)
-		req, err := http.NewRequest("GET", fuzzPath, nil)
+		req, err := clients.NewRequest("GET", fuzzPath, nil, clients.Fuzz4034)
 		if err != nil {
 			return true
 		}
@@ -95,7 +94,7 @@ func fuzzNewPath(domainWithPath string) {
 		originalStr := original.(string)
 		fuzzPath := strings.TrimRight(strings.ReplaceAll(originalStr, domain, domainWithPath), "/")
 		// logger.Warnf("Debug NewPath %s", fuzzPath)
-		req, err := http.NewRequest("GET", fuzzPath, nil)
+		req, err := clients.NewRequest("GET", fuzzPath, nil, clients.Fuzz4034)
 		if err != nil {
 			return true
 		}

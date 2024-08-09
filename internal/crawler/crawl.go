@@ -1,7 +1,6 @@
 package crawler
 
 import (
-	"net/http"
 	"strings"
 	"sync"
 
@@ -40,7 +39,7 @@ func Crawl(response *common.ServerResult) {
 			if strings.HasSuffix(url, ".svg") || strings.HasSuffix(url, ".png") || strings.HasSuffix(url, ".jpg") || strings.HasSuffix(url, ".gif") || strings.HasSuffix(url, ".jpeg") {
 				common.Cl0P.PublishMessage(url)
 			} else {
-				req, err := http.NewRequest("GET", url, nil)
+				req, err := clients.NewRequest("GET", url, nil, clients.Crawl)
 				if err != nil {
 					logger.Debugf("Error creating request: %v", err)
 					return

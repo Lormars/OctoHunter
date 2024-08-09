@@ -1,7 +1,6 @@
 package checker
 
 import (
-	"net/http"
 	"net/http/httptrace"
 	"net/url"
 	"time"
@@ -32,7 +31,7 @@ func CheckCacheable(payload string) bool {
 	parsedURL.RawQuery = queryParams.Encode()
 	payload = parsedURL.String()
 	for i := 0; i < 2; i++ {
-		req, err := http.NewRequest("GET", payload, nil)
+		req, err := clients.NewRequest("GET", payload, nil, clients.Misc)
 		if err != nil {
 			logger.Debugf("Error creating request: %v", err)
 			return false
@@ -56,7 +55,7 @@ func CheckCacheable(payload string) bool {
 	return false
 }
 
-func MeasureElapse(req *http.Request, client *clients.OctoClient) (time.Duration, *common.ServerResult, error) {
+func MeasureElapse(request *clients.OctoRequest, client *clients.OctoClient) (time.Duration, *common.ServerResult, error) {
 	var start time.Time
 	var elapse time.Duration
 	trace := &httptrace.ClientTrace{
@@ -67,8 +66,10 @@ func MeasureElapse(req *http.Request, client *clients.OctoClient) (time.Duration
 			elapse = time.Since(start)
 		},
 	}
+	req := request.Request
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), trace))
-	resp, err := CheckServerCustom(req, client)
+	request.Request = req
+	resp, err := CheckServerCustom(request, client)
 	if err != nil {
 		return 0, nil, err
 	}

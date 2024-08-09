@@ -1,7 +1,6 @@
 package checker
 
 import (
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -64,7 +63,7 @@ func CheckHomePage(urlStr string) bool {
 }
 
 func CheckHttpRedirectToHttps(urlStr string) bool {
-	req, err := http.NewRequest("GET", urlStr, nil)
+	req, err := clients.NewRequest("GET", urlStr, nil, clients.Misc)
 	if err != nil {
 		return false
 	}

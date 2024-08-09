@@ -2,7 +2,6 @@ package parser
 
 import (
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/BishopFox/jsluice"
@@ -31,7 +30,7 @@ func ParseJS(result *common.ServerResult) {
 			notify.SendMessage(msg)
 		}
 
-		req, err := http.NewRequest("GET", resolvedURL, nil)
+		req, err := clients.NewRequest("GET", resolvedURL, nil, clients.Crawl)
 		if err != nil {
 			logger.Debugf("Error creating request: %v", err)
 			continue

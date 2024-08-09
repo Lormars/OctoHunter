@@ -3,7 +3,6 @@ package modules
 import (
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
@@ -30,7 +29,7 @@ func SingleRedirectCheck(result *common.ServerResult) {
 
 	logger.Debugf("finalURL: %s for original url: %s", finalURL, result.Url)
 
-	req, err := http.NewRequest("GET", finalURL.String(), nil)
+	req, err := clients.NewRequest("GET", finalURL.String(), nil, clients.Redirect)
 	if err == nil {
 		resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 		if err == nil {
@@ -105,7 +104,7 @@ func checkOpenRedirect(finalURL *url.URL, result *common.ServerResult) {
 				}
 				originalQueries.Set(key, newValue)
 				parsedOriginalURL.RawQuery = originalQueries.Encode()
-				req, err := http.NewRequest("GET", parsedOriginalURL.String(), nil)
+				req, err := clients.NewRequest("GET", parsedOriginalURL.String(), nil, clients.Redirect)
 				if err != nil {
 					logger.Warnf("Error creating request: %v\n", err)
 					continue
@@ -144,7 +143,7 @@ func getLength(url string) (int, error) {
 }
 
 func getFinalURL(initialURL string) (*url.URL, error) {
-	req, err := http.NewRequest("GET", initialURL, nil)
+	req, err := clients.NewRequest("GET", initialURL, nil, clients.Redirect)
 	if err != nil {
 		logger.Warnf("Error creating request: %v", err)
 		return nil, err

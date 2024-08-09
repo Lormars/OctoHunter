@@ -3,7 +3,6 @@ package fuzzer
 import (
 	"bufio"
 	"fmt"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -56,7 +55,7 @@ func FuzzPath(result *common.ServerResult) {
 				<-semaphore
 			}()
 			fuzzedURL := fmt.Sprintf("%s/%s", strings.TrimRight(urlStr, "/"), path)
-			req, err := http.NewRequest("GET", fuzzedURL, nil)
+			req, err := clients.NewRequest("GET", fuzzedURL, nil, clients.Fuzzpath)
 			if err != nil {
 				return
 			}

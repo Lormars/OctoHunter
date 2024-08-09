@@ -30,7 +30,7 @@ func CheckGraphql(urlStr string) {
 		wg.Add(1)
 		go func(payload string) {
 			testURL := target + payload
-			req, err := http.NewRequest("GET", testURL, nil)
+			req, err := clients.NewRequest("GET", testURL, nil, clients.Graphql)
 			if err != nil {
 				logger.Warnf("Error creating request: %v", err)
 				return
@@ -52,7 +52,11 @@ func checkIntrospect(urlStr string) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
+	octoReq := &clients.OctoRequest{
+		Request:  req,
+		Producer: clients.Graphql,
+	}
+	resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", false, true))
 	if err != nil {
 		logger.Debugf("Error checking server: %v", err)
 		return
@@ -71,7 +75,8 @@ func checkIntrospect(urlStr string) {
 					continue
 				}
 				req.Header.Set("Content-Type", "application/json")
-				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
+				octoReq.Request = req
+				resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error checking server: %v", err)
 					continue
@@ -82,7 +87,8 @@ func checkIntrospect(urlStr string) {
 					break
 				}
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-				resp, err = checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
+				octoReq.Request = req
+				resp, err = checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error checking server: %v", err)
 					continue
@@ -101,7 +107,8 @@ func checkIntrospect(urlStr string) {
 					logger.Warnf("Error creating request: %v", err)
 					return
 				}
-				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
+				octoReq.Request = req
+				resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Debugf("Error checking server: %v", err)
 					return

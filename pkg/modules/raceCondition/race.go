@@ -110,7 +110,7 @@ func RaceCondition(urlStr string) {
 
 	}
 
-	req, err := http.NewRequest("GET", urlStr, nil)
+	req, err := clients.NewRequest("GET", urlStr, nil, clients.Rc)
 	if err != nil {
 		logger.Warnf("Failed to create request: %v", err)
 		return

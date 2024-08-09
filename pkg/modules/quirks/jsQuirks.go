@@ -43,7 +43,11 @@ func CheckJSQuirks(result *common.ServerResult) {
 		return
 	}
 	parseReq.Header.Set("Content-Type", "text/plain")
-	resp, err := checker.CheckServerCustom(parseReq, clients.Clients.GetRandomClient("h1NA", false, false))
+	octoReq := &clients.OctoRequest{
+		Request:  parseReq,
+		Producer: clients.Quirks,
+	}
+	resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h1NA", false, false))
 	if err != nil {
 		logger.Warnf("Error getting response from %s: %v\n", parseServerURL, err)
 		return

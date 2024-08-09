@@ -2,7 +2,6 @@ package dispatcher
 
 import (
 	"bufio"
-	"net/http"
 	"os"
 	"strings"
 	"sync"
@@ -66,7 +65,7 @@ func Input(opts *common.Opts) {
 					}
 					go func() {
 						if errhttp == nil && httpStatus.Online {
-							req, err := http.NewRequest("GET", httpStatus.Url, nil)
+							req, err := clients.NewRequest("GET", httpStatus.Url, nil, clients.In)
 							if err == nil {
 								resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 								if err == nil {
@@ -87,7 +86,7 @@ func Input(opts *common.Opts) {
 								logger.Warnf("shouldnt happen: %v", errhttps)
 								return
 							}
-							req, err := http.NewRequest("GET", httpsStatus.Url, nil)
+							req, err := clients.NewRequest("GET", httpsStatus.Url, nil, clients.In)
 							if err == nil {
 								resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
 

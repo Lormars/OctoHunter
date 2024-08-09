@@ -142,7 +142,11 @@ func FuzzUnkeyed(urlStr string) {
 				logger.Debugf("[DEBUG] Checking %s", parsedURL.String())
 				logger.Debugf("[DEBUG] Headers: %v", req.Header)
 
-				resp, err := checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
+				octoReq := &clients.OctoRequest{
+					Request:  req,
+					Producer: clients.Fuzzunkeyed,
+				}
+				resp, err := checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", false, true))
 				if err != nil {
 					logger.Warnf("Error checking server: %v", err)
 					continue
@@ -167,7 +171,8 @@ func FuzzUnkeyed(urlStr string) {
 						if param[1] == "header" {
 							//check if this header is unkeyed
 							req.Header.Del(param[0])
-							resp, err = checker.CheckServerCustom(req, clients.Clients.GetRandomClient("h0", false, true))
+							octoReq.Request = req
+							resp, err = checker.CheckServerCustom(octoReq, clients.Clients.GetRandomClient("h0", false, true))
 							if err != nil {
 								continue
 							}

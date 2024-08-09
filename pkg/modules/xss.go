@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"net/http"
 	"net/url"
 	"strings"
 
@@ -51,7 +50,7 @@ func checkXssInAttribute(urlStr string, param string) {
 		queries.Set(param, payload)
 		parsedURL.RawQuery = queries.Encode()
 		// Do the request here
-		req, err := http.NewRequest("GET", parsedURL.String(), nil)
+		req, err := clients.NewRequest("GET", parsedURL.String(), nil, clients.Xss)
 		if err != nil {
 			logger.Warnf("Error creating request: %v", err)
 			continue
@@ -89,7 +88,7 @@ func checkXssInTag(urlStr string, param string) {
 		queries.Set(param, payload)
 		parsedURL.RawQuery = queries.Encode()
 		// Do the request here
-		req, err := http.NewRequest("GET", parsedURL.String(), nil)
+		req, err := clients.NewRequest("GET", parsedURL.String(), nil, clients.Xss)
 		if err != nil {
 			logger.Warnf("Error creating request: %v", err)
 			continue
